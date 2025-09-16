@@ -41,7 +41,7 @@ export async function GET(request: Request) {
         [
           // Background scratch card (blurred)
           React.createElement("img", {
-            src: "https://scratch-off-xi.vercel.app/assets/scratched-card-image.png",
+            src: `${process.env.NEXT_PUBLIC_URL}/assets/scratched-card-image.png`,
             alt: "scratch card background",
             style: {
               position: "absolute",
@@ -59,7 +59,7 @@ export async function GET(request: Request) {
 
           // Background GIF
           React.createElement("img", {
-            src: "https://scratch-off-xi.vercel.app/assets/winner.gif",
+            src: `${process.env.NEXT_PUBLIC_URL}/assets/winner.gif`,
             alt: "winner",
             style: {
               position: "absolute",

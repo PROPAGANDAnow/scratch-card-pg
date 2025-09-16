@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
           "https://api.neynar.com/v2/farcaster/frame/notifications/",
           {
             notification: {
-              target_url: "https://scratch-off-xi.vercel.app",
+              target_url: process.env.NEXT_PUBLIC_URL,
               body: "Play Scratch Off to win big!",
               title: `${username} just won a free card for you!`,
             },
@@ -139,7 +139,7 @@ export async function POST(request: NextRequest) {
           "https://api.neynar.com/v2/farcaster/frame/notifications/",
           {
             notification: {
-              target_url: "https://scratch-off-xi.vercel.app",
+              target_url: process.env.NEXT_PUBLIC_URL,
               body: "Play Scratch Off to win big!",
               title: `${username} just won $${amount}!`,
             },

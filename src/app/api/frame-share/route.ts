@@ -8,8 +8,7 @@ export async function GET(request: NextRequest) {
     const prizeAmount = searchParams.get("prize") || "0";
     const username = searchParams.get("username") || "";
     const friendUsername = searchParams.get("friend_username") || "";
-    const baseUrl =
-      process.env.NEXT_PUBLIC_URL || "https://scratch-off-xi.vercel.app";
+    const baseUrl = process.env.NEXT_PUBLIC_URL;
 
     // Create Frame HTML that uses your generated image
     const frameHtml = `

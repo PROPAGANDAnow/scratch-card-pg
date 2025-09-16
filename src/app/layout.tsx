@@ -32,16 +32,14 @@ export const metadata: Metadata = {
   other: {
     "fc:frame": JSON.stringify({
       version: "next",
-      imageUrl:
-        "https://scratch-off-xi.vercel.app/assets/splash-image.jpg",
+      imageUrl: `${process.env.NEXT_PUBLIC_URL}/assets/splash-image.jpg`,
       button: {
         title: "Scratch Off",
         action: {
           type: "launch_frame",
           name: "Scratch Off",
-          url: "https://farcaster.xyz/miniapps/XK6cHhOmUkRm/scratch-off",
-          splashImageUrl:
-            "https://scratch-off-xi.vercel.app/assets/splash-image.jpg",
+          url: "https://scratch-card-pg.vercel.app",
+          splashImageUrl: `${process.env.NEXT_PUBLIC_URL}/assets/splash-image.jpg`,
         },
       },
     }),

@@ -1,12 +1,37 @@
-import { NextResponse } from 'next/server';
-import { getFarcasterMetadata } from '../../../lib/utils';
+function withValidProperties(properties: Record<string, undefined | string | string[]>) {
+  return Object.fromEntries(
+    Object.entries(properties).filter(([_, value]) => (Array.isArray(value) ? value.length > 0 : !!value))
+  );
+}
 
 export async function GET() {
-  try {
-    const config = await getFarcasterMetadata();
-    return NextResponse.json(config);
-  } catch (error) {
-    console.error('Error generating metadata:', error);
-    return NextResponse.json({ error: error instanceof Error ? error.message : 'Unknown error' }, { status: 500 });
-  }
+  const URL = process.env.NEXT_PUBLIC_URL as string;
+  return Response.json({
+    accountAssociation: {
+      header: process.env.FARCASTER_HEADER,
+      payload: process.env.FARCASTER_PAYLOAD,
+      signature: process.env.FARCASTER_SIGNATURE,
+    },
+    frame: withValidProperties({
+      version: '1',
+      name: process.env.NEXT_PUBLIC_ONCHAINKIT_PROJECT_NAME || process.env.NEXT_PUBLIC_APP_NAME || 'Scratch Off',
+      subtitle: process.env.NEXT_PUBLIC_APP_SUBTITLE,
+      description: process.env.NEXT_PUBLIC_APP_DESCRIPTION || 'Scratch to win big!',
+      screenshotUrls: [],
+      iconUrl: process.env.NEXT_PUBLIC_APP_ICON,
+      splashImageUrl: process.env.NEXT_PUBLIC_APP_SPLASH_IMAGE,
+      splashBackgroundColor: process.env.NEXT_PUBLIC_SPLASH_BACKGROUND_COLOR,
+      homeUrl: URL,
+      webhookUrl: `${URL}/api/webhook`,
+      primaryCategory: process.env.NEXT_PUBLIC_APP_PRIMARY_CATEGORY,
+      tags: [],
+      heroImageUrl: process.env.NEXT_PUBLIC_APP_HERO_IMAGE,
+      tagline: process.env.NEXT_PUBLIC_APP_TAGLINE,
+      ogTitle: process.env.NEXT_PUBLIC_APP_OG_TITLE,
+      ogDescription: process.env.NEXT_PUBLIC_APP_OG_DESCRIPTION,
+      ogImageUrl: process.env.NEXT_PUBLIC_APP_OG_IMAGE,
+      // use only while testing
+      noindex: 'true',
+    }),
+  });
 }

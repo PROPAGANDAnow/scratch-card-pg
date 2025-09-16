@@ -76,8 +76,7 @@ export default function ScratchOff({
   const handleShare = async () => {
     if (!state.user) return;
 
-    const baseUrl =
-      process.env.NEXT_PUBLIC_URL || "https://scratch-off-xi.vercel.app";
+    const baseUrl = process.env.NEXT_PUBLIC_URL;
     const frameUrl =
       `${baseUrl}/api/frame-share?` +
       new URLSearchParams({
