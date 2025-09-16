@@ -53,7 +53,6 @@ export default function ScratchOff({
   const [shareButtonText, setShareButtonText] = useState("Share Win");
   const [bestFriend, setBestFriend] = useState<BestFriend | null>(null);
   const [coverImageLoaded, setCoverImageLoaded] = useState(false);
-  const [scrollPosition, setScrollPosition] = useState(0);
 
   const { actions, haptics } = useMiniApp();
 
@@ -533,7 +532,6 @@ export default function ScratchOff({
       setTilt({ x: 0, y: 0 });
       setShareButtonText("Share Win");
       setCoverImageLoaded(false);
-      setScrollPosition(0);
 
       // Clear timeout on unmount
       if (timeoutRef.current) {
