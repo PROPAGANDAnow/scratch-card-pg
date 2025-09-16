@@ -45,6 +45,32 @@ body {
   color: var(--foreground);
   background: var(--background);
   font-family: var(--font-geist-sans), 'Inter', Helvetica, Arial, sans-serif;
+  
+  /* Prevent scrolling/bouncing in webviews during touch interactions */
+  overscroll-behavior: none;
+  -webkit-overscroll-behavior: none;
+  -ms-overscroll-behavior: none;
+}
+
+/* Prevent pull-to-refresh and other webview gestures */
+html {
+  overscroll-behavior: none;
+  -webkit-overscroll-behavior: none;
+  -ms-overscroll-behavior: none;
+  /* Prevent tap highlights on touch */
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Lock scroll position only during scratching */
+body.scratch-active {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  overflow: hidden !important;
+  -webkit-overflow-scrolling: auto !important;
+  touch-action: none !important;
 }
 
 * {

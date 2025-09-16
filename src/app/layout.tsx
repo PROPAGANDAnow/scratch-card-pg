@@ -19,6 +19,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Scratch Off",
   description: "Scratch to win big!",
+  viewport: "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover",
   icons: {
     icon: [
       {
@@ -55,6 +56,11 @@ export default async function RootLayout({
     <html lang="en">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        style={{
+          overscrollBehavior: "none",
+          WebkitOverscrollBehavior: "none",
+          msOverscrollBehavior: "none"
+        }}
       >
         <Providers>
           <AppContextProvider>

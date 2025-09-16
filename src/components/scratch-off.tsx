@@ -53,6 +53,7 @@ export default function ScratchOff({
   const [shareButtonText, setShareButtonText] = useState("Share Win");
   const [bestFriend, setBestFriend] = useState<BestFriend | null>(null);
   const [coverImageLoaded, setCoverImageLoaded] = useState(false);
+  const [scrollPosition, setScrollPosition] = useState(0);
 
   const { actions, haptics } = useMiniApp();
 
@@ -179,28 +180,48 @@ export default function ScratchOff({
     const pointerDown = (e: PointerEvent) => {
       if (!cardData || isProcessing) return;
       e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
       isDrawing = true;
-      // Prevent body scrolling during scratch
+      
+      // Store current scroll position
+      setScrollPosition(window.pageYOffset || document.documentElement.scrollTop);
+      
+      // Lock page completely during scratch
+      document.body.classList.add('scratch-active');
       document.body.style.overflow = "hidden";
       document.body.style.touchAction = "none";
+      document.documentElement.style.touchAction = "none";
+      
       const { x, y } = getPointer(e);
       scratch(x, y);
-      window.addEventListener("pointermove", pointerMove);
+      window.addEventListener("pointermove", pointerMove, { passive: false });
       window.addEventListener("pointerup", pointerUp, { once: true });
     };
 
     const pointerMove = (e: PointerEvent) => {
       if (!isDrawing) return;
       e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
       const { x, y } = getPointer(e);
       scratch(x, y);
     };
 
     const pointerUp = () => {
       isDrawing = false;
-      // Restore body scrolling
+      
+      // Restore page scrolling and position
+      document.body.classList.remove('scratch-active');
       document.body.style.overflow = "";
       document.body.style.touchAction = "";
+      document.documentElement.style.touchAction = "";
+      
+      // Restore scroll position if it changed
+      if (scrollPosition > 0) {
+        window.scrollTo(0, scrollPosition);
+      }
+      
       window.removeEventListener("pointermove", pointerMove);
       setTimeout(checkScratched, 300);
     };
@@ -396,8 +417,10 @@ export default function ScratchOff({
       window.removeEventListener("pointermove", pointerMove);
       window.removeEventListener("pointerup", pointerUp);
       // Cleanup: restore body scrolling if component unmounts during scratch
+      document.body.classList.remove('scratch-active');
       document.body.style.overflow = "";
       document.body.style.touchAction = "";
+      document.documentElement.style.touchAction = "";
     };
   }, []);
 
@@ -461,6 +484,7 @@ export default function ScratchOff({
       setTilt({ x: 0, y: 0 });
       setShareButtonText("Share Win");
       setCoverImageLoaded(false);
+      setScrollPosition(0);
 
       // Clear timeout on unmount
       if (timeoutRef.current) {
