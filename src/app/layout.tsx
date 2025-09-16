@@ -38,7 +38,7 @@ export const metadata: Metadata = {
         action: {
           type: "launch_frame",
           name: "Scratch Off",
-          url: "https://scratch-card-pg.vercel.app",
+          url: process.env.NEXT_PUBLIC_URL,
           splashImageUrl: `${process.env.NEXT_PUBLIC_URL}/assets/splash-image.jpg`,
         },
       },
