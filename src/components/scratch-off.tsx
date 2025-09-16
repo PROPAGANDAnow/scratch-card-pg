@@ -467,7 +467,7 @@ export default function ScratchOff({
 
   return (
     <>
-      <div className="h-full w-full flex flex-col items-center  justify-center">
+      <div className="h-full w-full flex flex-col items-center justify-center overflow-y-auto">
         <p
           className="font-[ABCGaisyr] text-center text-[30px] mb-1 font-bold italic rotate-[-4deg]"
           style={{
