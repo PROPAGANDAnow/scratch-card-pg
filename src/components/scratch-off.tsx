@@ -52,6 +52,7 @@ export default function ScratchOff({
   const [showBlurOverlay, setShowBlurOrverlay] = useState(false);
   const [shareButtonText, setShareButtonText] = useState("Share Win");
   const [bestFriend, setBestFriend] = useState<BestFriend | null>(null);
+  const [coverImageLoaded, setCoverImageLoaded] = useState(false);
 
   const { actions, haptics } = useMiniApp();
 
@@ -146,6 +147,7 @@ export default function ScratchOff({
         CANVAS_WIDTH,
         CANVAS_HEIGHT
       );
+      setCoverImageLoaded(true);
     };
   }, []);
 
@@ -449,6 +451,7 @@ export default function ScratchOff({
       setShowBlurOrverlay(false);
       setTilt({ x: 0, y: 0 });
       setShareButtonText("Share Win");
+      setCoverImageLoaded(false);
 
       // Clear timeout on unmount
       if (timeoutRef.current) {
@@ -552,7 +555,7 @@ export default function ScratchOff({
                   pointerEvents: "none",
                 }}
               />
-              {cardData?.numbers_json ? (
+              {cardData?.numbers_json && (cardData?.scratched || scratched || coverImageLoaded) ? (
                 <div className="absolute inset-0 z-10 flex flex-col items-center justify-center text-center rotate-[-4deg]">
                   {(() => {
                     const rows = chunk3(cardData.numbers_json);
