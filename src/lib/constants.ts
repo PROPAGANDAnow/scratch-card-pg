@@ -1,4 +1,4 @@
-import { type AccountAssociation } from '@farcaster/miniapp-core/src/manifest';
+import { type AccountAssociation } from '@farcaster/miniapp-sdk';
 
 /**
  * Application constants and configuration values.
