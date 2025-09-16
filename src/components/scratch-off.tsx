@@ -180,6 +180,9 @@ export default function ScratchOff({
       if (!cardData || isProcessing) return;
       e.preventDefault();
       isDrawing = true;
+      // Prevent body scrolling during scratch
+      document.body.style.overflow = "hidden";
+      document.body.style.touchAction = "none";
       const { x, y } = getPointer(e);
       scratch(x, y);
       window.addEventListener("pointermove", pointerMove);
@@ -195,6 +198,9 @@ export default function ScratchOff({
 
     const pointerUp = () => {
       isDrawing = false;
+      // Restore body scrolling
+      document.body.style.overflow = "";
+      document.body.style.touchAction = "";
       window.removeEventListener("pointermove", pointerMove);
       setTimeout(checkScratched, 300);
     };
@@ -389,6 +395,9 @@ export default function ScratchOff({
       canvas.removeEventListener("pointerdown", pointerDown);
       window.removeEventListener("pointermove", pointerMove);
       window.removeEventListener("pointerup", pointerUp);
+      // Cleanup: restore body scrolling if component unmounts during scratch
+      document.body.style.overflow = "";
+      document.body.style.touchAction = "";
     };
   }, []);
 
@@ -471,7 +480,10 @@ export default function ScratchOff({
 
   return (
     <>
-      <div className="h-full w-full flex flex-col items-center justify-center overflow-y-auto">
+      <div className="h-full w-full flex flex-col items-center justify-center overflow-y-auto"
+        style={{
+          touchAction: (!cardData?.scratched && !scratched) ? "none" : "auto"
+        }}>
         <p
           className="font-[ABCGaisyr] text-center text-[30px] mb-1 font-bold italic rotate-[-4deg]"
           style={{
