@@ -9,8 +9,12 @@
  * Manual changes may be overwritten during project initialization.
  */
 
-// Type definition for AccountAssociation (if needed in the future)
-type AccountAssociation = any;
+// AccountAssociation type is not exported from the SDK currently
+type AccountAssociation = {
+  header: string;
+  payload: string;
+  signature: string;
+};
 
 // --- App Configuration ---
 /**

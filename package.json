@@ -38,6 +38,7 @@
     "clsx": "^2.1.1",
     "dotenv": "^16.4.7",
     "framer-motion": "^12.23.3",
+    "inquirer": "^12.9.6",
     "lucide-react": "^0.469.0",
     "mipd": "^0.0.7",
     "motion-plus": "^1.5.1",
