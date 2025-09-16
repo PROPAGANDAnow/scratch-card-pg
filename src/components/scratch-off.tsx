@@ -176,6 +176,7 @@ export default function ScratchOff({
 
     const pointerDown = (e: PointerEvent) => {
       if (!cardData || isProcessing) return;
+      e.preventDefault();
       isDrawing = true;
       const { x, y } = getPointer(e);
       scratch(x, y);
@@ -185,6 +186,7 @@ export default function ScratchOff({
 
     const pointerMove = (e: PointerEvent) => {
       if (!isDrawing) return;
+      e.preventDefault();
       const { x, y } = getPointer(e);
       scratch(x, y);
     };
