@@ -1,5 +1,3 @@
-import { type AccountAssociation } from '@farcaster/miniapp-sdk';
-
 /**
  * Application constants and configuration values.
  *
@@ -10,6 +8,9 @@ import { type AccountAssociation } from '@farcaster/miniapp-sdk';
  * NOTE: This file is automatically updated by the init script.
  * Manual changes may be overwritten during project initialization.
  */
+
+// Type definition for AccountAssociation (if needed in the future)
+type AccountAssociation = any;
 
 // --- App Configuration ---
 /**
