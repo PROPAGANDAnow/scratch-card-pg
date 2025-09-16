@@ -14,27 +14,6 @@ const projectRoot = path.join(__dirname, '..');
 // Load environment variables in specific order
 dotenv.config({ path: '.env' });
 
-async function generateFarcasterMetadata(domain, webhookUrl) {
-  const trimmedDomain = domain.trim();
-  const tags = process.env.NEXT_PUBLIC_MINI_APP_TAGS?.split(',');
-
-  return {
-    frame: {
-      version: '1',
-      name: process.env.NEXT_PUBLIC_MINI_APP_NAME,
-      iconUrl: `https://${trimmedDomain}/icon.png`,
-      homeUrl: `https://${trimmedDomain}`,
-      imageUrl: `https://${trimmedDomain}/api/opengraph-image`,
-      buttonTitle: process.env.NEXT_PUBLIC_MINI_APP_BUTTON_TEXT,
-      splashImageUrl: `https://${trimmedDomain}/splash.png`,
-      splashBackgroundColor: '#f7f7f7',
-      webhookUrl: webhookUrl?.trim(),
-      description: process.env.NEXT_PUBLIC_MINI_APP_DESCRIPTION,
-      primaryCategory: process.env.NEXT_PUBLIC_MINI_APP_PRIMARY_CATEGORY,
-      tags,
-    },
-  };
-}
 
 async function loadEnvLocal() {
   try {
@@ -637,16 +616,6 @@ async function deployToVercel(useGitHub = false) {
       }
     }
 
-    // Generate mini app metadata
-    console.log('\n🔨 Generating mini app metadata...');
-
-    const webhookUrl =
-      process.env.NEYNAR_API_KEY && process.env.NEYNAR_CLIENT_ID
-        ? `https://api.neynar.com/f/app/${process.env.NEYNAR_CLIENT_ID}/event`
-        : `https://${domain}/api/webhook`;
-
-    const miniAppMetadata = await generateFarcasterMetadata(domain, webhookUrl);
-    console.log('✅ Mini app metadata generated');
 
     // Prepare environment variables
     const nextAuthSecret =
@@ -666,7 +635,6 @@ async function deployToVercel(useGitHub = false) {
       ...(process.env.SPONSOR_SIGNER && {
         SPONSOR_SIGNER: process.env.SPONSOR_SIGNER,
       }),
-      ...(miniAppMetadata && { MINI_APP_METADATA: miniAppMetadata }),
 
       ...Object.fromEntries(
         Object.entries(process.env).filter(([key]) =>
@@ -763,16 +731,6 @@ async function deployToVercel(useGitHub = false) {
         NEXT_PUBLIC_URL: `https://${actualDomain}`,
       };
 
-      if (miniAppMetadata) {
-        const updatedMetadata = await generateFarcasterMetadata(
-          actualDomain,
-          fid,
-          await validateSeedPhrase(process.env.SEED_PHRASE),
-          process.env.SEED_PHRASE,
-          webhookUrl
-        );
-        updatedEnv.MINI_APP_METADATA = updatedMetadata;
-      }
 
       await setEnvironmentVariables(
         vercelClient,
