@@ -1,20 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "~/lib/supabaseAdmin";
 import axios from "axios";
-
-interface BestFriend {
-  fid: number;
-  mutual_affinity_score: number;
-  username: string;
-}
-
-interface BestFriendsResponse {
-  users: BestFriend[];
-}
+import { BestFriend } from "~/app/interface/bestFriends";
 
 export async function POST(request: NextRequest) {
   try {
-    const { fid, username, amount, friend_fid } = await request.json();
+    const { fid, username, amount, friend_fid, bestFriends } = await request.json();
 
     if (!fid || !username || amount === undefined) {
       return NextResponse.json(
@@ -74,29 +65,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Step 1: Fetch best friends from Neynar (for regular prize wins)
-    let bestFriends: BestFriend[] = [];
-    try {
-      const bestFriendsResponse = await axios.get<BestFriendsResponse>(
-        `https://api.neynar.com/v2/farcaster/user/best_friends/?limit=30&fid=${fid}`,
-        {
-          headers: {
-            "x-api-key": neynarApiKey,
-          },
-        }
-      );
-      bestFriends = bestFriendsResponse.data.users;
-      console.log(`Found ${bestFriends.length} best friends for FID ${fid}`);
-    } catch (error) {
-      console.error("Error fetching best friends:", error);
-      return NextResponse.json(
-        { error: "Failed to fetch best friends" },
-        { status: 500 }
-      );
-    }
-
     // Step 2: Find users in database with notification_enabled = true
-    const bestFriendFids = bestFriends.map((friend) => friend.fid);
+    const bestFriendFids = bestFriends.map((friend: BestFriend) => friend.fid);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let usersToNotify: any[] = [];
 

@@ -145,7 +145,7 @@ export async function POST(request: NextRequest) {
         const numbers = generateNumbers({
           prizeAmount: prize,
           prizeAsset,
-          decoyAmounts: [0.5, 1, 2, 5, 10],
+          decoyAmounts: [0.5, 0.75, 1, 1.5, 2, 5, 10],
           decoyAssets: PRIZE_ASSETS as unknown as string[],
           friends,
         });
@@ -339,7 +339,7 @@ export async function POST(request: NextRequest) {
         const friendCardNumbers = generateNumbers({
           prizeAmount: friendPrizeAmount,
           prizeAsset: friendPrizeAsset,
-          decoyAmounts: [0.5, 1, 2, 5, 10],
+          decoyAmounts: [0.5, 0.75, 1, 1.5, 2, 5, 10],
           decoyAssets: PRIZE_ASSETS as unknown as string[],
           friends: [], // Empty array since we don't know the friend's friends
         });
@@ -373,7 +373,7 @@ export async function POST(request: NextRequest) {
         const userCardNumbers = generateNumbers({
           prizeAmount: userPrizeAmount,
           prizeAsset: userPrizeAsset,
-          decoyAmounts: [0.5, 1, 2, 5, 10],
+          decoyAmounts: [0.5, 0.75, 1, 1.5, 2, 5, 10],
           decoyAssets: PRIZE_ASSETS as unknown as string[],
           friends: friends,
         });

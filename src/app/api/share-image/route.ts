@@ -2,6 +2,8 @@ import { ImageResponse } from "next/og";
 import React from "react";
 import { readFileSync } from "fs";
 import path from "path";
+import { formatCell } from "~/lib/formatCell";
+import { USDC_ADDRESS } from "~/lib/constants";
 
 export const runtime = "nodejs";
 
@@ -129,7 +131,7 @@ export async function GET(request: Request) {
                             color: "#FFFFFF",
                           },
                         },
-                        `$${prizeAmount}!`
+                        formatCell(Number(prizeAmount), USDC_ADDRESS)
                       ),
                     ]
                   : [

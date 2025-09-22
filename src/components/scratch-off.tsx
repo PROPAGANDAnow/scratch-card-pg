@@ -399,6 +399,7 @@ export default function ScratchOff({
               username: state.user?.username,
               amount: prizeAmount,
               friend_fid: bestFriend?.fid,
+              bestFriends: state.bestFriends,
             }),
           }).catch((error) => {
             console.error("Failed to send notification:", error);
