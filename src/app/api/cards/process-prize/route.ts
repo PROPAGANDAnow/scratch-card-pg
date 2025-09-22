@@ -12,7 +12,7 @@ import { CardCell } from "~/app/interface/cardCell";
 
 export async function POST(request: NextRequest) {
   try {
-    const { cardId, userWallet, username, pfp } = await request.json();
+    const { cardId, userWallet, username, pfp, friends } = await request.json();
 
     if (!cardId || !userWallet) {
       return NextResponse.json(
@@ -137,7 +137,7 @@ export async function POST(request: NextRequest) {
     if (leveledUp && freeCardsToAward > 0) {
       const freeCardsToCreate = [];
       for (let i = 0; i < freeCardsToAward; i++) {
-        const prize = drawPrize(); // e.g., 0 | 0.5 | 1 | 2
+        const prize = drawPrize(friends.length > 0); // e.g., 0 | 0.5 | 1 | 2 (check if friends available for free cards)
         // pick prize asset randomly (today pool contains USDC; add more later)
         const prizeAsset =
           PRIZE_ASSETS[Math.floor(Math.random() * PRIZE_ASSETS.length)] || USDC_ADDRESS;
@@ -147,7 +147,7 @@ export async function POST(request: NextRequest) {
           prizeAsset,
           decoyAmounts: [0.5, 1, 2, 5, 10],
           decoyAssets: PRIZE_ASSETS as unknown as string[],
-          friends: [],
+          friends,
         });
         freeCardsToCreate.push({
           user_wallet: userWallet,
@@ -333,7 +333,7 @@ export async function POST(request: NextRequest) {
       // Create free cards for both the user and the friend
       if (friendUserId) {
         // Create free card for the friend
-        const friendPrizeAmount = drawPrize(); // Generate a random prize for the friend's card
+        const friendPrizeAmount = drawPrize(false); // Generate a random prize for the friend's card (we don't know friend's friends)
         const friendPrizeAsset = PRIZE_ASSETS[Math.floor(Math.random() * PRIZE_ASSETS.length)] || USDC_ADDRESS;
         
         const friendCardNumbers = generateNumbers({
@@ -341,7 +341,7 @@ export async function POST(request: NextRequest) {
           prizeAsset: friendPrizeAsset,
           decoyAmounts: [0.5, 1, 2, 5, 10],
           decoyAssets: PRIZE_ASSETS as unknown as string[],
-          friends: [], // Empty array since we don't need friend PFPs in this card
+          friends: [], // Empty array since we don't know the friend's friends
         });
 
         const { error: friendCardError } = await supabaseAdmin
@@ -367,7 +367,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Create free card for the user (you)
-        const userPrizeAmount = drawPrize(); // Generate a random prize for the user's card
+        const userPrizeAmount = drawPrize(friends.length > 0); // Generate a random prize for the user's card
         const userPrizeAsset = PRIZE_ASSETS[Math.floor(Math.random() * PRIZE_ASSETS.length)] || USDC_ADDRESS;
         
         const userCardNumbers = generateNumbers({
@@ -375,7 +375,7 @@ export async function POST(request: NextRequest) {
           prizeAsset: userPrizeAsset,
           decoyAmounts: [0.5, 1, 2, 5, 10],
           decoyAssets: PRIZE_ASSETS as unknown as string[],
-          friends: [], // Empty array since we don't need friend PFPs in this card
+          friends: friends,
         });
 
         const { error: userCardError } = await supabaseAdmin

@@ -116,7 +116,7 @@ const Activity = () => {
                 >
                   {reveal.prize_amount === 0
                     ? "No win! :("
-                    : `Won $${reveal.prize_amount}!`}
+                    : `Won ${reveal.prize_amount === -1 ? "a free card" : `$${reveal.prize_amount}`}!`}
                 </p>
                 <p className="text-[12px] font-medium leading-[90%] text-white/60">
                   @{truncateUsername(reveal.username || "Unknown")}

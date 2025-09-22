@@ -425,6 +425,7 @@ export default function ScratchOff({
               userWallet: cardData.user_wallet,
               username: state.user?.username,
               pfp: state.user?.pfp,
+              friends: state.bestFriends
             }),
           })
             .then((response) => response.json())
@@ -551,7 +552,7 @@ export default function ScratchOff({
 
   return (
     <>
-      <div className="h-full w-full flex flex-col items-center justify-center overflow-y-auto"
+      <div className="h-full w-full flex flex-col items-center justify-center"
         style={{
           touchAction: (!cardData?.scratched && !scratched) ? "none" : "auto"
         }}>

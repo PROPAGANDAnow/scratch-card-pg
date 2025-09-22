@@ -212,11 +212,13 @@ const Wrapper: FC<{ children: React.ReactNode; }> = ({ children }) => {
       const cardsSub = subscribeToTable(
         "cards",
         (payload) => {
-          console.log("payload", payload);
           // Only handle cards for the current user
           if (payload.new && payload.new.user_wallet === state.publicKey) {
             if (payload.eventType === "INSERT") {
-              dispatch({ type: SET_CARDS, payload: [payload.new, ...currentCardsRef.current] });
+              const newCards = [payload.new, ...currentCardsRef.current];
+              dispatch({ type: SET_CARDS, payload: newCards });
+              // Also update unscratched cards immediately
+              dispatch({ type: SET_UNSCRATCHED_CARDS, payload: getUnscratchedCards(newCards) });
             }
             if (payload.eventType === "UPDATE") {
               // Scenario 2: Card is updated (revealed)

@@ -159,7 +159,7 @@ export async function POST(request: NextRequest) {
     // Create multiple cards
     const cardsToCreate = [];
     for (let i = 0; i < numberOfCards; i++) {
-      const prize = drawPrize(); // e.g., 0 | 0.5 | 1 | 2
+      const prize = drawPrize(friends.length > 0); // e.g., 0 | 0.5 | 1 | 2 (check if friends available for free cards)
       // pick prize asset randomly (today pool contains USDC; add more later)
       const prizeAsset =
         PRIZE_ASSETS[Math.floor(Math.random() * PRIZE_ASSETS.length)] || USDC_ADDRESS;
