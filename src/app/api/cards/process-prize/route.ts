@@ -8,11 +8,10 @@ import { getRevealsToNextLevel } from "~/lib/level";
 import { PRIZE_ASSETS, tokenMeta, USDC_ADDRESS } from "~/lib/constants";
 import { generateNumbers } from "~/lib/generateNumbers";
 import { drawPrize } from "~/lib/drawPrize";
-import { CardCell } from "~/app/interface/cardCell";
 
 export async function POST(request: NextRequest) {
   try {
-    const { cardId, userWallet, username, pfp, friends } = await request.json();
+    const { cardId, userWallet, userFid, pfp, username, friends } = await request.json();
 
     if (!cardId || !userWallet) {
       return NextResponse.json(
@@ -23,7 +22,7 @@ export async function POST(request: NextRequest) {
 
     const { data: card, error: cardError } = await supabaseAdmin
       .from("cards")
-      .select("id, user_wallet, payment_tx, prize_amount, prize_asset_contract, scratched, claimed, numbers_json, shared_to")
+      .select("id, user_wallet, payment_tx, prize_amount, prize_asset_contract, scratched, claimed, numbers_json, shared_to, shared_from")
       .eq("id", cardId)
       .single();
     if (cardError || !card) {
@@ -160,6 +159,7 @@ export async function POST(request: NextRequest) {
           created_at: new Date().toISOString(),
           card_no: (user.cards_count || 0) + i + 1,
           shared_to: null,
+          shared_from: null,
         });
       }
 
@@ -272,28 +272,32 @@ export async function POST(request: NextRequest) {
     // Handle friend wins (prize_amount === -1)
     if (prizeAmount === -1) {
       // Check if friend exists in the app
+      const friendWallet = card.shared_to?.wallet;
+      if (!friendWallet) {
+        return NextResponse.json(
+          { error: "Friend wallet not found in shared_to" },
+          { status: 400 }
+        );
+      }
+
       const { data: existingFriend, error: friendCheckError } = await supabaseAdmin
         .from("users")
         .select("username, pfp, wallet, cards_count")
-        .eq("wallet", card.shared_to)
+        .eq("wallet", friendWallet)
         .single();
 
       let friendUserId: string | null = null;
 
       if (friendCheckError || !existingFriend) {
-        // Friend doesn't exist, create them using data from numbers_json
-        const friendCell = card.numbers_json.find((cell: CardCell) => 
-          cell.friend_wallet === card.shared_to
-        );
-
-        if (friendCell && friendCell.friend_username && friendCell.friend_pfp && friendCell.friend_wallet) {
+        // Friend doesn't exist, create them using data from shared_to object
+        if (card.shared_to && card.shared_to.fid && card.shared_to.username && card.shared_to.pfp && card.shared_to.wallet) {
           const { data: newFriend, error: createFriendError } = await supabaseAdmin
             .from("users")
             .insert({
-              wallet: friendCell.friend_wallet,
-              username: friendCell.friend_username,
-              pfp: friendCell.friend_pfp,
-              fid: friendCell.friend_fid || 0,
+              wallet: card.shared_to.wallet,
+              username: card.shared_to.username,
+              pfp: card.shared_to.pfp,
+              fid: parseInt(card.shared_to.fid) || 0,
               cards_count: 1,
               total_reveals: 0,
               total_wins: 0,
@@ -316,9 +320,9 @@ export async function POST(request: NextRequest) {
           }
 
           friendUserId = newFriend.wallet;
-          console.log(`Created new friend user: ${friendCell.friend_username}`);
+          console.log(`Created new friend user: ${card.shared_to.username}`);
         } else {
-          console.error("Friend data not found in numbers_json");
+          console.error("Friend data not found in shared_to object");
           return NextResponse.json(
             { error: "Friend data not found" },
             { status: 500 }
@@ -347,7 +351,7 @@ export async function POST(request: NextRequest) {
         const { error: friendCardError } = await supabaseAdmin
           .from("cards")
           .insert({
-            user_wallet: card.shared_to,
+            user_wallet: friendWallet,
             payment_tx: "FREE_CARD_SHARED",
             payout_tx: null,
             prize_amount: friendPrizeAmount,
@@ -358,6 +362,12 @@ export async function POST(request: NextRequest) {
             created_at: new Date().toISOString(),
             card_no: (existingFriend?.cards_count || 0) + 1,
             shared_to: null,
+            shared_from: {
+              fid: userFid?.toString() || "0",
+              username: username || "",
+              pfp: pfp || "",
+              wallet: userWallet
+            },
           });
 
         if (friendCardError) {
@@ -392,6 +402,7 @@ export async function POST(request: NextRequest) {
             created_at: new Date().toISOString(),
             card_no: (user.cards_count || 0) + 1,
             shared_to: null,
+            shared_from: null,
           });
 
         if (userCardError) {

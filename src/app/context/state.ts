@@ -21,6 +21,7 @@ export interface AppState {
   swipableMode: boolean;
   bestFriends: BestFriend[] | [];
   unscratchedCards: Card[] | [];
+  localCards: Card[] | [];
   refetchUserCards: (() => Promise<void>) | null;
   buyCards: (() => void) | null;
   currentCardIndex: number;
@@ -44,6 +45,7 @@ const initialState: AppState = {
   swipableMode: false,
   bestFriends: [],
   unscratchedCards: [],
+  localCards: [],
   refetchUserCards: null,
   buyCards: null,
   currentCardIndex: 0,

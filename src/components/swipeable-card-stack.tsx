@@ -89,7 +89,7 @@ export default function SwipeableCardStack({
               initial={{ opacity: 0, scale: 0.7, x: -72, y: 0 }}
               animate={{ opacity: 0.18, scale: 0.7, x: -72, y: 0 }}
               exit={{ opacity: 0, scale: 0.7, x: -72, y: 0 }}
-              transition={{ duration: 0.25 }}
+              transition={{ duration: 0.1 }}
               style={{ zIndex: 1 }}
             >
               <ScratchOff cardData={prev} isDetailView />
@@ -102,7 +102,7 @@ export default function SwipeableCardStack({
               initial={{ opacity: 0, scale: 0.7, x: 72, y: 0 }}
               animate={{ opacity: 0.18, scale: 0.7, x: 72, y: 0 }}
               exit={{ opacity: 0, scale: 0.7, x: 72, y: 0 }}
-              transition={{ duration: 0.25 }}
+              transition={{ duration: 0.1 }}
               style={{ zIndex: 1 }}
             >
               <ScratchOff cardData={next} isDetailView />
@@ -130,7 +130,7 @@ export default function SwipeableCardStack({
               x: -direction * 100, // Exit in the direction of swipe
               scale: 0.98,
             }}
-            transition={{ type: "spring", stiffness: 320, damping: 32 }}
+            transition={{ type: "spring", stiffness: 700, damping: 50 }}
           >
             {/* Click areas - 15% on each side */}
             <div
@@ -215,7 +215,7 @@ export default function SwipeableCardStack({
                       }}
                       initial={{ opacity: 0, scale: 0.8 }}
                       animate={{ opacity: 1, scale: 1 }}
-                      transition={{ delay: 0.2, duration: 0.4 }}
+                      transition={{ delay: 0, duration: 0.2 }}
                     />
                     <motion.div
                       style={{
@@ -224,7 +224,7 @@ export default function SwipeableCardStack({
                       }}
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
-                      transition={{ delay: 0.3, duration: 0.4 }}
+                      transition={{ delay: 0, duration: 0.2 }}
                     >
                       <Image
                         src="/assets/scratched-card-image.png"

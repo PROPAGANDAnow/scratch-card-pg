@@ -114,7 +114,7 @@ async function verifyPayment(
 
 export async function POST(request: NextRequest) {
   try {
-    const { userWallet, paymentTx, numberOfCards, friends } = await request.json();
+    const { userWallet, userFid, pfp, username, paymentTx, numberOfCards, friends } = await request.json();
     
     if (!userWallet || !paymentTx || !numberOfCards) {
       return NextResponse.json(
@@ -175,7 +175,13 @@ export async function POST(request: NextRequest) {
       if (prize === -1) {
         const winningRow = findWinningRow(numbers, prize, prizeAsset);
         if (winningRow !== null && winningRow !== -1) {
-          shared_to = numbers[winningRow * 3].friend_wallet;
+          const friendCell = numbers[winningRow * 3];
+          shared_to = {
+            fid: friendCell.friend_fid?.toString() || "0",
+            username: friendCell.friend_username || "",
+            pfp: friendCell.friend_pfp || "",
+            wallet: friendCell.friend_wallet || ""
+          };
         }
       }
       cardsToCreate.push({
@@ -189,6 +195,7 @@ export async function POST(request: NextRequest) {
         created_at: new Date().toISOString(),
         card_no: startCardNo + i,
         shared_to,
+        shared_from: null
       });
     }
 

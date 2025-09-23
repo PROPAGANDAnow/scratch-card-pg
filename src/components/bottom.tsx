@@ -70,6 +70,9 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({ mode
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           userWallet: state.publicKey,
+          userFid: state.user?.fid,
+          pfp: state.user?.pfp,
+          username: state.user?.username,
           paymentTx: hash,
           numberOfCards,
           friends: state.bestFriends,
@@ -216,7 +219,7 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({ mode
 
         {/* Next Card Button - Only show on home page when there's a next card */}
         <AnimatePresence>
-          {pathname === "/" && mode === "swipeable" && state.currentCardIndex < state.unscratchedCards.length - 1 && (
+          {pathname === "/" && !showBigBuy && mode === "swipeable" && state.currentCardIndex < state.localCards.length - 1 && (
             <motion.div
               className="w-full p-1 rounded-[40px] border border-white"
               initial={{ opacity: 0, y: 20, scale: 0.9 }}
@@ -224,9 +227,9 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({ mode
               exit={{ opacity: 0, y: 20, scale: 0.9 }}
               transition={{
                 type: "spring",
-                stiffness: 300,
-                damping: 25,
-                duration: 0.4,
+                stiffness: 700,
+                damping: 45,
+                duration: 0.15,
               }}
             >
               <motion.button
@@ -253,9 +256,9 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({ mode
               exit={{ opacity: 0, y: 20, scale: 0.9 }}
               transition={{
                 type: "spring",
-                stiffness: 300,
-                damping: 25,
-                duration: 0.4,
+                stiffness: 700,
+                damping: 45,
+                duration: 0.15,
               }}
             >
               <motion.button
@@ -282,9 +285,9 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({ mode
               exit={{ opacity: 0, y: 20, scale: 0.9 }}
               transition={{
                 type: "spring",
-                stiffness: 300,
-                damping: 25,
-                duration: 0.4,
+                stiffness: 700,
+                damping: 45,
+                duration: 0.15,
               }}
             >
               <motion.button
@@ -312,9 +315,9 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({ mode
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
             transition={{
               type: "spring",
-              stiffness: 300,
-              damping: 30,
-              duration: 0.3,
+              stiffness: 700,
+              damping: 45,
+              duration: 0.15,
             }}
           >
             <div className="relative space-y-6">
@@ -339,7 +342,7 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({ mode
                 </button>
               </div>
               <div className="grid grid-cols-3 gap-2">
-                {[5, 3, 1].map((amount) => (
+                {[5, 10, 20].map((amount) => (
                   <button
                     key={amount}
                     className={`py-[14px] px-[18px] rounded-[46px] transition-colors ${

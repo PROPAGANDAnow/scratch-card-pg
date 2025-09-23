@@ -164,7 +164,7 @@ export default function ScratchOff({
     const getEventPoint = (e: TouchEvent | MouseEvent) => {
       const rect = canvas.getBoundingClientRect();
       let clientX, clientY;
-      
+
       if ('touches' in e) {
         if (e.touches.length === 0) return null;
         clientX = e.touches[0].clientX;
@@ -173,7 +173,7 @@ export default function ScratchOff({
         clientX = e.clientX;
         clientY = e.clientY;
       }
-      
+
       return {
         x: ((clientX - rect.left) / rect.width) * CANVAS_WIDTH,
         y: ((clientY - rect.top) / rect.height) * CANVAS_HEIGHT,
@@ -205,7 +205,7 @@ export default function ScratchOff({
       e.preventDefault();
       const point = getEventPoint(e);
       if (!point) return;
-      
+
       isDrawing = true;
       lastPoint = point;
       scratch(point.x, point.y);
@@ -216,7 +216,7 @@ export default function ScratchOff({
       e.preventDefault();
       const point = getEventPoint(e);
       if (!point) return;
-      
+
       if (lastPoint) {
         drawLine(lastPoint, point);
       }
@@ -238,7 +238,7 @@ export default function ScratchOff({
       e.preventDefault();
       const point = getEventPoint(e);
       if (!point) return;
-      
+
       isDrawing = true;
       lastPoint = point;
       scratch(point.x, point.y);
@@ -249,7 +249,7 @@ export default function ScratchOff({
       e.preventDefault();
       const point = getEventPoint(e);
       if (!point) return;
-      
+
       if (lastPoint) {
         drawLine(lastPoint, point);
       }
@@ -299,11 +299,11 @@ export default function ScratchOff({
           payload: state.cards.map((card) =>
             card.id === cardData?.id
               ? {
-                  ...card,
-                  scratched: true,
-                  scratched_at: new Date().toISOString(),
-                  claimed: true,
-                }
+                ...card,
+                scratched: true,
+                scratched_at: new Date().toISOString(),
+                claimed: true,
+              }
               : card
           ),
         });
@@ -353,27 +353,27 @@ export default function ScratchOff({
           payload: state.leaderboard.map((user) =>
             user.wallet === cardData?.user_wallet
               ? {
-                  ...user,
-                  amount_won:
-                    (user.amount_won || 0) +
-                    (prizeAmount < 0 ? 0 : prizeAmount),
-                  total_wins:
-                    (user.total_wins || 0) + (prizeAmount > 0 ? 1 : 0),
-                  total_reveals: (user.total_reveals || 0) + 1,
-                  current_level:
-                    getRevealsToNextLevel(state.user?.current_level || 1) === 0
-                      ? (state.user?.current_level || 1) + 1
-                      : state.user?.current_level || 1,
-                  reveals_to_next_level:
-                    (state.user?.reveals_to_next_level ||
-                      getRevealsToNextLevel(state.user?.current_level || 1)) ===
+                ...user,
+                amount_won:
+                  (user.amount_won || 0) +
+                  (prizeAmount < 0 ? 0 : prizeAmount),
+                total_wins:
+                  (user.total_wins || 0) + (prizeAmount > 0 ? 1 : 0),
+                total_reveals: (user.total_reveals || 0) + 1,
+                current_level:
+                  getRevealsToNextLevel(state.user?.current_level || 1) === 0
+                    ? (state.user?.current_level || 1) + 1
+                    : state.user?.current_level || 1,
+                reveals_to_next_level:
+                  (state.user?.reveals_to_next_level ||
+                    getRevealsToNextLevel(state.user?.current_level || 1)) ===
                     0
-                      ? getRevealsToNextLevel(
-                          (state.user?.current_level || 1) + 1
-                        )
-                      : getRevealsToNextLevel(state.user?.current_level || 1),
-                  last_active: new Date().toISOString(),
-                }
+                    ? getRevealsToNextLevel(
+                      (state.user?.current_level || 1) + 1
+                    )
+                    : getRevealsToNextLevel(state.user?.current_level || 1),
+                last_active: new Date().toISOString(),
+              }
               : user
           ),
         });
@@ -426,6 +426,7 @@ export default function ScratchOff({
               userWallet: cardData.user_wallet,
               username: state.user?.username,
               pfp: state.user?.pfp,
+              userFid: state.user?.fid,
               friends: state.bestFriends
             }),
           })
@@ -455,7 +456,7 @@ export default function ScratchOff({
     canvas.addEventListener("touchstart", touchStart, { passive: false });
     canvas.addEventListener("touchmove", touchMove, { passive: false });
     canvas.addEventListener("touchend", touchEnd, { passive: false });
-    
+
     // Add mouse events (fallback for desktop)
     canvas.addEventListener("mousedown", mouseDown);
     document.addEventListener("mousemove", mouseMove);
@@ -466,7 +467,7 @@ export default function ScratchOff({
       canvas.removeEventListener("touchstart", touchStart);
       canvas.removeEventListener("touchmove", touchMove);
       canvas.removeEventListener("touchend", touchEnd);
-      
+
       // Remove mouse events
       canvas.removeEventListener("mousedown", mouseDown);
       document.removeEventListener("mousemove", mouseMove);
@@ -500,9 +501,9 @@ export default function ScratchOff({
 
   // Populate best friend state when cardData changes
   useEffect(() => {
-    if (cardData?.numbers_json && cardData?.shared_to) {
+    if (cardData?.numbers_json && cardData?.shared_to && cardData?.shared_to?.wallet) {
       const friendCell = cardData.numbers_json.find(
-        (cell) => cell.friend_wallet === cardData.shared_to
+        (cell) => cell.friend_wallet === cardData?.shared_to?.wallet
       );
 
       if (
@@ -575,9 +576,9 @@ export default function ScratchOff({
             ? prizeAmount === -1 || cardData?.prize_amount === -1
               ? `Won free card!`
               : `Won ${formatCell(
-                  cardData?.prize_amount || prizeAmount,
-                  USDC_ADDRESS
-                )}!`
+                cardData?.prize_amount || prizeAmount,
+                USDC_ADDRESS
+              )}!`
             : " No win!"}
         </p>
         <div className="flex-1 grow">
@@ -607,7 +608,7 @@ export default function ScratchOff({
             onMouseLeave={handleMouseLeave}
           >
             {/* Shadow element below the card */}
-            <div
+            <motion.div
               style={{
                 position: "absolute",
                 top: 30,
@@ -619,6 +620,9 @@ export default function ScratchOff({
                 borderRadius: 4,
                 zIndex: 0,
               }}
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.2 }}
             />
             <div
               style={{
@@ -662,11 +666,10 @@ export default function ScratchOff({
                               {row.map((cell, cellIndex) => (
                                 <div
                                   key={`${cell.amount}-${cellIndex}`}
-                                  className={`w-[77px] h-[77px] rounded-[14px] font-[ABCGaisyr] font-bold text-[24px] leading-[90%] italic flex items-center justify-center ${
-                                    isWinning
+                                  className={`w-[77px] h-[77px] rounded-[14px] font-[ABCGaisyr] font-bold text-[24px] leading-[90%] italic flex items-center justify-center ${isWinning
                                       ? "!text-[#00A151]/40 !bg-[#00A151]/15"
                                       : "!text-[#000]/15 !bg-[#000]/10"
-                                  }`}
+                                    }`}
                                   style={{
                                     filter:
                                       "drop-shadow(0px 0.5px 0.5px rgba(0, 0, 0, 0.15))",
@@ -679,9 +682,8 @@ export default function ScratchOff({
                                     <div className="relative">
                                       <Image
                                         src={cell.friend_pfp}
-                                        alt={`${
-                                          cell.friend_username || "Friend"
-                                        }`}
+                                        alt={`${cell.friend_username || "Friend"
+                                          }`}
                                         width={48}
                                         height={48}
                                         className="rounded-full object-cover"

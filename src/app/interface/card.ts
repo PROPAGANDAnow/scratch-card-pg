@@ -13,5 +13,16 @@ export interface Card {
   created_at: string;
   scratched: boolean;
   card_no: number;
-  shared_to: string;
+  shared_to: {
+    fid: string;
+    username: string;
+    pfp: string;
+    wallet: string;
+  } | null;
+  shared_from: {
+    fid: string;
+    username: string;
+    pfp: string;
+    wallet: string;
+  } | null;
 }
