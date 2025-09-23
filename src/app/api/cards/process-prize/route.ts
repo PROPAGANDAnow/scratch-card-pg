@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
     const newTotalReveals = (user.total_reveals || 0) + 1;
     const prizeAmount = Number(card.prize_amount || 0);
     const prizeAsset = card.prize_asset_contract;
-    const newTotalWins = (user.total_wins || 0) + (prizeAmount === 0 ? 1 : 0);
+    const newTotalWins = (user.total_wins || 0) + (prizeAmount !== 0 ? 1 : 0);
     const newAmountWon = (user.amount_won || 0) + (prizeAmount === -1 ? 0 : prizeAmount);
 
     // Level progression logic - only for wins (prize_amount !== 0)

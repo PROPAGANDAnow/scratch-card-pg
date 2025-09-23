@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "~/lib/supabaseAdmin";
 import { getRevealsToNextLevel } from "~/lib/level";
+import axios from "axios";
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,6 +14,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (!fid) {
+      return NextResponse.json(
+        { error: "Missing fid" },
+        { status: 400 }
+      );
+    }
+
     // Check if user exists
     const { data: existingUser } = await supabaseAdmin
       .from("users")
@@ -21,6 +29,16 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (!existingUser) {
+
+      const data = await axios.get(`https://api.neynar.com/v2/farcaster/user/bulk/?fids=${fid}`,
+        {
+          headers: {
+            "x-api-key": process.env.NEYNAR_API_KEY,
+          },
+        })
+      const user = data.data.users[0];
+      const isPro = user?.pro?.status === "subscribed" || false;
+
       // Create new user
       const { data: newUser, error } = await supabaseAdmin
         .from("users")
@@ -35,6 +53,7 @@ export async function POST(request: NextRequest) {
           last_active: new Date().toISOString(),
           current_level: 1,
           reveals_to_next_level: getRevealsToNextLevel(1),
+          is_pro: isPro
         })
         .select()
         .single();

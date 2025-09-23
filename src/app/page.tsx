@@ -11,8 +11,9 @@ export default function Home() {
     dispatch({ type: SET_SWIPABLE_MODE, payload: true });
     return () => {
       dispatch({ type: SET_SWIPABLE_MODE, payload: false });
+      dispatch({ type: SET_LOCAL_CARDS, payload: [] });
     };
-  }, []);
+  }, [dispatch]);
 
   // Sync localCards with unscratched cards and update scratched status
   useEffect(() => {

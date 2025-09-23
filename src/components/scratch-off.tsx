@@ -315,7 +315,7 @@ export default function ScratchOff({
               (state.user?.amount_won || 0) +
               (prizeAmount < 0 ? 0 : prizeAmount),
             total_wins:
-              (state.user?.total_wins || 0) + (prizeAmount > 0 ? 1 : 0),
+              (state.user?.total_wins || 0) + (prizeAmount !== 0 ? 1 : 0),
             total_reveals: (state.user?.total_reveals || 0) + 1,
             current_level:
               getRevealsToNextLevel(state.user?.current_level || 1) === 0
@@ -358,7 +358,7 @@ export default function ScratchOff({
                   (user.amount_won || 0) +
                   (prizeAmount < 0 ? 0 : prizeAmount),
                 total_wins:
-                  (user.total_wins || 0) + (prizeAmount > 0 ? 1 : 0),
+                  (user.total_wins || 0) + (prizeAmount !== 0 ? 1 : 0),
                 total_reveals: (user.total_reveals || 0) + 1,
                 current_level:
                   getRevealsToNextLevel(state.user?.current_level || 1) === 0

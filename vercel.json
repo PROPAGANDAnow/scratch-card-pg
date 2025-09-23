@@ -1,4 +1,10 @@
 {
   "buildCommand": "next build",
-  "framework": "nextjs"
-} 
+  "framework": "nextjs",
+  "crons": [
+    {
+      "path": "/api/cron/pro-users-free-cards",
+      "schedule": "30 5 * * 5"
+    }
+  ]
+}
