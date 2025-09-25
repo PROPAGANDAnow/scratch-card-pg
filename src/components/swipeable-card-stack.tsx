@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useRef, useContext } from "react";
+import React, { useState, useEffect, useRef, useContext, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card } from "~/app/interface/card";
 import ScratchOff from "./scratch-off";
@@ -12,6 +12,9 @@ interface SwipeableCardStackProps {
   cards: Card[];
   initialIndex?: number;
 }
+
+// Memoized ScratchOff component to prevent unnecessary re-renders
+const MemoizedScratchOff = React.memo(ScratchOff);
 
 export default function SwipeableCardStack({
   cards,
@@ -31,7 +34,7 @@ export default function SwipeableCardStack({
     }
   }, [cards, initialIndex, currentCardNo]);
 
-  // Find current card
+  // Find current card and index
   const current = cards.find((card) => card.card_no === currentCardNo);
   const currentIndex = current
     ? cards.findIndex((card) => card.card_no === currentCardNo)
@@ -54,8 +57,8 @@ export default function SwipeableCardStack({
     dispatch({ type: SET_CURRENT_CARD_INDEX, payload: currentIndex });
   }, [canGoNext, currentIndex, cards, dispatch]);
 
-  // Mouse handlers for card tilt
-  const handleMouseMove = (e: React.MouseEvent) => {
+  // Mouse handlers for card tilt - memoized for performance
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
     const rect = cardRef.current?.getBoundingClientRect();
     if (!rect) return;
     const x = e.clientX - rect.left;
@@ -66,11 +69,38 @@ export default function SwipeableCardStack({
       x: percentY * 20, // max 20deg up/down
       y: percentX * 20, // max 20deg left/right
     });
-  };
+  }, []);
 
-  const handleMouseLeave = () => {
+  const handleMouseLeave = useCallback(() => {
     setTilt({ x: 0, y: 0 });
-  };
+  }, []);
+
+  // Memoized click handlers for better performance
+  const handlePrevClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (canGoPrev) {
+      setDirection(-1);
+      const prevCard = cards[currentIndex - 1];
+      if (prevCard) setCurrentCardNo(prevCard.card_no);
+    }
+  }, [canGoPrev, currentIndex, cards]);
+
+  const handleNextClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (canGoNext) {
+      setDirection(1);
+      const nextCard = cards[currentIndex + 1];
+      if (nextCard) setCurrentCardNo(nextCard.card_no);
+    }
+  }, [canGoNext, currentIndex, cards]);
+
+  const handleNextFromScratch = useCallback(() => {
+    if (canGoNext) {
+      setDirection(1);
+      const nextCard = cards[currentIndex + 1];
+      if (nextCard) setCurrentCardNo(nextCard.card_no);
+    }
+  }, [canGoNext, currentIndex, cards]);
 
   // Ensure currentIndex is within bounds
   const safeIndex = Math.max(0, Math.min(currentIndex, cards.length - 1));
@@ -90,9 +120,13 @@ export default function SwipeableCardStack({
               animate={{ opacity: 0.18, scale: 0.7, x: -72, y: 0 }}
               exit={{ opacity: 0, scale: 0.7, x: -72, y: 0 }}
               transition={{ duration: 0.1 }}
-              style={{ zIndex: 1 }}
+              style={{ 
+                zIndex: 1,
+                willChange: 'transform, opacity',
+                transform: 'translateZ(0)' // Force GPU acceleration
+              }}
             >
-              <ScratchOff cardData={prev} isDetailView />
+              <MemoizedScratchOff cardData={prev} isDetailView />
             </motion.div>
           ) : null}
           {next ? (
@@ -103,9 +137,13 @@ export default function SwipeableCardStack({
               animate={{ opacity: 0.18, scale: 0.7, x: 72, y: 0 }}
               exit={{ opacity: 0, scale: 0.7, x: 72, y: 0 }}
               transition={{ duration: 0.1 }}
-              style={{ zIndex: 1 }}
+              style={{ 
+                zIndex: 1,
+                willChange: 'transform, opacity',
+                transform: 'translateZ(0)' // Force GPU acceleration
+              }}
             >
-              <ScratchOff cardData={next} isDetailView />
+              <MemoizedScratchOff cardData={next} isDetailView />
             </motion.div>
           ) : null}
         </div>
@@ -131,46 +169,30 @@ export default function SwipeableCardStack({
               scale: 0.98,
             }}
             transition={{ type: "spring", stiffness: 700, damping: 50 }}
+            style={{
+              willChange: 'transform, opacity',
+              transform: 'translateZ(0)' // Force GPU acceleration
+            }}
           >
             {/* Click areas - 15% on each side */}
             <div
               className="absolute left-0 top-0 w-[20%] h-full z-20 cursor-pointer hover:bg-black/5 transition-colors"
-              onClick={(e) => {
-                e.stopPropagation();
-                if (canGoPrev) {
-                  setDirection(-1);
-                  const prevCard = cards[currentIndex - 1];
-                  if (prevCard) setCurrentCardNo(prevCard.card_no);
-                }
-              }}
+              onClick={handlePrevClick}
             />
 
             <div
               className="absolute right-0 top-0 w-[20%] h-full z-20 cursor-pointer hover:bg-black/5 transition-colors"
-              onClick={(e) => {
-                e.stopPropagation();
-                if (canGoNext) {
-                  setDirection(1);
-                  const nextCard = cards[currentIndex + 1];
-                  if (nextCard) setCurrentCardNo(nextCard.card_no);
-                }
-              }}
+              onClick={handleNextClick}
             />
 
             {/* Center 60% for scratching */}
             <div className="w-full h-[auto]">
               {cards.length ? (
-                <ScratchOff
+                <MemoizedScratchOff
                   cardData={current || null}
                   isDetailView
                   hasNext={canGoNext}
-                  onNext={() => {
-                    if (canGoNext) {
-                      setDirection(1);
-                      const nextCard = cards[currentIndex + 1];
-                      if (nextCard) setCurrentCardNo(nextCard.card_no);
-                    }
-                  }}
+                  onNext={handleNextFromScratch}
                 />
               ) : (
                 <AnimatePresence>
@@ -196,6 +218,8 @@ export default function SwipeableCardStack({
                     style={{
                       perspective: 1000,
                       marginTop: 48,
+                      willChange: 'transform, opacity',
+                      transform: 'translateZ(0)' // Force GPU acceleration
                     }}
                     onMouseMove={handleMouseMove}
                     onMouseLeave={handleMouseLeave}

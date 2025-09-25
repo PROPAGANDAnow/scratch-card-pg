@@ -1,5 +1,5 @@
 "use client";
-import { useRef, useEffect, useState, useContext } from "react";
+import { useRef, useEffect, useState, useContext, useCallback, useMemo } from "react";
 import { motion } from "framer-motion";
 import Image from "next/image";
 import { AppContext } from "~/app/context";
@@ -16,7 +16,6 @@ import {
   APP_COLORS,
   CANVAS_HEIGHT,
   CANVAS_WIDTH,
-  CANVAS_DPI_SCALE,
   SCRATCH_RADIUS,
   USDC_ADDRESS,
 } from "~/lib/constants";
@@ -26,6 +25,9 @@ import { formatCell } from "~/lib/formatCell";
 import { chunk3, findWinningRow } from "~/lib/winningRow";
 import { getRevealsToNextLevel } from "~/lib/level";
 import { BestFriend } from "~/app/interface/bestFriends";
+import { useDebouncedScratchDetection } from "~/hooks/useDebouncedScratchDetection";
+import { useBatchedUpdates } from "~/hooks/useBatchedUpdates";
+import ModalPortal from "~/components/ModalPortal";
 
 interface ScratchOffProps {
   cardData: Card | null;
@@ -44,7 +46,6 @@ export default function ScratchOff({
   const [state, dispatch] = useContext(AppContext);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [scratched, setScratched] = useState(false);
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
   const [prizeAmount, setPrizeAmount] = useState(0);
@@ -55,9 +56,18 @@ export default function ScratchOff({
   const [coverImageLoaded, setCoverImageLoaded] = useState(false);
 
   const { actions, haptics } = useMiniApp();
+  const { batchUpdate, flushUpdates } = useBatchedUpdates(dispatch);
 
-  // Mouse handlers for card tilt
-  const handleMouseMove = (e: React.MouseEvent) => {
+  // Lock body scroll when modal is open
+  useEffect(() => {
+    if (!showBlurOverlay) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = prev; };
+  }, [showBlurOverlay]);
+
+  // Mouse handlers for card tilt - memoized for performance
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
     const rect = cardRef.current?.getBoundingClientRect();
     if (!rect) return;
     const x = e.clientX - rect.left;
@@ -68,13 +78,13 @@ export default function ScratchOff({
       x: percentY * 20, // max 20deg up/down
       y: percentX * 20, // max 20deg left/right
     });
-  };
+  }, []);
 
-  const handleMouseLeave = () => {
+  const handleMouseLeave = useCallback(() => {
     setTilt({ x: 0, y: 0 });
-  };
+  }, []);
 
-  const handleShare = async () => {
+  const handleShare = useCallback(async () => {
     if (!state.user) return;
 
     const baseUrl = process.env.NEXT_PUBLIC_URL;
@@ -99,18 +109,185 @@ export default function ScratchOff({
       // Fallback: open in new tab
       window.open(frameUrl, "_blank");
     }
-  };
+  }, [state.user, prizeAmount, bestFriend?.username, actions]);
 
-  // Draw the cover image on the canvas with high-DPI support
+  // Debounced scratch detection to prevent excessive API calls
+  const { debouncedCallback: debouncedScratchDetection, cancel: cancelScratchDetection } = 
+    useDebouncedScratchDetection(() => {
+      if (!cardData || isProcessing) return;
+      
+      const prizeAmount = cardData?.prize_amount || 0;
+      setPrizeAmount(prizeAmount);
+      setShowBlurOrverlay(prizeAmount > 0 || prizeAmount === -1);
+      setIsProcessing(true);
+      
+      // Batch all state updates
+      const updates = [
+        {
+          type: SET_APP_STATS,
+          payload: {
+            ...state.appStats,
+            reveals: (state.appStats?.reveals || 0) + 1,
+            winnings: (state.appStats?.winnings || 0) + (prizeAmount < 0 ? 0 : prizeAmount),
+          },
+        },
+        {
+          type: SET_CARDS,
+          payload: state.cards.map((card) =>
+            card.id === cardData?.id
+              ? {
+                  ...card,
+                  scratched: true,
+                  scratched_at: new Date().toISOString(),
+                  claimed: true,
+                }
+              : card
+          ),
+        },
+        {
+          type: SET_USER,
+          payload: {
+            ...state.user,
+            amount_won: (state.user?.amount_won || 0) + (prizeAmount < 0 ? 0 : prizeAmount),
+            total_wins: (state.user?.total_wins || 0) + (prizeAmount !== 0 ? 1 : 0),
+            total_reveals: (state.user?.total_reveals || 0) + 1,
+            current_level: getRevealsToNextLevel(state.user?.current_level || 1) === 0
+              ? (state.user?.current_level || 1) + 1
+              : state.user?.current_level || 1,
+            reveals_to_next_level: (state.user?.reveals_to_next_level || getRevealsToNextLevel(state.user?.current_level || 1)) === 0
+              ? getRevealsToNextLevel((state.user?.current_level || 1) + 1)
+              : getRevealsToNextLevel(state.user?.current_level || 1),
+            last_active: new Date().toISOString(),
+          },
+        },
+        {
+          type: SET_ACTIVITY,
+          payload: [
+            ...state.activity,
+            {
+              id: cardData?.id + new Date().toISOString(),
+              card_id: cardData?.id,
+              user_wallet: cardData?.user_wallet,
+              prize_amount: prizeAmount < 0 ? 0 : prizeAmount,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+              username: state.user?.username,
+              pfp: state.user?.pfp,
+              payment_tx: cardData?.payment_tx,
+              payout_tx: null,
+              won: prizeAmount > 0,
+            },
+          ],
+        },
+        {
+          type: SET_LEADERBOARD,
+          payload: state.leaderboard.map((user) =>
+            user.wallet === cardData?.user_wallet
+              ? {
+                  ...user,
+                  amount_won: (user.amount_won || 0) + (prizeAmount < 0 ? 0 : prizeAmount),
+                  total_wins: (user.total_wins || 0) + (prizeAmount !== 0 ? 1 : 0),
+                  total_reveals: (user.total_reveals || 0) + 1,
+                  current_level: getRevealsToNextLevel(state.user?.current_level || 1) === 0
+                    ? (state.user?.current_level || 1) + 1
+                    : state.user?.current_level || 1,
+                  reveals_to_next_level: (state.user?.reveals_to_next_level || getRevealsToNextLevel(state.user?.current_level || 1)) === 0
+                    ? getRevealsToNextLevel((state.user?.current_level || 1) + 1)
+                    : getRevealsToNextLevel(state.user?.current_level || 1),
+                  last_active: new Date().toISOString(),
+                }
+              : user
+          ),
+        },
+      ];
+      
+      batchUpdate(updates);
+      setScratched(true);
+      onPrizeRevealed?.(prizeAmount);
+
+      // Handle background color changes and haptics
+      if (prizeAmount > 0 || prizeAmount === -1) {
+        dispatch({
+          type: SET_APP_COLOR,
+          payload: APP_COLORS.WON,
+        });
+        dispatch({
+          type: SET_APP_BACKGROUND,
+          payload: `linear-gradient(to bottom, #090210, ${APP_COLORS.WON})`,
+        });
+        haptics.impactOccurred("heavy");
+        haptics.notificationOccurred("success");
+        // Play win sound
+        state.playWinSound?.();
+        fetch("/api/neynar/send-notification", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            fid: state.user?.fid,
+            username: state.user?.username,
+            amount: prizeAmount,
+            friend_fid: bestFriend?.fid,
+            bestFriends: state.bestFriends,
+          }),
+        }).catch((error) => {
+          console.error("Failed to send notification:", error);
+        });
+      } else {
+        dispatch({
+          type: SET_APP_COLOR,
+          payload: APP_COLORS.LOST,
+        });
+        dispatch({
+          type: SET_APP_BACKGROUND,
+          payload: `linear-gradient(to bottom, #090210, ${APP_COLORS.LOST})`,
+        });
+      }
+
+      // Process prize immediately
+      if (cardData?.id) {
+        fetch("/api/cards/process-prize", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            cardId: cardData.id,
+            userWallet: cardData.user_wallet,
+            username: state.user?.username,
+            pfp: state.user?.pfp,
+            userFid: state.user?.fid,
+            friends: state.bestFriends
+          }),
+        })
+          .then((response) => response.json())
+          .then((processData) => {
+            const pa = Number(processData.prizeAmount || 0);
+            setPrizeAmount(pa);
+            if (processData.success) {
+              onPrizeRevealed?.(prizeAmount);
+
+              // If user leveled up and got free cards, refetch user cards
+              if (processData.leveledUp && processData.freeCardsAwarded > 0) {
+                setTimeout(() => {
+                  state.refetchUserCards?.();
+                }, 1000); // Wait 1 second for database to be fully updated
+              }
+            }
+          })
+          .catch((error) => {
+            console.error("Failed to process prize:", error);
+          });
+      }
+    }, 100);
+
+  // Draw the cover image on the canvas with optimized setup
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    // Set up high-DPI canvas
-    const devicePixelRatio = window.devicePixelRatio || 1;
-    const scale = CANVAS_DPI_SCALE * devicePixelRatio;
+    // Optimized DPI scaling - reduced for better mobile performance
+    const devicePixelRatio = Math.min(window.devicePixelRatio || 1, 2); // Cap at 2x for mobile
+    const scale = devicePixelRatio;
 
     // Set the actual canvas size to the scaled dimensions
     canvas.width = CANVAS_WIDTH * scale;
@@ -119,15 +296,14 @@ export default function ScratchOff({
     // Scale the canvas back down using CSS
     canvas.style.width = CANVAS_WIDTH + "px";
     canvas.style.height = CANVAS_HEIGHT + "px";
+    canvas.style.willChange = 'transform';
 
     // Scale the drawing context so everything draws at the higher resolution
     ctx.scale(scale, scale);
 
-    // Enable highest quality image smoothing
+    // Optimized image smoothing settings for mobile
     ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = "high";
-
-    // Additional quality settings for crisp rendering
+    ctx.imageSmoothingQuality = "medium"; // Reduced from "high" for better performance
     ctx.textBaseline = "top";
 
     // Use preloaded image from context
@@ -276,179 +452,8 @@ export default function ScratchOff({
       const percent = (transparent / (actualWidth * actualHeight)) * 100;
 
       if (percent > 40 && !scratched && !isProcessing) {
-        setIsProcessing(true);
-
-        // Use prize amount from card data directly
-        const prizeAmount = cardData?.prize_amount || 0;
-        setPrizeAmount(prizeAmount);
-        setShowBlurOrverlay(prizeAmount > 0 || prizeAmount === -1);
-
-        // optimistic update
-        dispatch({
-          type: SET_APP_STATS,
-          payload: {
-            ...state.appStats,
-            reveals: (state.appStats?.reveals || 0) + 1,
-            winnings:
-              (state.appStats?.winnings || 0) +
-              (prizeAmount < 0 ? 0 : prizeAmount),
-          },
-        });
-        dispatch({
-          type: SET_CARDS,
-          payload: state.cards.map((card) =>
-            card.id === cardData?.id
-              ? {
-                ...card,
-                scratched: true,
-                scratched_at: new Date().toISOString(),
-                claimed: true,
-              }
-              : card
-          ),
-        });
-        dispatch({
-          type: SET_USER,
-          payload: {
-            ...state.user,
-            amount_won:
-              (state.user?.amount_won || 0) +
-              (prizeAmount < 0 ? 0 : prizeAmount),
-            total_wins:
-              (state.user?.total_wins || 0) + (prizeAmount !== 0 ? 1 : 0),
-            total_reveals: (state.user?.total_reveals || 0) + 1,
-            current_level:
-              getRevealsToNextLevel(state.user?.current_level || 1) === 0
-                ? (state.user?.current_level || 1) + 1
-                : state.user?.current_level || 1,
-            reveals_to_next_level:
-              (state.user?.reveals_to_next_level ||
-                getRevealsToNextLevel(state.user?.current_level || 1)) === 0
-                ? getRevealsToNextLevel((state.user?.current_level || 1) + 1)
-                : getRevealsToNextLevel(state.user?.current_level || 1),
-            last_active: new Date().toISOString(),
-          },
-        });
-        dispatch({
-          type: SET_ACTIVITY,
-          payload: [
-            ...state.activity,
-            {
-              id: cardData?.id + new Date().toISOString(),
-              card_id: cardData?.id,
-              user_wallet: cardData?.user_wallet,
-              prize_amount: prizeAmount < 0 ? 0 : prizeAmount,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-              username: state.user?.username,
-              pfp: state.user?.pfp,
-              payment_tx: cardData?.payment_tx,
-              payout_tx: null,
-              won: prizeAmount > 0,
-            },
-          ],
-        });
-        dispatch({
-          type: SET_LEADERBOARD,
-          payload: state.leaderboard.map((user) =>
-            user.wallet === cardData?.user_wallet
-              ? {
-                ...user,
-                amount_won:
-                  (user.amount_won || 0) +
-                  (prizeAmount < 0 ? 0 : prizeAmount),
-                total_wins:
-                  (user.total_wins || 0) + (prizeAmount !== 0 ? 1 : 0),
-                total_reveals: (user.total_reveals || 0) + 1,
-                current_level:
-                  getRevealsToNextLevel(state.user?.current_level || 1) === 0
-                    ? (state.user?.current_level || 1) + 1
-                    : state.user?.current_level || 1,
-                reveals_to_next_level:
-                  (state.user?.reveals_to_next_level ||
-                    getRevealsToNextLevel(state.user?.current_level || 1)) ===
-                    0
-                    ? getRevealsToNextLevel(
-                      (state.user?.current_level || 1) + 1
-                    )
-                    : getRevealsToNextLevel(state.user?.current_level || 1),
-                last_active: new Date().toISOString(),
-              }
-              : user
-          ),
-        });
-
-        if (prizeAmount > 0 || prizeAmount === -1) {
-          dispatch({
-            type: SET_APP_COLOR,
-            payload: APP_COLORS.WON,
-          });
-          dispatch({
-            type: SET_APP_BACKGROUND,
-            payload: `linear-gradient(to bottom, #090210, ${APP_COLORS.WON})`,
-          });
-          haptics.impactOccurred("heavy");
-          haptics.notificationOccurred("success");
-          // Play win sound
-          state.playWinSound?.();
-          fetch("/api/neynar/send-notification", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              fid: state.user?.fid,
-              username: state.user?.username,
-              amount: prizeAmount,
-              friend_fid: bestFriend?.fid,
-              bestFriends: state.bestFriends,
-            }),
-          }).catch((error) => {
-            console.error("Failed to send notification:", error);
-          });
-        } else {
-          dispatch({
-            type: SET_APP_COLOR,
-            payload: APP_COLORS.LOST,
-          });
-          dispatch({
-            type: SET_APP_BACKGROUND,
-            payload: `linear-gradient(to bottom, #090210, ${APP_COLORS.LOST})`,
-          });
-        }
-        setScratched(true);
-
-        // Process prize immediately
-        if (cardData?.id) {
-          fetch("/api/cards/process-prize", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              cardId: cardData.id,
-              userWallet: cardData.user_wallet,
-              username: state.user?.username,
-              pfp: state.user?.pfp,
-              userFid: state.user?.fid,
-              friends: state.bestFriends
-            }),
-          })
-            .then((response) => response.json())
-            .then((processData) => {
-              const pa = Number(processData.prizeAmount || 0);
-              setPrizeAmount(pa);
-              if (processData.success) {
-                onPrizeRevealed?.(prizeAmount);
-
-                // If user leveled up and got free cards, refetch user cards
-                if (processData.leveledUp && processData.freeCardsAwarded > 0) {
-                  setTimeout(() => {
-                    state.refetchUserCards?.();
-                  }, 1000); // Wait 1 second for database to be fully updated
-                }
-              }
-            })
-            .catch((error) => {
-              console.error("Failed to process prize:", error);
-            });
-        }
+        // Use debounced scratch detection instead of immediate processing
+        debouncedScratchDetection();
       }
     };
 
@@ -463,6 +468,9 @@ export default function ScratchOff({
     document.addEventListener("mouseup", mouseUp);
 
     return () => {
+      // Cancel any pending debounced calls
+      cancelScratchDetection();
+      
       // Remove touch events
       canvas.removeEventListener("touchstart", touchStart);
       canvas.removeEventListener("touchmove", touchMove);
@@ -536,11 +544,6 @@ export default function ScratchOff({
       setShareButtonText("Share Win");
       setCoverImageLoaded(false);
 
-      // Clear timeout on unmount
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-
       dispatch({
         type: SET_APP_COLOR,
         payload: APP_COLORS.DEFAULT,
@@ -603,6 +606,8 @@ export default function ScratchOff({
             }}
             style={{
               perspective: 1000,
+              willChange: 'transform, opacity',
+              transform: 'translateZ(0)', // Force GPU acceleration
             }}
             onMouseMove={handleMouseMove}
             onMouseLeave={handleMouseLeave}
@@ -731,7 +736,7 @@ export default function ScratchOff({
                     position: "absolute",
                     top: "50%",
                     left: "50%",
-                    transform: "translate(-50%, -50%)",
+                    transform: "translate(-50%, -50%) translateZ(0)",
                     width: CANVAS_WIDTH,
                     height: CANVAS_HEIGHT,
                     borderRadius: 4,
@@ -740,6 +745,7 @@ export default function ScratchOff({
                     WebkitTouchCallout: "none",
                     WebkitUserSelect: "none",
                     userSelect: "none",
+                    willChange: "transform",
                   }}
                 />
               )}
@@ -748,16 +754,21 @@ export default function ScratchOff({
         </div>
       </div>
       {showBlurOverlay && (
-        <motion.div
-          className="fixed inset-0 z-50 backdrop-blur-md text-white flex flex-col items-center justify-center"
-          style={{ pointerEvents: "auto" }}
-          onClick={(e) => {
-            // Tap outside content to dismiss
-            if (e.target === e.currentTarget) {
-              setShowBlurOrverlay(false);
-            }
-          }}
-        >
+        <ModalPortal>
+          <motion.div
+            className="fixed inset-0 z-[9999] text-white flex flex-col items-center justify-center"
+            style={{ 
+              pointerEvents: "auto", 
+              backdropFilter: "blur(20px)", 
+              WebkitBackdropFilter: "blur(20px)",
+            }}
+            onClick={(e) => {
+              // Tap outside content to dismiss
+              if (e.target === e.currentTarget) {
+                setShowBlurOrverlay(false);
+              }
+            }}
+          >
           {/* Close button */}
           <button
             onClick={() => setShowBlurOrverlay(false)}
@@ -844,7 +855,8 @@ export default function ScratchOff({
               </div>
             ) : null}
           </div>
-        </motion.div>
+          </motion.div>
+        </ModalPortal>
       )}
     </>
   );
