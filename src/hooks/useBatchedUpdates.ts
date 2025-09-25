@@ -4,10 +4,13 @@ import { useCallback, useRef, useEffect } from 'react';
  * Hook for batching multiple state updates into a single dispatch
  * Improves performance by reducing re-render frequency
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const useBatchedUpdates = (dispatch: (action: any) => void) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const pendingUpdatesRef = useRef<any[]>([]);
   const timeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const batchUpdate = useCallback((updates: any[]) => {
     pendingUpdatesRef.current.push(...updates);
     

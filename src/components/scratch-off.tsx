@@ -1,5 +1,5 @@
 "use client";
-import { useRef, useEffect, useState, useContext, useCallback, useMemo } from "react";
+import { useRef, useEffect, useState, useContext, useCallback } from "react";
 import { motion } from "framer-motion";
 import Image from "next/image";
 import { AppContext } from "~/app/context";
@@ -56,7 +56,7 @@ export default function ScratchOff({
   const [coverImageLoaded, setCoverImageLoaded] = useState(false);
 
   const { actions, haptics } = useMiniApp();
-  const { batchUpdate, flushUpdates } = useBatchedUpdates(dispatch);
+  const { batchUpdate } = useBatchedUpdates(dispatch);
 
   // Lock body scroll when modal is open
   useEffect(() => {

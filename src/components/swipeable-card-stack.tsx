@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useRef, useContext, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useRef, useContext, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card } from "~/app/interface/card";
 import ScratchOff from "./scratch-off";
