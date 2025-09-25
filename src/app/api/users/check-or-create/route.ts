@@ -94,7 +94,6 @@ export async function POST(request: NextRequest) {
         .select()
         .single();
 
-      console.log("Existing user updated:", userWallet);
       return NextResponse.json({
         success: true,
         user: updatedUser,
