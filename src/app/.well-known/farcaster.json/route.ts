@@ -1,6 +1,10 @@
-function withValidProperties(properties: Record<string, undefined | string | string[]>) {
+function withValidProperties(
+  properties: Record<string, undefined | string | string[]>
+) {
   return Object.fromEntries(
-    Object.entries(properties).filter(([_, value]) => (Array.isArray(value) ? value.length > 0 : !!value))
+    Object.entries(properties).filter(([_, value]) =>
+      Array.isArray(value) ? value.length > 0 : !!value
+    )
   );
 }
 
@@ -13,25 +17,26 @@ export async function GET() {
       signature: process.env.FARCASTER_SIGNATURE,
     },
     frame: withValidProperties({
-      version: '1',
-      name: process.env.NEXT_PUBLIC_ONCHAINKIT_PROJECT_NAME || process.env.NEXT_PUBLIC_APP_NAME || 'Scratch Off',
-      subtitle: process.env.NEXT_PUBLIC_APP_SUBTITLE,
-      description: process.env.NEXT_PUBLIC_APP_DESCRIPTION || 'Scratch to win big!',
+      version: "1",
+      name: "Scratch Off",
+      subtitle: "Scratch to win big!",
+      description: "Scratch to win big!",
       screenshotUrls: [],
-      iconUrl: process.env.NEXT_PUBLIC_APP_ICON,
-      splashImageUrl: process.env.NEXT_PUBLIC_APP_SPLASH_IMAGE,
-      splashBackgroundColor: process.env.NEXT_PUBLIC_SPLASH_BACKGROUND_COLOR,
+      iconUrl: "https://scratch-card-pg.vercel.app/assets/splash-image.jpg",
+      splashImageUrl:
+        "https://scratch-card-pg.vercel.app/assets/splash-image.jpg",
+      splashBackgroundColor: "FFFFFF",
       homeUrl: URL,
       webhookUrl: `${URL}/api/webhook`,
       primaryCategory: process.env.NEXT_PUBLIC_APP_PRIMARY_CATEGORY,
-      tags: [],
+      tags: ["games"],
       heroImageUrl: process.env.NEXT_PUBLIC_APP_HERO_IMAGE,
-      tagline: process.env.NEXT_PUBLIC_APP_TAGLINE,
-      ogTitle: process.env.NEXT_PUBLIC_APP_OG_TITLE,
-      ogDescription: process.env.NEXT_PUBLIC_APP_OG_DESCRIPTION,
+      tagline: "Scratch to win big!",
+      ogTitle: "Scratch Off",
+      ogDescription: "Scratch to win big!",
       ogImageUrl: process.env.NEXT_PUBLIC_APP_OG_IMAGE,
       // use only while testing
-      noindex: 'true',
+      noindex: "true",
     }),
   });
 }
