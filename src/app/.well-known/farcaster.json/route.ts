@@ -21,11 +21,13 @@ export async function GET() {
       name: "Scratch Off",
       subtitle: "Scratch to win big!",
       description: "Scratch to win big!",
+      imageUrl: "https://scratch-card-pg.vercel.app/assets/splash-image.jpg",
+      buttonTitle: "Play Now",
       screenshotUrls: [],
       iconUrl: "https://scratch-card-pg.vercel.app/assets/splash-image.jpg",
       splashImageUrl:
         "https://scratch-card-pg.vercel.app/assets/splash-image.jpg",
-      splashBackgroundColor: "FFFFFF",
+      splashBackgroundColor: "#FFFFFF",
       homeUrl: URL,
       webhookUrl: `${URL}/api/webhook`,
       primaryCategory: process.env.NEXT_PUBLIC_APP_PRIMARY_CATEGORY,
@@ -34,7 +36,7 @@ export async function GET() {
       tagline: "Scratch to win big!",
       ogTitle: "Scratch Off",
       ogDescription: "Scratch to win big!",
-      ogImageUrl: process.env.NEXT_PUBLIC_APP_OG_IMAGE,
+      ogImageUrl: "https://scratch-card-pg.vercel.app/assets/splash-image.jpg",
       // use only while testing
       noindex: "true",
     }),
