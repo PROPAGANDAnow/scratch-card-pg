@@ -8,6 +8,7 @@ import { getRevealsToNextLevel } from "~/lib/level";
 import { PRIZE_ASSETS, tokenMeta, USDC_ADDRESS } from "~/lib/constants";
 import { generateNumbers } from "~/lib/generateNumbers";
 import { drawPrize } from "~/lib/drawPrize";
+import { findWinningRow } from "~/lib/winningRow";
 
 export async function POST(request: NextRequest) {
   try {
@@ -148,6 +149,22 @@ export async function POST(request: NextRequest) {
           decoyAssets: PRIZE_ASSETS as unknown as string[],
           friends,
         });
+        
+        // Check if this is a friend win and populate shared_to accordingly
+        let shared_to = null;
+        if (prize === -1) {
+          const winningRow = findWinningRow(numbers, prize, prizeAsset);
+          if (winningRow !== null && winningRow !== -1) {
+            const friendCell = numbers[winningRow * 3];
+            shared_to = {
+              fid: friendCell.friend_fid?.toString() || "0",
+              username: friendCell.friend_username || "",
+              pfp: friendCell.friend_pfp || "",
+              wallet: friendCell.friend_wallet || ""
+            };
+          }
+        }
+        
         freeCardsToCreate.push({
           user_wallet: userWallet,
           payment_tx: "FREE_CARD_LEVEL_UP", // Special identifier for free cards
@@ -158,7 +175,7 @@ export async function POST(request: NextRequest) {
           claimed: false,
           created_at: new Date().toISOString(),
           card_no: (user.cards_count || 0) + i + 1,
-          shared_to: null,
+          shared_to,
           shared_from: null,
         });
       }
@@ -388,6 +405,21 @@ export async function POST(request: NextRequest) {
           friends: friends,
         });
 
+        // Check if this is a friend win and populate shared_to accordingly
+        let userSharedTo = null;
+        if (userPrizeAmount === -1) {
+          const winningRow = findWinningRow(userCardNumbers, userPrizeAmount, userPrizeAsset);
+          if (winningRow !== null && winningRow !== -1) {
+            const friendCell = userCardNumbers[winningRow * 3];
+            userSharedTo = {
+              fid: friendCell.friend_fid?.toString() || "0",
+              username: friendCell.friend_username || "",
+              pfp: friendCell.friend_pfp || "",
+              wallet: friendCell.friend_wallet || ""
+            };
+          }
+        }
+
         const { error: userCardError } = await supabaseAdmin
           .from("cards")
           .insert({
@@ -401,7 +433,7 @@ export async function POST(request: NextRequest) {
             claimed: false,
             created_at: new Date().toISOString(),
             card_no: (user.cards_count || 0) + 1,
-            shared_to: null,
+            shared_to: userSharedTo,
             shared_from: null,
           });
 
