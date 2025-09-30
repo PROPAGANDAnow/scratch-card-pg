@@ -1,5 +1,5 @@
 "use client";
-import { useRef, useEffect, useState, useContext, useCallback } from "react";
+import { useRef, useEffect, useState, useContext, useCallback, useMemo } from "react";
 import { motion } from "framer-motion";
 import Image from "next/image";
 import { AppContext } from "~/app/context";
@@ -555,6 +555,14 @@ export default function ScratchOff({
     };
   }, []);
 
+  // Pre-scratch banner when the card was shared to the current user
+  const isPreScratchShared = useMemo(() => !!(
+    cardData &&
+    !cardData.scratched &&
+    !scratched &&
+    cardData.shared_from?.username
+  ), [cardData, scratched]);
+
   return (
     <>
       <div className="h-full w-full flex flex-col items-center justify-center"
@@ -562,27 +570,31 @@ export default function ScratchOff({
           touchAction: (!cardData?.scratched && !scratched) ? "none" : "auto"
         }}>
         <p
-          className="font-[ABCGaisyr] text-center text-[30px] mb-1 font-bold italic rotate-[-4deg]"
+          className={`font-[ABCGaisyr] text-center mb-1 font-bold italic rotate-[-4deg] ${isPreScratchShared ? 'text-[14px]' : 'text-[30px]'}`}
           style={{
-            visibility: cardData?.scratched || scratched ? "visible" : "hidden",
-            color:
-              cardData?.prize_amount || prizeAmount
+            visibility: (cardData?.scratched || scratched || isPreScratchShared) ? "visible" : "hidden",
+            color: isPreScratchShared
+              ? "#fff"
+              : (cardData?.prize_amount || prizeAmount
                 ? "#fff"
-                : "rgba(255, 255, 255, 0.4)",
-            textShadow:
-              cardData?.prize_amount || prizeAmount
+                : "rgba(255, 255, 255, 0.4)"),
+            textShadow: isPreScratchShared
+              ? "none"
+              : ((cardData?.prize_amount || prizeAmount)
                 ? "0px 0px 1px #00A34F, 0px 0px 2px #00A34F, 0px 0px 6px #00A34F, 0px 0px 12px #00A34F"
-                : "none",
+                : "none"),
           }}
         >
-          {cardData?.prize_amount || prizeAmount
-            ? prizeAmount === -1 || cardData?.prize_amount === -1
-              ? `Won free card!`
-              : `Won ${formatCell(
-                cardData?.prize_amount || prizeAmount,
-                USDC_ADDRESS
-              )}!`
-            : " No win!"}
+          {isPreScratchShared
+            ? `You received a free card from @${cardData?.shared_from?.username}`
+            : ((cardData?.prize_amount || prizeAmount)
+              ? (prizeAmount === -1 || cardData?.prize_amount === -1
+                ? `Won free card!`
+                : `Won ${formatCell(
+                  cardData?.prize_amount || prizeAmount,
+                  USDC_ADDRESS
+                )}!`)
+              : " No win!")}
         </p>
         <div className="flex-1 grow">
           <motion.div
