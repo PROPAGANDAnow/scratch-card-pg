@@ -15,6 +15,7 @@ export async function POST(request: NextRequest) {
     const { cardId, userWallet, userFid, pfp, username, friends } = await request.json();
 
     if (!cardId || !userWallet) {
+      console.error("Missing required fields: cardId or userWallet");
       return NextResponse.json(
         { error: "Missing required fields: cardId or userWallet" },
         { status: 400 }
@@ -40,6 +41,7 @@ export async function POST(request: NextRequest) {
 
     // Validate card status
     if (card.scratched) {
+      console.error("Card has already been scratched");
       return NextResponse.json(
         { error: "Card has already been scratched" },
         { status: 400 }
@@ -47,6 +49,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (card.claimed) {
+      console.error("Card has already been claimed");
       return NextResponse.json(
         { error: "Card has already been claimed" },
         { status: 400 }

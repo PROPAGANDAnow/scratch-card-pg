@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useRef, useContext, useCallback } from "react";
+import { useState, useEffect, useRef, useContext, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card } from "~/app/interface/card";
 import ScratchOff from "./scratch-off";
@@ -12,9 +12,6 @@ interface SwipeableCardStackProps {
   cards: Card[];
   initialIndex?: number;
 }
-
-// Memoized ScratchOff component to prevent unnecessary re-renders
-const MemoizedScratchOff = React.memo(ScratchOff);
 
 export default function SwipeableCardStack({
   cards,
@@ -126,7 +123,7 @@ export default function SwipeableCardStack({
                 transform: 'translateZ(0)' // Force GPU acceleration
               }}
             >
-              <MemoizedScratchOff cardData={prev} isDetailView />
+              <ScratchOff cardData={prev} isDetailView />
             </motion.div>
           ) : null}
           {next ? (
@@ -143,7 +140,7 @@ export default function SwipeableCardStack({
                 transform: 'translateZ(0)' // Force GPU acceleration
               }}
             >
-              <MemoizedScratchOff cardData={next} isDetailView />
+              <ScratchOff cardData={next} isDetailView />
             </motion.div>
           ) : null}
         </div>
@@ -188,7 +185,7 @@ export default function SwipeableCardStack({
             {/* Center 60% for scratching */}
             <div className="w-full h-[auto]">
               {cards.length ? (
-                <MemoizedScratchOff
+                <ScratchOff
                   cardData={current || null}
                   isDetailView
                   hasNext={canGoNext}
