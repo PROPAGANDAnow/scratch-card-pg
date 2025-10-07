@@ -10,10 +10,11 @@ const WinRatePopup = () => {
     >
       <motion.div
         className="w-[250px] border border-white/10 rounded-[48px] bg-[#0B071366] backdrop-blur py-2 flex flex-col items-center gap-4"
-        initial={{ opacity: 0, scale: 0.96, y: -4 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.96, y: -4 }}
-        transition={{ duration: 0.15, ease: "easeOut" }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.08, ease: "linear", type: "tween" }}
+        style={{ willChange: "opacity" }}
       >
         <p className="text-[16px] font-medium text-white leading-[90%] text-center">
           Win Rates
