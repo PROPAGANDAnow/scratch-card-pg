@@ -1,11 +1,11 @@
 "use client";
 import sdk from "@farcaster/miniapp-sdk";
-import { useMiniApp } from '@neynar/react';
+import { useMiniApp } from "@neynar/react";
 import { RealtimeChannel } from "@supabase/supabase-js";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { FC, useContext, useEffect, useRef, useState } from "react";
+import { createRef, FC, useContext, useEffect, useRef, useState } from "react";
 import {
   SET_ACTIVITY,
   SET_APP_STATS,
@@ -31,18 +31,28 @@ import {
 } from "~/lib/userapis";
 import { AppContext } from "../app/context";
 import Bottom from "./bottom";
+import { getFromLocalStorage } from "~/lib/utils";
+import InitialScreen from "./initial-screen";
+import { INITIAL_SCREEN_KEY } from "~/lib/constants";
+import WinRatePopup from "./win-rate-popup";
+import { useDetectClickOutside } from "~/hooks/useDetectClickOutside";
 
-const Wrapper: FC<{ children: React.ReactNode; }> = ({ children }) => {
+const Wrapper: FC<{ children: React.ReactNode }> = ({ children }) => {
   const [state, dispatch] = useContext(AppContext);
   const [loading, setLoading] = useState(true);
+  const [seenInitial, setSeenInitial] = useState(false);
+  const [showWinRates, setShowWinRates] = useState(false);
   const readyCalled = useRef(false);
   const currentCardsRef = useRef(state.cards);
   const currentLeaderboardRef = useRef(state.leaderboard);
   const currentActivityRef = useRef(state.activity);
   const currentUnscratchedCardsRef = useRef(state.unscratchedCards);
+  const prizePoolRef = createRef<HTMLDivElement>();
   const { push } = useRouter();
   const { context } = useMiniApp();
   const userFid = context?.user.fid;
+
+  useDetectClickOutside(prizePoolRef, () => setShowWinRates(false));
 
   // Audio for win sounds - load once and reuse
   const winAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -64,6 +74,12 @@ const Wrapper: FC<{ children: React.ReactNode; }> = ({ children }) => {
     }
   }, []);
 
+  // Initialize/record initial-screen flag once on mount
+  useEffect(() => {
+    const seenInitial = getFromLocalStorage(INITIAL_SCREEN_KEY, false);
+    setSeenInitial(seenInitial);
+  }, []);
+
   // Function to play win sound
   const playWinSound = () => {
     if (winAudioRef.current) {
@@ -79,7 +95,7 @@ const Wrapper: FC<{ children: React.ReactNode; }> = ({ children }) => {
 
   // Helper function to filter unscratched cards
   const getUnscratchedCards = (cards: Card[]) => {
-    return cards.filter(card => !card.scratched);
+    return cards.filter((card) => !card.scratched);
   };
 
   // Refetch function for user cards
@@ -91,11 +107,16 @@ const Wrapper: FC<{ children: React.ReactNode; }> = ({ children }) => {
       const userCards = await fetchUserCards(state.publicKey);
       if (userCards) {
         dispatch({ type: SET_CARDS, payload: userCards });
-        dispatch({ type: SET_UNSCRATCHED_CARDS, payload: getUnscratchedCards(userCards) });
+        dispatch({
+          type: SET_UNSCRATCHED_CARDS,
+          payload: getUnscratchedCards(userCards),
+        });
 
         // If there's a selected card, update it with the latest data to preserve its state
         if (state.selectedCard) {
-          const updatedSelectedCard = userCards.find(card => card.id === state.selectedCard!.id);
+          const updatedSelectedCard = userCards.find(
+            (card) => card.id === state.selectedCard!.id
+          );
           if (updatedSelectedCard) {
             dispatch({ type: SET_SELECTED_CARD, payload: updatedSelectedCard });
           }
@@ -116,7 +137,10 @@ const Wrapper: FC<{ children: React.ReactNode; }> = ({ children }) => {
   // Keep ref updated with current cards
   useEffect(() => {
     currentCardsRef.current = state.cards;
-    dispatch({ type: SET_UNSCRATCHED_CARDS, payload: getUnscratchedCards(state.cards) });
+    dispatch({
+      type: SET_UNSCRATCHED_CARDS,
+      payload: getUnscratchedCards(state.cards),
+    });
   }, [state.cards]);
 
   // Keep ref updated with current leaderboard
@@ -218,7 +242,10 @@ const Wrapper: FC<{ children: React.ReactNode; }> = ({ children }) => {
               const newCards = [payload.new, ...currentCardsRef.current];
               dispatch({ type: SET_CARDS, payload: newCards });
               // Also update unscratched cards immediately
-              dispatch({ type: SET_UNSCRATCHED_CARDS, payload: getUnscratchedCards(newCards) });
+              dispatch({
+                type: SET_UNSCRATCHED_CARDS,
+                payload: getUnscratchedCards(newCards),
+              });
             }
             if (payload.eventType === "UPDATE") {
               // Scenario 2: Card is updated (revealed)
@@ -228,7 +255,10 @@ const Wrapper: FC<{ children: React.ReactNode; }> = ({ children }) => {
               dispatch({ type: SET_CARDS, payload: updatedCards });
 
               // If the updated card is the currently selected card, update it to preserve its state
-              if (state.selectedCard && state.selectedCard.id === payload.new.id) {
+              if (
+                state.selectedCard &&
+                state.selectedCard.id === payload.new.id
+              ) {
                 dispatch({ type: SET_SELECTED_CARD, payload: payload.new });
               }
             }
@@ -365,6 +395,10 @@ const Wrapper: FC<{ children: React.ReactNode; }> = ({ children }) => {
     }
   }, [state.publicKey, state.user]);
 
+  if (!seenInitial) {
+    return <InitialScreen onScratchNow={() => setSeenInitial(true)} />;
+  }
+
   return (
     <div
       className="h-[100dvh] transition-all ease-in-out duration-300"
@@ -401,8 +435,8 @@ const Wrapper: FC<{ children: React.ReactNode; }> = ({ children }) => {
               }}
             >
               <Image
-                src={"/assets/history-icon.svg"}
-                alt="history-icon"
+                src={"/assets/profile-icon.svg"}
+                alt="profile-icon"
                 unoptimized
                 priority
                 width={24}
@@ -439,27 +473,32 @@ const Wrapper: FC<{ children: React.ReactNode; }> = ({ children }) => {
               </svg>
             </motion.button>
           )}
-          <motion.button
-            className="px-6 border border-white/10 rounded-[48px] h-[42px] flex items-center justify-center gap-2"
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{
-              opacity: loading ? 0 : 1,
-              scale: loading ? 0.8 : 1,
-            }}
-            transition={{
-              duration: 0.4,
-              ease: "easeOut",
-              delay: 0.4,
-            }}
-            onClick={() => push("/")}
-          >
-            <span className="text-[16px] leading-[90%] font-medium text-white/40">
-              Prize Pool
-            </span>
-            <span className="text-[16px] leading-[90%] font-medium text-white">
-              ${state?.appStats?.winnings || state?.user?.amount_won || 0}
-            </span>
-          </motion.button>
+          <div className="relative" ref={prizePoolRef}>
+            <motion.button
+              className="px-6 border border-white/10 rounded-[48px] h-[42px] flex items-center justify-center gap-2"
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{
+                opacity: loading ? 0 : 1,
+                scale: loading ? 0.8 : 1,
+              }}
+              transition={{
+                duration: 0.4,
+                ease: "easeOut",
+                delay: 0.4,
+              }}
+              onClick={() => setShowWinRates(!showWinRates)}
+            >
+              <span className="text-[16px] leading-[90%] font-medium text-white/40">
+                Prize Pool
+              </span>
+              <span className="text-[16px] leading-[90%] font-medium text-white">
+                ${state?.appStats?.winnings || state?.user?.amount_won || 0}
+              </span>
+            </motion.button>
+            <AnimatePresence>
+              {showWinRates && <WinRatePopup />}
+            </AnimatePresence>
+          </div>
           <motion.button
             className="p-2 rounded-full bg-white/10 cursor-pointer hover:bg-white/20 transition-colors"
             onClick={() => push("/leaderboard")}
@@ -475,8 +514,8 @@ const Wrapper: FC<{ children: React.ReactNode; }> = ({ children }) => {
             }}
           >
             <Image
-              src={"/assets/info-icon.svg"}
-              alt="info-icon"
+              src={"/assets/leaderboard-icon.svg"}
+              alt="leaderboard-icon"
               unoptimized
               priority
               width={24}
@@ -489,7 +528,10 @@ const Wrapper: FC<{ children: React.ReactNode; }> = ({ children }) => {
           <div className="flex-1 h-full">{children}</div>
         </div>
         {/* Bottom Section - Bottom */}
-        <Bottom mode={state.swipableMode ? "swipeable" : "normal"} loading={loading} />
+        <Bottom
+          mode={state.swipableMode ? "swipeable" : "normal"}
+          loading={loading}
+        />
       </div>
     </div>
   );

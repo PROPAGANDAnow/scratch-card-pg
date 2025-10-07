@@ -1097,6 +1097,7 @@ const ScratchOff = ({
                   <button
                     onClick={() => {
                       state.buyCards?.();
+                      setShowBlurOrverlay(false);
                     }}
                     className="w-full py-2 bg-white/80 rounded-[40px] font-semibold text-[14px] hover:bg-white h-11 transition-colors"
                     style={{

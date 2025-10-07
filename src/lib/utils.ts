@@ -40,3 +40,26 @@ export function getMiniAppEmbedMetadata(ogImageUrl?: string) {
   };
 }
 
+// Generic localStorage helpers
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function getFromLocalStorage(key: string, defaultValue: any = false): boolean {
+  if (typeof window === "undefined") return defaultValue;
+  try {
+    const raw = window.localStorage.getItem(key);
+    if (raw === null) return defaultValue;
+    return raw === "true";
+  } catch {
+    return defaultValue;
+  }
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function setInLocalStorage(key: string, value: any): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(key, value ? "true" : "false");
+  } catch {
+    // no-op
+  }
+}
+

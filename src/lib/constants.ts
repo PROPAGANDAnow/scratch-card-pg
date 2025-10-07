@@ -186,3 +186,5 @@ export const TOKENS: Record<string, TokenMeta> = {
 export function tokenMeta(addr: string): TokenMeta {
   return TOKENS[addr.toLowerCase()] ?? { symbol: '???', decimals: 6 };
 }
+
+export const INITIAL_SCREEN_KEY = "initial-screen";
