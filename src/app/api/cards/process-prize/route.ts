@@ -12,7 +12,8 @@ import { findWinningRow } from "~/lib/winningRow";
 
 export async function POST(request: NextRequest) {
   try {
-    const { cardId, userWallet, userFid, pfp, username, friends } = await request.json();
+    const { cardId, userWallet, userFid, pfp, username, friends } =
+      await request.json();
 
     if (!cardId || !userWallet) {
       console.error("Missing required fields: cardId or userWallet");
@@ -24,11 +25,24 @@ export async function POST(request: NextRequest) {
 
     const { data: card, error: cardError } = await supabaseAdmin
       .from("cards")
-      .select("id, user_wallet, payment_tx, prize_amount, prize_asset_contract, scratched, claimed, numbers_json, shared_to, shared_from")
+      .update({
+        scratched: true,
+        scratched_at: new Date().toISOString(),
+      })
       .eq("id", cardId)
+      .eq("user_wallet", userWallet)
+      .eq("scratched", false)
+      .eq("claimed", false)
+      .select(
+        "id, user_wallet, payment_tx, prize_amount, prize_asset_contract, scratched, claimed, numbers_json, shared_to, shared_from"
+      )
       .single();
+
     if (cardError || !card) {
-      return NextResponse.json({ error: "Card not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Card not found or already processed" },
+        { status: 404 }
+      );
     }
 
     // Validate card ownership
@@ -56,25 +70,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Update card with scratched status (prize_amount is already set)
-    const { data: updatedCard, error: updateError } = await supabaseAdmin
-      .from("cards")
-      .update({
-        scratched: true,
-        scratched_at: new Date().toISOString(),
-      })
-      .eq("id", cardId)
-      .select()
-      .single();
-
-    if (updateError) {
-      console.error("Error updating card:", updateError);
-      return NextResponse.json(
-        { error: "Failed to update card" },
-        { status: 500 }
-      );
-    }
-
     // Update user stats
     const { data: user, error: userError } = await supabaseAdmin
       .from("users")
@@ -96,18 +91,21 @@ export async function POST(request: NextRequest) {
     const prizeAmount = Number(card.prize_amount || 0);
     const prizeAsset = card.prize_asset_contract;
     const newTotalWins = (user.total_wins || 0) + (prizeAmount !== 0 ? 1 : 0);
-    const newAmountWon = (user.amount_won || 0) + (prizeAmount === -1 ? 0 : prizeAmount);
+    const newAmountWon =
+      (user.amount_won || 0) + (prizeAmount === -1 ? 0 : prizeAmount);
 
     // Level progression logic - only for wins (prize_amount !== 0)
     const currentLevel = user.current_level || 1;
     let newLevel = currentLevel;
-    let newRevealsToNextLevel = user.reveals_to_next_level || getRevealsToNextLevel(1);
+    let newRevealsToNextLevel =
+      user.reveals_to_next_level || getRevealsToNextLevel(1);
     let leveledUp = false;
     let freeCardsToAward = 0;
 
     if (prizeAmount !== 0) {
       // Only update level progression for wins
-      const currentRevealsToNext = user.reveals_to_next_level || getRevealsToNextLevel(1);
+      const currentRevealsToNext =
+        user.reveals_to_next_level || getRevealsToNextLevel(1);
       const newRevealsToNext = currentRevealsToNext - 1;
       newRevealsToNextLevel = newRevealsToNext;
 
@@ -143,7 +141,8 @@ export async function POST(request: NextRequest) {
         const prize = drawPrize(friends.length > 0); // e.g., 0 | 0.5 | 1 | 2 (check if friends available for free cards)
         // pick prize asset randomly (today pool contains USDC; add more later)
         const prizeAsset =
-          PRIZE_ASSETS[Math.floor(Math.random() * PRIZE_ASSETS.length)] || USDC_ADDRESS;
+          PRIZE_ASSETS[Math.floor(Math.random() * PRIZE_ASSETS.length)] ||
+          USDC_ADDRESS;
         // build 12 cells (3x4) with one winning row if prize > 0
         const numbers = generateNumbers({
           prizeAmount: prize,
@@ -152,7 +151,7 @@ export async function POST(request: NextRequest) {
           decoyAssets: PRIZE_ASSETS as unknown as string[],
           friends,
         });
-        
+
         // Check if this is a friend win and populate shared_to accordingly
         let shared_to = null;
         if (prize === -1) {
@@ -163,11 +162,11 @@ export async function POST(request: NextRequest) {
               fid: friendCell.friend_fid?.toString() || "0",
               username: friendCell.friend_username || "",
               pfp: friendCell.friend_pfp || "",
-              wallet: friendCell.friend_wallet || ""
+              wallet: friendCell.friend_wallet || "",
             };
           }
         }
-        
+
         freeCardsToCreate.push({
           user_wallet: userWallet,
           payment_tx: "FREE_CARD_LEVEL_UP", // Special identifier for free cards
@@ -193,7 +192,7 @@ export async function POST(request: NextRequest) {
         console.error("Error creating free cards:", freeCardsError);
       } else {
         console.log(`Created ${freeCardsToAward} free cards for level up`);
-        
+
         // Update user's cards_count to reflect the new free cards
         const { error: cardsCountUpdateError } = await supabaseAdmin
           .from("users")
@@ -203,7 +202,10 @@ export async function POST(request: NextRequest) {
           .eq("wallet", userWallet);
 
         if (cardsCountUpdateError) {
-          console.error("Error updating user cards_count:", cardsCountUpdateError);
+          console.error(
+            "Error updating user cards_count:",
+            cardsCountUpdateError
+          );
         }
       }
     }
@@ -217,7 +219,7 @@ export async function POST(request: NextRequest) {
           user_wallet: userWallet,
           card_id: cardId,
           prize_amount: prizeAmount,
-          payment_tx: updatedCard.payment_tx,
+          payment_tx: card.payment_tx,
           payout_tx: null, // Will be set if payment succeeds
           won: prizeAmount !== 0,
           username: username,
@@ -232,7 +234,7 @@ export async function POST(request: NextRequest) {
           user_wallet: userWallet,
           card_id: cardId,
           prize_amount: prizeAmount,
-          payment_tx: updatedCard.payment_tx,
+          payment_tx: card.payment_tx,
           won: prizeAmount !== 0,
         });
       } else {
@@ -300,36 +302,44 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      const { data: existingFriend, error: friendCheckError } = await supabaseAdmin
-        .from("users")
-        .select("username, pfp, wallet, cards_count")
-        .eq("wallet", friendWallet)
-        .single();
+      const { data: existingFriend, error: friendCheckError } =
+        await supabaseAdmin
+          .from("users")
+          .select("username, pfp, wallet, cards_count")
+          .eq("wallet", friendWallet)
+          .single();
 
       let friendUserId: string | null = null;
 
       if (friendCheckError || !existingFriend) {
         // Friend doesn't exist, create them using data from shared_to object
-        if (card.shared_to && card.shared_to.fid && card.shared_to.username && card.shared_to.pfp && card.shared_to.wallet) {
-          const { data: newFriend, error: createFriendError } = await supabaseAdmin
-            .from("users")
-            .insert({
-              wallet: card.shared_to.wallet,
-              username: card.shared_to.username,
-              pfp: card.shared_to.pfp,
-              fid: parseInt(card.shared_to.fid) || 0,
-              cards_count: 1,
-              total_reveals: 0,
-              total_wins: 0,
-              amount_won: 0,
-              current_level: 1,
-              reveals_to_next_level: getRevealsToNextLevel(1),
-              notification_enabled: false,
-              created_at: new Date().toISOString(),
-              last_active: new Date().toISOString(),
-            })
-            .select("wallet, cards_count")
-            .single();
+        if (
+          card.shared_to &&
+          card.shared_to.fid &&
+          card.shared_to.username &&
+          card.shared_to.pfp &&
+          card.shared_to.wallet
+        ) {
+          const { data: newFriend, error: createFriendError } =
+            await supabaseAdmin
+              .from("users")
+              .insert({
+                wallet: card.shared_to.wallet,
+                username: card.shared_to.username,
+                pfp: card.shared_to.pfp,
+                fid: parseInt(card.shared_to.fid) || 0,
+                cards_count: 1,
+                total_reveals: 0,
+                total_wins: 0,
+                amount_won: 0,
+                current_level: 1,
+                reveals_to_next_level: getRevealsToNextLevel(1),
+                notification_enabled: false,
+                created_at: new Date().toISOString(),
+                last_active: new Date().toISOString(),
+              })
+              .select("wallet, cards_count")
+              .single();
 
           if (createFriendError) {
             console.error("Error creating friend user:", createFriendError);
@@ -358,8 +368,10 @@ export async function POST(request: NextRequest) {
       if (friendUserId) {
         // Create free card for the friend
         const friendPrizeAmount = drawPrize(false); // Generate a random prize for the friend's card (we don't know friend's friends)
-        const friendPrizeAsset = PRIZE_ASSETS[Math.floor(Math.random() * PRIZE_ASSETS.length)] || USDC_ADDRESS;
-        
+        const friendPrizeAsset =
+          PRIZE_ASSETS[Math.floor(Math.random() * PRIZE_ASSETS.length)] ||
+          USDC_ADDRESS;
+
         const friendCardNumbers = generateNumbers({
           prizeAmount: friendPrizeAmount,
           prizeAsset: friendPrizeAsset,
@@ -386,7 +398,7 @@ export async function POST(request: NextRequest) {
               fid: userFid?.toString() || "0",
               username: username || "",
               pfp: pfp || "",
-              wallet: userWallet
+              wallet: userWallet,
             },
           });
 
@@ -398,8 +410,10 @@ export async function POST(request: NextRequest) {
 
         // Create free card for the user (you)
         const userPrizeAmount = drawPrize(friends.length > 0); // Generate a random prize for the user's card
-        const userPrizeAsset = PRIZE_ASSETS[Math.floor(Math.random() * PRIZE_ASSETS.length)] || USDC_ADDRESS;
-        
+        const userPrizeAsset =
+          PRIZE_ASSETS[Math.floor(Math.random() * PRIZE_ASSETS.length)] ||
+          USDC_ADDRESS;
+
         const userCardNumbers = generateNumbers({
           prizeAmount: userPrizeAmount,
           prizeAsset: userPrizeAsset,
@@ -411,14 +425,18 @@ export async function POST(request: NextRequest) {
         // Check if this is a friend win and populate shared_to accordingly
         let userSharedTo = null;
         if (userPrizeAmount === -1) {
-          const winningRow = findWinningRow(userCardNumbers, userPrizeAmount, userPrizeAsset);
+          const winningRow = findWinningRow(
+            userCardNumbers,
+            userPrizeAmount,
+            userPrizeAsset
+          );
           if (winningRow !== null && winningRow !== -1) {
             const friendCell = userCardNumbers[winningRow * 3];
             userSharedTo = {
               fid: friendCell.friend_fid?.toString() || "0",
               username: friendCell.friend_username || "",
               pfp: friendCell.friend_pfp || "",
-              wallet: friendCell.friend_wallet || ""
+              wallet: friendCell.friend_wallet || "",
             };
           }
         }
@@ -450,9 +468,9 @@ export async function POST(request: NextRequest) {
         if (existingFriend) {
           await supabaseAdmin
             .from("users")
-            .update({ 
+            .update({
               cards_count: (existingFriend.cards_count || 0) + 1,
-              last_active: new Date().toISOString()
+              last_active: new Date().toISOString(),
             })
             .eq("wallet", friendUserId);
         }
@@ -460,9 +478,9 @@ export async function POST(request: NextRequest) {
         // Update user's cards_count
         await supabaseAdmin
           .from("users")
-          .update({ 
+          .update({
             cards_count: (user.cards_count || 0) + 1,
-            last_active: new Date().toISOString()
+            last_active: new Date().toISOString(),
           })
           .eq("wallet", userWallet);
       }
