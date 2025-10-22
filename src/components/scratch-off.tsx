@@ -332,8 +332,8 @@ const ScratchOff = ({
       });
     }
 
-    // Process prize immediately
-    if (cardData?.id) {
+    // Process prize via server payout only if explicitly enabled
+    if (process.env.NEXT_PUBLIC_ENABLE_SERVER_PAYOUT === 'true' && cardData?.id) {
       fetch("/api/cards/process-prize", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -353,11 +353,10 @@ const ScratchOff = ({
           if (processData.success) {
             onPrizeRevealed?.(prizeAmount);
 
-            // If user leveled up and got free cards, refetch user cards
             if (processData.leveledUp && processData.freeCardsAwarded > 0) {
               setTimeout(() => {
                 state.refetchUserCards?.();
-              }, 1000); // Wait 1 second for database to be fully updated
+              }, 1000);
             }
           }
         })

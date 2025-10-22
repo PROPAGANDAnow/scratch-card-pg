@@ -1,4 +1,6 @@
 import { supabase } from "./supabase";
+import { getPublicClient, getStats as getChainStats, getUserCards as getChainUserCards, getCard as getChainCard } from "~/lib/contract";
+import type { Hex } from "viem";
 
 // Fetch user info when wallet connects
 export const fetchUserInfo = async (userWallet: string) => {
@@ -64,6 +66,39 @@ export const fetchAppStats = async () => {
   } catch (error) {
     console.error("Failed to fetch app stats:", error);
     return {};
+  }
+};
+
+// On-chain stats (from contract)
+export const fetchOnChainStats = async () => {
+  try {
+    const pc = getPublicClient();
+    const [totalRegistered, totalClaimed, totalDistributed, balance] = await getChainStats(pc);
+    return { totalRegistered, totalClaimed, totalDistributed, balance };
+  } catch (error) {
+    console.error("Failed to fetch on-chain stats:", error);
+    return { totalRegistered: 0n, totalClaimed: 0n, totalDistributed: 0n, balance: 0n };
+  }
+};
+
+export const fetchOnChainUserCards = async (user: `0x${string}`) => {
+  try {
+    const pc = getPublicClient();
+    return await getChainUserCards(pc, user);
+  } catch (error) {
+    console.error("Failed to fetch on-chain user cards:", error);
+    return [] as Hex[];
+  }
+};
+
+export const fetchOnChainCard = async (recordId: Hex) => {
+  try {
+    const pc = getPublicClient();
+    const [owner, prizeAmount, claimed, registeredAt] = await getChainCard(pc, recordId);
+    return { owner, prizeAmount, claimed, registeredAt };
+  } catch (error) {
+    console.error("Failed to fetch on-chain card:", error);
+    return null;
   }
 };
 

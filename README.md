@@ -79,3 +79,7 @@ However, this does not fully replicate the npx install flow and may not catch al
 
 If you update environment variable handling, remember to replicate any changes in the `dev`, `build`, and `deploy` scripts as needed. The `build` and `deploy` scripts may need further updates and are less critical for most development workflows.
 
+## Security
+
+- See `docs/security-issues.md` for risks and preventive fixes.
+
