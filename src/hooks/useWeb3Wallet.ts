@@ -1,5 +1,5 @@
 /**
- * Web3 Wallet Connection Hook
+ * Wallet Connection Hook
  * 
  * Integrates wallet functionality with the existing Farcaster Mini App
  * Provides wallet connection, account management, and network switching

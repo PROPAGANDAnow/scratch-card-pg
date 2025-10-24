@@ -10,13 +10,13 @@ import { useContext, useEffect, useState, useCallback, useMemo } from "react";
 import { motion } from "framer-motion";
 import { AppContext } from "./context";
 import { SET_LOCAL_CARDS, SET_SWIPABLE_MODE } from "./context/actions";
-import Web3InitialScreen from "~/components/web3-initial-screen";
-import Web3ScratchOff from "~/components/web3-scratch-off";
+import NftInitialScreen from "~/components/nft-initial-screen";
+import NftScratchOff from "~/components/nft-scratch-off";
 import { useWeb3Wallet } from "~/hooks/useWeb3Wallet";
 import { useUserCards } from "~/hooks/useContractMinting";
 import { Card } from "./interface/card";
 
-export default function Web3Home() {
+export default function NftHome() {
   const [state, dispatch] = useContext(AppContext);
   const [currentView, setCurrentView] = useState<'initial' | 'scratching' | 'cards'>('initial');
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
@@ -128,7 +128,7 @@ export default function Web3Home() {
   // Render based on current view
   if (currentView === 'initial') {
     return (
-      <Web3InitialScreen 
+      <NftInitialScreen 
         onScratchNow={handleScratchNow}
       />
     );
@@ -136,7 +136,7 @@ export default function Web3Home() {
 
   if (currentView === 'scratching' && currentCard) {
     return (
-      <Web3ScratchOff
+      <NftScratchOff
         cardData={currentCard}
         tokenId={parseInt(currentCard.id)}
         onPrizeRevealed={handlePrizeRevealed}

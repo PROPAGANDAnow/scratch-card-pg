@@ -1,5 +1,5 @@
 /**
- * Web3 Wallet Connection Button
+ * Wallet Connection Button
  * 
  * Integrates wallet connection with existing Farcaster Mini App UI
  * Provides connection status and network switching
@@ -12,7 +12,7 @@ import { motion } from 'framer-motion';
 import Image from 'next/image';
 import { useWeb3Wallet, useWalletStatus } from '~/hooks/useWeb3Wallet';
 
-interface Web3WalletButtonProps {
+interface WalletButtonProps {
   /** Additional CSS classes */
   className?: string;
   
@@ -30,16 +30,16 @@ interface Web3WalletButtonProps {
 }
 
 /**
- * Web3 wallet connection button component
+ * Wallet connection button component
  * Integrates with existing Mini App design system
  */
-export const Web3WalletButton = ({
+export const WalletButton = ({
   className = '',
   showStatus = true,
   buttonText,
   size = 'md',
   onClick,
-}: Web3WalletButtonProps) => {
+}: WalletButtonProps) => {
   const { 
     state, 
     address, 

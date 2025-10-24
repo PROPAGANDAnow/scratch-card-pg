@@ -1,5 +1,5 @@
 /**
- * Web3 Minting Component
+ * NFT Minting Component
  * 
  * Replaces traditional card buying with NFT minting
  * Integrates with existing Mini App UI and social features
@@ -16,7 +16,7 @@ import { useWeb3Wallet, useWalletAction } from '~/hooks/useWeb3Wallet';
 import { useMiniApp } from '@neynar/react';
 
 
-interface Web3MintingProps {
+interface MintingProps {
   /** Callback when minting is successful */
   onSuccess?: (tokenIds: bigint[]) => void;
   
@@ -34,16 +34,16 @@ interface Web3MintingProps {
 }
 
 /**
- * Web3 minting component for scratch card NFTs
+ * NFT minting component for scratch card NFTs
  * Replaces API-based card purchasing with smart contract minting
  */
-export const Web3Minting = ({
+export const Minting = ({
   onSuccess,
   onError,
   showQuantitySelector = true,
   defaultQuantity = 1,
   className = '',
-}: Web3MintingProps) => {
+}: MintingProps) => {
   // Web3 hooks
   const { isConnected, isCorrectNetwork } = useWeb3Wallet();
   const { ensureWalletReady } = useWalletAction();

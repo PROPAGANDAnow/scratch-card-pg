@@ -1,7 +1,7 @@
 /**
- * Web3 Initial Screen Component
+ * NFT Initial Screen Component
  * 
- * Replaces traditional card buying with Web3 minting
+ * Replaces traditional card buying with NFT minting
  * Integrates wallet connection and NFT minting
  */
 
@@ -15,16 +15,16 @@ import {
 import { AppContext } from "~/app/context";
 import { FC, useContext, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Web3WalletButton } from "./web3-wallet-button";
-import { Web3Minting } from "./web3-minting";
+import { WalletButton } from "./wallet-button";
+import { Minting } from "./minting";
 import { useWeb3Wallet, useWalletStatus } from "~/hooks/useWeb3Wallet";
 import { useUserCards } from "~/hooks/useContractMinting";
 
-interface Web3InitialScreenProps {
+interface NftInitialScreenProps {
   onScratchNow: () => void;
 }
 
-const Web3InitialScreen: FC<Web3InitialScreenProps> = ({ onScratchNow }) => {
+const NftInitialScreen: FC<NftInitialScreenProps> = ({ onScratchNow }) => {
   const [state] = useContext(AppContext);
   const [showMinting, setShowMinting] = useState(false);
   
@@ -179,7 +179,7 @@ const Web3InitialScreen: FC<Web3InitialScreenProps> = ({ onScratchNow }) => {
               animate={{ opacity: 1 }}
               transition={{ delay: 0.6, duration: 0.3 }}
             >
-              <Web3WalletButton
+              <WalletButton
                 showStatus={true}
                 size="lg"
               />
@@ -273,7 +273,7 @@ const Web3InitialScreen: FC<Web3InitialScreenProps> = ({ onScratchNow }) => {
             transition={{ duration: 0.3 }}
           >
             <div className="w-full max-w-[360px]">
-              <Web3Minting
+              <Minting
                 onSuccess={handleMintingSuccess}
                 onError={handleMintingError}
                 showQuantitySelector={true}
@@ -297,4 +297,4 @@ const Web3InitialScreen: FC<Web3InitialScreenProps> = ({ onScratchNow }) => {
   );
 };
 
-export default Web3InitialScreen;
+export default NftInitialScreen;

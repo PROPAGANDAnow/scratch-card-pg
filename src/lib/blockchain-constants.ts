@@ -1,5 +1,5 @@
 /**
- * Web3 Environment Constants
+ * Blockchain Environment Constants
  * 
  * Configuration for blockchain integration
  * Replaces traditional API endpoints with smart contract interactions

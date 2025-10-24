@@ -1,5 +1,5 @@
 /**
- * Web3 Scratch Off Component
+ * NFT Scratch Off Component
  * 
  * Integrates on-chain prize claiming with existing scratch mechanics
  * Maintains social features while using smart contracts for prizes
@@ -50,7 +50,7 @@ import {
 } from "~/lib/contracts";
 import ModalPortal from "~/components/ModalPortal";
 
-interface Web3ScratchOffProps {
+interface NftScratchOffProps {
   cardData: Card | null;
   tokenId?: number;
   isDetailView?: boolean;
@@ -59,13 +59,13 @@ interface Web3ScratchOffProps {
   onNext?: () => void;
 }
 
-const Web3ScratchOff = ({
+const NftScratchOff = ({
   cardData,
   tokenId,
   onPrizeRevealed,
   hasNext,
   onNext,
-}: Web3ScratchOffProps) => {
+}: NftScratchOffProps) => {
   const [state, dispatch] = useContext(AppContext);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
@@ -1018,4 +1018,4 @@ const Web3ScratchOff = ({
   );
 };
 
-export default memo(Web3ScratchOff);
+export default memo(NftScratchOff);
