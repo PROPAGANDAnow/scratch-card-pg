@@ -10,7 +10,10 @@ import sdk from "@farcaster/miniapp-sdk";
 import { USDC_ADDRESS } from "~/lib/constants";
 import { usePathname, useRouter } from "next/navigation";
 
-const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({ mode = "normal", loading = false }) => {
+const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
+  mode = "normal",
+  loading = false,
+}) => {
   const [state, dispatch] = useContext(AppContext);
   const [showBigBuy, setShowBigBuy] = useState(false);
   const [numBuyCards, setNumBuyCards] = useState(5);
@@ -199,7 +202,11 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({ mode
           </motion.div>
           <motion.button
             className="border border-[#fff] rounded-[8px] p-[10px]"
-            onClick={showBigBuy && pathname === "/" ? () => push("/leaderboard") : () => setShowBuyModal(true)}
+            onClick={
+              showBigBuy && pathname === "/"
+                ? () => push("/leaderboard")
+                : () => setShowBuyModal(true)
+            }
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{
               opacity: loading ? 0 : 1,
@@ -219,32 +226,35 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({ mode
 
         {/* Next Card Button - Only show on home page when there's a next card */}
         <AnimatePresence>
-          {pathname === "/" && !showBigBuy && mode === "swipeable" && state.currentCardIndex < state.localCards.length - 1 && (
-            <motion.div
-              className="w-full p-1 rounded-[40px] border border-white"
-              initial={{ opacity: 0, y: 20, scale: 0.9 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 20, scale: 0.9 }}
-              transition={{
-                type: "spring",
-                stiffness: 700,
-                damping: 45,
-                duration: 0.15,
-              }}
-            >
-              <motion.button
-                onClick={() => state.nextCard?.()}
-                className="w-full py-2 bg-white/80 rounded-[40px] font-semibold text-[14px] hover:bg-white h-11 transition-colors"
-                style={{
-                  color: state.appColor,
+          {pathname === "/" &&
+            !showBigBuy &&
+            mode === "swipeable" &&
+            state.currentCardIndex < state.localCards.length - 1 && (
+              <motion.div
+                className="w-full p-1 rounded-[40px] border border-white"
+                initial={{ opacity: 0, y: 20, scale: 0.9 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 20, scale: 0.9 }}
+                transition={{
+                  type: "spring",
+                  stiffness: 700,
+                  damping: 45,
+                  duration: 0.15,
                 }}
-                whileTap={{ scale: 0.98 }}
-                transition={{ duration: 0.1 }}
               >
-                Next Card
-              </motion.button>
-            </motion.div>
-          )}
+                <motion.button
+                  onClick={() => state.nextCard?.()}
+                  className="w-full py-2 bg-white/80 rounded-[40px] font-semibold text-[14px] hover:bg-white h-11 transition-colors"
+                  style={{
+                    color: state.appColor,
+                  }}
+                  whileTap={{ scale: 0.98 }}
+                  transition={{ duration: 0.1 }}
+                >
+                  Next Card
+                </motion.button>
+              </motion.div>
+            )}
         </AnimatePresence>
 
         <AnimatePresence>
@@ -341,28 +351,49 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({ mode
                   />
                 </button>
               </div>
-              <div className="grid grid-cols-3 gap-2">
-                {[5, 10, 20].map((amount) => (
-                  <button
-                    key={amount}
-                    className={`py-[14px] px-[18px] rounded-[46px] transition-colors ${
-                      numBuyCards === amount
-                        ? "bg-white shadow-lg shadow-gray-600/50 hover:bg-white"
-                        : "bg-white/10 hover:bg-white/20"
-                    }`}
-                    onClick={() => {
-                      setNumBuyCards(amount);
-                    }}
+              <div className="flex flex-col gap-2 w-full">
+                <div className="py-[14px] px-[18px] rounded-[46px] bg-white/10 flex items-center justify-between w-full">
+                  <p
+                    className="text-[18px] font-semibold font-mono leading-[100%] text-white/90 cursor-pointer hover:text-white"
+                    onClick={() => setNumBuyCards(numBuyCards + 1)}
                   >
-                    <p
-                      className={`text-[15px] font-semibold font-mono leading-[100%] ${
-                        numBuyCards === amount ? "text-[#090909]" : "text-white"
+                    +
+                  </p>
+                  <p className="text-[15px] font-semibold font-mono leading-[100%] text-white">
+                    {numBuyCards}
+                  </p>
+                  <p
+                    className="text-[18px] font-semibold font-mono leading-[100%] text-white/90 cursor-pointer hover:text-white"
+                    onClick={() => setNumBuyCards(numBuyCards - 1)}
+                  >
+                    -
+                  </p>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  {[5, 10, 20].map((amount) => (
+                    <button
+                      key={amount}
+                      className={`py-[14px] px-[18px] rounded-[46px] transition-colors ${
+                        numBuyCards === amount
+                          ? "bg-white shadow-lg shadow-gray-600/50 hover:bg-white"
+                          : "bg-white/10 hover:bg-white/20"
                       }`}
+                      onClick={() => {
+                        setNumBuyCards(amount);
+                      }}
                     >
-                      {amount}
-                    </p>
-                  </button>
-                ))}
+                      <p
+                        className={`text-[15px] font-semibold font-mono leading-[100%] ${
+                          numBuyCards === amount
+                            ? "text-[#090909]"
+                            : "text-white"
+                        }`}
+                      >
+                        {amount}
+                      </p>
+                    </button>
+                  ))}
+                </div>
               </div>
               <div className="space-y-2">
                 <div className="flex items-center justify-between w-full">

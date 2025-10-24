@@ -53,23 +53,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate card status
-    if (card.scratched) {
-      console.error("Card has already been scratched");
-      return NextResponse.json(
-        { error: "Card has already been scratched" },
-        { status: 400 }
-      );
-    }
-
-    if (card.claimed) {
-      console.error("Card has already been claimed");
-      return NextResponse.json(
-        { error: "Card has already been claimed" },
-        { status: 400 }
-      );
-    }
-
     // Update user stats
     const { data: user, error: userError } = await supabaseAdmin
       .from("users")
