@@ -83,6 +83,13 @@ const NftScratchOff = ({
   const { batchUpdate } = useBatchedUpdates(dispatch);
   const { address } = useWeb3Wallet();
   
+  // Store user wallet in localStorage when it changes
+  useEffect(() => {
+    if (address) {
+      localStorage.setItem('user_wallet', address);
+    }
+  }, [address]);
+  
   // Web3 claiming hooks
   const { 
     claimPrize, 

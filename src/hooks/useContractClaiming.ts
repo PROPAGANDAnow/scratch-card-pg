@@ -288,23 +288,53 @@ export const useTokenClaimability = (tokenId: number | null, userAddress: Addres
 export const useClaimSignature = () => {
   const createSignature = useCallback(async (
     tokenId: number,
-    prizeAmount: number,
-    tokenAddress: Address,
-    deadline: number
+    _prizeAmount?: number,
+    _tokenAddress?: Address,
+    _deadline?: number
   ): Promise<ClaimSignature> => {
-    // This would normally be done on server
-    // For development, we'll simulate it
-    
-    // In production, get signature from server
-    // For now, return a mock signature
-    const mockSignature: ClaimSignature = {
-      prizeAmount: BigInt(prizeAmount),
-      tokenAddress,
-      deadline: BigInt(deadline),
-      signature: '0x' + '0'.repeat(130) as `0x${string}` // Mock signature
-    };
+    try {
+      // Get user wallet from localStorage (this should be passed from context in a better implementation)
+      const userWallet = localStorage.getItem('user_wallet');
+      
+      if (!userWallet) {
+        throw new Error('User wallet not found. Please connect your wallet.');
+      }
 
-    return mockSignature;
+      // Call the server endpoint to generate signature
+      const response = await fetch('/api/cards/generate-claim-signature', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          tokenId,
+          userWallet,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to generate claim signature');
+      }
+
+      if (!result.success) {
+        throw new Error('Failed to generate claim signature');
+      }
+
+      // Convert the returned signature to the expected format
+      const claimSignature: ClaimSignature = {
+        prizeAmount: BigInt(result.signature.prizeAmount),
+        tokenAddress: result.signature.tokenAddress as Address,
+        deadline: BigInt(result.signature.deadline),
+        signature: result.signature.signature as `0x${string}`,
+      };
+
+      return claimSignature;
+    } catch (error) {
+      console.error('Error creating claim signature:', error);
+      throw error;
+    }
   }, []);
 
   return {
