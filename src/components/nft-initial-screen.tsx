@@ -17,7 +17,7 @@ import { FC, useContext, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { WalletButton } from "./wallet-button";
 import { Minting } from "./minting";
-import { useWeb3Wallet, useWalletStatus } from "~/hooks/useWeb3Wallet";
+import { useWallet, useWalletStatus } from "~/hooks/useWeb3Wallet";
 import { useUserCards } from "~/hooks/useContractMinting";
 
 interface NftInitialScreenProps {
@@ -27,9 +27,9 @@ interface NftInitialScreenProps {
 const NftInitialScreen: FC<NftInitialScreenProps> = ({ onScratchNow }) => {
   const [state] = useContext(AppContext);
   const [showMinting, setShowMinting] = useState(false);
-  
+
   // Web3 hooks
-  const { address, isConnected } = useWeb3Wallet();
+  const { address, isConnected } = useWallet();
   const { canTransact } = useWalletStatus();
   const { tokenIds } = useUserCards(address);
 
@@ -48,7 +48,7 @@ const NftInitialScreen: FC<NftInitialScreenProps> = ({ onScratchNow }) => {
   const handleMintingSuccess = useCallback((tokenIds: bigint[]) => {
     console.log('Minting successful:', tokenIds);
     setShowMinting(false);
-    
+
     // Refresh cards after successful minting
     setTimeout(() => {
       window.location.reload();
@@ -98,7 +98,7 @@ const NftInitialScreen: FC<NftInitialScreenProps> = ({ onScratchNow }) => {
               animate={{ scale: 1, opacity: 1 }}
               transition={{ delay: 0.2, duration: 0.5 }}
             >
-              <h1 
+              <h1
                 className="font-[ABCGaisyr] text-[48px] font-bold italic text-white leading-[90%] mb-2"
                 style={textShadowStyle}
               >
@@ -133,7 +133,7 @@ const NftInitialScreen: FC<NftInitialScreenProps> = ({ onScratchNow }) => {
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 0.5, duration: 0.3 }}
               />
-              
+
               {/* Card Image */}
               <motion.div
                 style={{
@@ -157,7 +157,7 @@ const NftInitialScreen: FC<NftInitialScreenProps> = ({ onScratchNow }) => {
                     userSelect: "none",
                   }}
                 />
-                
+
                 {/* Card count overlay */}
                 {hasCards && (
                   <motion.div
@@ -213,7 +213,7 @@ const NftInitialScreen: FC<NftInitialScreenProps> = ({ onScratchNow }) => {
                       Mint Your First Card
                     </motion.button>
                   )}
-                  
+
                   <motion.button
                     className="w-full py-3 bg-white/20 text-white font-semibold rounded-full border border-white/30 hover:bg-white/30 transition-all duration-200"
                     onClick={() => setShowMinting(true)}
@@ -224,7 +224,7 @@ const NftInitialScreen: FC<NftInitialScreenProps> = ({ onScratchNow }) => {
                   </motion.button>
                 </>
               )}
-              
+
               {!isConnected && (
                 <motion.div
                   className="text-center text-white/60 text-sm"
@@ -279,7 +279,7 @@ const NftInitialScreen: FC<NftInitialScreenProps> = ({ onScratchNow }) => {
                 showQuantitySelector={true}
                 defaultQuantity={1}
               />
-              
+
               {/* Back button */}
               <motion.button
                 className="w-full mt-4 py-3 bg-white/10 text-white/60 font-medium rounded-full hover:bg-white/20 transition-all duration-200"

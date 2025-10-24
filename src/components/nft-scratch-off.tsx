@@ -43,9 +43,9 @@ import { BestFriend } from "~/app/interface/bestFriends";
 import { useDebouncedScratchDetection } from "~/hooks/useDebouncedScratchDetection";
 import { useBatchedUpdates } from "~/hooks/useBatchedUpdates";
 import { useContractClaiming, useTokenClaimability, useClaimSignature } from "~/hooks/useContractClaiming";
-import { useWeb3Wallet } from "~/hooks/useWeb3Wallet";
-import { 
-  ClaimSignature, 
+import { useWallet } from "~/hooks/useWeb3Wallet";
+import {
+  ClaimSignature,
   createClaimSignature
 } from "~/lib/contracts";
 import ModalPortal from "~/components/ModalPortal";
@@ -81,28 +81,28 @@ const NftScratchOff = ({
 
   const { actions, haptics } = useMiniApp();
   const { batchUpdate } = useBatchedUpdates(dispatch);
-  const { address } = useWeb3Wallet();
-  
+  const { address } = useWallet();
+
   // Store user wallet in localStorage when it changes
   useEffect(() => {
     if (address) {
       localStorage.setItem('user_wallet', address);
     }
   }, [address]);
-  
+
   // Web3 claiming hooks
-  const { 
-    claimPrize, 
-    claimPrizeWithBonus, 
+  const {
+    claimPrize,
+    claimPrizeWithBonus,
     state: claimingState,
     reset: resetClaiming
   } = useContractClaiming();
-  
+
   const { canClaim: canClaimToken, isClaimed: isTokenClaimed } = useTokenClaimability(
-    tokenId || null, 
+    tokenId || null,
     address || null
   );
-  
+
   const { createSignature } = useClaimSignature();
 
   // Lock body scroll when modal is open
@@ -181,20 +181,20 @@ const NftScratchOff = ({
       }
 
       haptics.notificationOccurred('success');
-      
+
     } catch (error) {
       console.error('Claiming failed:', error);
       haptics.notificationOccurred('error');
     }
   }, [
-    tokenId, 
-    claimSignature, 
-    canClaimToken, 
-    bestFriend, 
-    cardData, 
-    claimPrize, 
-    claimPrizeWithBonus, 
-    address, 
+    tokenId,
+    claimSignature,
+    canClaimToken,
+    bestFriend,
+    cardData,
+    claimPrize,
+    claimPrizeWithBonus,
+    address,
     haptics
   ]);
 
@@ -260,11 +260,11 @@ const NftScratchOff = ({
         payload: state.cards.map((card) =>
           card.id === cardData?.id
             ? {
-                ...card,
-                scratched: true,
-                scratched_at: new Date().toISOString(),
-                claimed: true,
-              }
+              ...card,
+              scratched: true,
+              scratched_at: new Date().toISOString(),
+              claimed: true,
+            }
             : card
         ),
       },
@@ -686,7 +686,7 @@ const NftScratchOff = ({
                 }}
               />
               {cardData?.numbers_json &&
-              (cardData?.scratched || scratched || coverImageLoaded) ? (
+                (cardData?.scratched || scratched || coverImageLoaded) ? (
                 <div className="absolute inset-0 z-10 flex flex-col items-center justify-center text-center rotate-[-4deg]">
                   {(() => {
                     const rows = chunk3(cardData.numbers_json);
@@ -708,11 +708,10 @@ const NftScratchOff = ({
                               {row.map((cell, cellIndex) => (
                                 <div
                                   key={`${cell.amount}-${cellIndex}`}
-                                  className={`w-[77px] h-[77px] rounded-[14px] font-[ABCGaisyr] font-bold text-[24px] leading-[90%] italic flex items-center justify-center ${
-                                    isWinning
+                                  className={`w-[77px] h-[77px] rounded-[14px] font-[ABCGaisyr] font-bold text-[24px] leading-[90%] italic flex items-center justify-center ${isWinning
                                       ? "!text-[#00A151]/40 !bg-[#00A151]/15"
                                       : "!text-[#000]/15 !bg-[#000]/10"
-                                  }`}
+                                    }`}
                                   style={{
                                     filter:
                                       "drop-shadow(0px 0.5px 0.5px rgba(0, 0, 0, 0.15))",
@@ -724,9 +723,8 @@ const NftScratchOff = ({
                                     <div className="relative">
                                       <Image
                                         src={cell.friend_pfp}
-                                        alt={`${
-                                          cell.friend_username || "Friend"
-                                        }`}
+                                        alt={`${cell.friend_username || "Friend"
+                                          }`}
                                         width={48}
                                         height={48}
                                         className="rounded-full object-cover"
@@ -764,7 +762,7 @@ const NftScratchOff = ({
                   })()}
                 </div>
               ) : null}
-              
+
               {/* Scratch cover */}
               {(!cardData || (!cardData?.scratched && !scratched)) && (
                 <canvas
@@ -901,22 +899,21 @@ const NftScratchOff = ({
 
                 {/* Claim Button */}
                 <motion.button
-                  className={`w-full py-3 rounded-full font-semibold transition-all duration-200 ${
-                    !canClaimToken || isAlreadyClaimed || claimingState !== 'idle'
+                  className={`w-full py-3 rounded-full font-semibold transition-all duration-200 ${!canClaimToken || isAlreadyClaimed || claimingState !== 'idle'
                       ? 'bg-gray-500 cursor-not-allowed'
                       : 'bg-green-500 hover:bg-green-600'
-                  }`}
+                    }`}
                   onClick={handleClaimPrize}
                   disabled={!canClaimToken || isAlreadyClaimed || claimingState !== 'idle'}
                   whileHover={canClaimToken && !isAlreadyClaimed && claimingState === 'idle' ? { scale: 1.02 } : {}}
                   whileTap={canClaimToken && !isAlreadyClaimed && claimingState === 'idle' ? { scale: 0.98 } : {}}
                 >
                   {isAlreadyClaimed ? 'Already Claimed' :
-                   claimingState === 'pending' ? 'Claiming...' :
-                   claimingState === 'confirming' ? 'Confirming...' :
-                   claimingState === 'success' ? 'Claimed!' :
-                   claimingState === 'error' ? 'Try Again' :
-                   'Claim Prize'}
+                    claimingState === 'pending' ? 'Claiming...' :
+                      claimingState === 'confirming' ? 'Confirming...' :
+                        claimingState === 'success' ? 'Claimed!' :
+                          claimingState === 'error' ? 'Try Again' :
+                            'Claim Prize'}
                 </motion.button>
               </motion.div>
             )}
@@ -953,7 +950,7 @@ const NftScratchOff = ({
                   </p>
                   <div className="flex items-center justify-between w-full">
                     <button
-                      onClick={() => {/* WhatsApp sharing */}}
+                      onClick={() => {/* WhatsApp sharing */ }}
                       className="rounded-full border border-[#fff]/[0.02] bg-[#fff]/[0.08] w-[64px] h-[64px] flex items-center justify-center hover:bg-[#fff]/[0.15] transition-colors"
                     >
                       <Image
@@ -964,7 +961,7 @@ const NftScratchOff = ({
                       />
                     </button>
                     <button
-                      onClick={() => {/* Telegram sharing */}}
+                      onClick={() => {/* Telegram sharing */ }}
                       className="rounded-full border border-[#fff]/[0.02] bg-[#fff]/[0.08] w-[64px] h-[64px] flex items-center justify-center hover:bg-[#fff]/[0.15] transition-colors"
                     >
                       <Image
@@ -988,7 +985,7 @@ const NftScratchOff = ({
                   </div>
                 </motion.div>
               )}
-              
+
               {hasNext && prizeAmount !== -1 ? (
                 <div className="w-full p-1 rounded-[40px] border border-white">
                   <button

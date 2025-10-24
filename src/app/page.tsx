@@ -12,7 +12,7 @@ import { AppContext } from "./context";
 import { SET_LOCAL_CARDS, SET_SWIPABLE_MODE } from "./context/actions";
 import NftInitialScreen from "~/components/nft-initial-screen";
 import NftScratchOff from "~/components/nft-scratch-off";
-import { useWeb3Wallet } from "~/hooks/useWeb3Wallet";
+import { useWallet } from "~/hooks/useWeb3Wallet";
 import { useUserCards } from "~/hooks/useContractMinting";
 import { Card } from "./interface/card";
 
@@ -20,15 +20,15 @@ export default function NftHome() {
   const [state, dispatch] = useContext(AppContext);
   const [currentView, setCurrentView] = useState<'initial' | 'scratching' | 'cards'>('initial');
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
-  
+
   // Web3 hooks
-  const { address } = useWeb3Wallet();
+  const { address } = useWallet();
   const { tokenIds } = useUserCards(address);
 
   // Convert token IDs to card format for compatibility
   const nftCards = useMemo(() => {
     if (!tokenIds || !Array.isArray(tokenIds) || tokenIds.length === 0) return [];
-    
+
     return tokenIds.map((tokenId: bigint, index: number) => ({
       id: tokenId.toString(),
       user_wallet: address || '',
@@ -61,7 +61,7 @@ export default function NftHome() {
     if (nftCards.length > 0 || state.localCards.length > 0) {
       // Create a set of NFT card IDs for quick lookup
       const nftCardIds = new Set(nftCards.map(card => card.id));
-      
+
       // Update existing cards
       const updatedCards = state.localCards.map(card => {
         if (nftCardIds.has(card.id)) {
@@ -71,13 +71,13 @@ export default function NftHome() {
         }
         return card;
       });
-      
+
       // Add new NFT cards that don't exist locally
       const existingIds = new Set(state.localCards.map(card => card.id));
       const newCards = nftCards.filter(card => !existingIds.has(card.id));
-      
+
       const newLocalCards = [...updatedCards, ...newCards];
-      
+
       // Only update if there are actual changes
       const hasChanges = JSON.stringify(newLocalCards) !== JSON.stringify(state.localCards);
       if (hasChanges) {
@@ -112,7 +112,7 @@ export default function NftHome() {
   const handlePrizeRevealed = useCallback((prizeAmount: number) => {
     console.log('Prize revealed:', prizeAmount);
     // Update card state in context
-    const updatedCards = state.localCards.map(card => 
+    const updatedCards = state.localCards.map(card =>
       card.id === nftCards[currentCardIndex]?.id
         ? { ...card, scratched: true, prize_amount: prizeAmount }
         : card
@@ -128,7 +128,7 @@ export default function NftHome() {
   // Render based on current view
   if (currentView === 'initial') {
     return (
-      <NftInitialScreen 
+      <NftInitialScreen
         onScratchNow={handleScratchNow}
       />
     );
@@ -155,7 +155,7 @@ export default function NftHome() {
             {nftCards.length} NFT Card{nftCards.length !== 1 ? 's' : ''}
           </p>
         </div>
-        
+
         <div className="grid grid-cols-2 gap-4 mb-8">
           {nftCards.map((card, index) => (
             <motion.button
@@ -173,7 +173,7 @@ export default function NftHome() {
                   #{card.card_no}
                 </span>
               </div>
-              
+
               {card.scratched && (
                 <div className="absolute top-2 right-2">
                   {card.prize_amount > 0 ? (
@@ -187,14 +187,14 @@ export default function NftHome() {
                   )}
                 </div>
               )}
-              
+
               <div className="text-sm text-white/80">
                 Card #{card.card_no}
               </div>
             </motion.button>
           ))}
         </div>
-        
+
         <div className="flex gap-4">
           <motion.button
             onClick={handleBackToCards}
@@ -202,7 +202,7 @@ export default function NftHome() {
           >
             Back
           </motion.button>
-          
+
           {nftCards.length === 0 && (
             <motion.button
               onClick={() => setCurrentView('initial')}

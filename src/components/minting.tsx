@@ -12,23 +12,23 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 import { Address } from 'viem';
 import { useContractMinting, useMintingCost } from '~/hooks/useContractMinting';
-import { useWeb3Wallet, useWalletAction } from '~/hooks/useWeb3Wallet';
+import { useWallet, useWalletAction } from '~/hooks/useWeb3Wallet';
 import { useMiniApp } from '@neynar/react';
 
 
 interface MintingProps {
   /** Callback when minting is successful */
   onSuccess?: (tokenIds: bigint[]) => void;
-  
+
   /** Callback when minting fails */
   onError?: (error: string) => void;
-  
+
   /** Show quantity selector */
   showQuantitySelector?: boolean;
-  
+
   /** Default quantity */
   defaultQuantity?: number;
-  
+
   /** Additional CSS classes */
   className?: string;
 }
@@ -45,20 +45,20 @@ export const Minting = ({
   className = '',
 }: MintingProps) => {
   // Web3 hooks
-  const { isConnected, isCorrectNetwork } = useWeb3Wallet();
+  const { isConnected, isCorrectNetwork } = useWallet();
   const { ensureWalletReady } = useWalletAction();
   const { haptics } = useMiniApp();
-  
+
   // Minting hooks
-  const { 
-    state: mintingState, 
-    maxBatchSize, 
+  const {
+    state: mintingState,
+    maxBatchSize,
     mintCardsBatch,
     canMint,
     error: mintingError,
     reset: resetMinting
   } = useContractMinting();
-  
+
   const { calculateCost, singleCardPrice } = useMintingCost();
 
   // Local state
@@ -90,7 +90,7 @@ export const Minting = ({
 
       // Mint cards
       await mintCardsBatch(
-        quantity, 
+        quantity,
         recipient || undefined
       );
 
@@ -103,12 +103,12 @@ export const Minting = ({
       onError?.(errorMessage);
     }
   }, [
-    ensureWalletReady, 
-    quantity, 
-    maxBatchSize, 
-    recipient, 
-    mintCardsBatch, 
-    haptics, 
+    ensureWalletReady,
+    quantity,
+    maxBatchSize,
+    recipient,
+    mintCardsBatch,
+    haptics,
     onError
   ]);
 
@@ -117,7 +117,7 @@ export const Minting = ({
     if (mintingState === 'success') {
       haptics.notificationOccurred('success');
       onSuccess?.([]); // TODO: Get actual token IDs from events
-      
+
       // Reset after delay
       setTimeout(() => {
         resetMinting();
@@ -183,11 +183,11 @@ export const Minting = ({
             >
               -
             </motion.button>
-            
+
             <div className="flex-1 text-center">
               <span className="text-3xl font-bold text-white">{quantity}</span>
             </div>
-            
+
             <motion.button
               className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white"
               onClick={incrementQuantity}
@@ -198,7 +198,7 @@ export const Minting = ({
               +
             </motion.button>
           </div>
-          
+
           <div className="text-xs text-white/40 mt-2 text-center">
             Max batch size: {maxBatchSize}
           </div>
@@ -221,7 +221,7 @@ export const Minting = ({
           />
           Mint as gift
         </motion.button>
-        
+
         <AnimatePresence>
           {showRecipient && (
             <motion.div
@@ -256,13 +256,12 @@ export const Minting = ({
       <AnimatePresence>
         {mintingState !== 'idle' && (
           <motion.div
-            className={`rounded-xl p-4 mb-6 ${
-              mintingState === 'success' 
-                ? 'bg-green-500/20 text-green-400' 
+            className={`rounded-xl p-4 mb-6 ${mintingState === 'success'
+                ? 'bg-green-500/20 text-green-400'
                 : mintingState === 'error'
-                ? 'bg-red-500/20 text-red-400'
-                : 'bg-yellow-500/20 text-yellow-400'
-            }`}
+                  ? 'bg-red-500/20 text-red-400'
+                  : 'bg-yellow-500/20 text-yellow-400'
+              }`}
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
@@ -275,7 +274,7 @@ export const Minting = ({
                   transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
                 />
               )}
-              
+
               {mintingState === 'success' && (
                 <Image
                   src="/assets/win-icon.svg"
@@ -284,7 +283,7 @@ export const Minting = ({
                   height={20}
                 />
               )}
-              
+
               {mintingState === 'error' && (
                 <Image
                   src="/assets/cross-icon.svg"
@@ -293,7 +292,7 @@ export const Minting = ({
                   height={20}
                 />
               )}
-              
+
               <div>
                 <div className="font-medium">
                   {mintingState === 'pending' && 'Minting...'}
@@ -301,13 +300,13 @@ export const Minting = ({
                   {mintingState === 'success' && 'Minting Successful!'}
                   {mintingState === 'error' && 'Minting Failed'}
                 </div>
-                
+
                 {mintingState === 'success' && (
                   <div className="text-sm opacity-80">
                     Your scratch cards are ready!
                   </div>
                 )}
-                
+
                 {mintingError && (
                   <div className="text-sm opacity-80">
                     {mintingError}
@@ -323,8 +322,8 @@ export const Minting = ({
       <motion.button
         className={`
           w-full py-3 rounded-full font-semibold text-white transition-all duration-200
-          ${canProceed 
-            ? 'bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600' 
+          ${canProceed
+            ? 'bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600'
             : 'bg-gray-500 cursor-not-allowed'
           }
         `}
@@ -339,8 +338,8 @@ export const Minting = ({
         {mintingState === 'error' && 'Try Again'}
         {mintingState === 'idle' && (
           !isConnected ? 'Connect Wallet' :
-          !isCorrectNetwork ? 'Switch to Base' :
-          `Mint ${quantity} Card${quantity > 1 ? 's' : ''}`
+            !isCorrectNetwork ? 'Switch to Base' :
+              `Mint ${quantity} Card${quantity > 1 ? 's' : ''}`
         )}
       </motion.button>
 
@@ -352,7 +351,7 @@ export const Minting = ({
           </p>
         </div>
       )}
-      
+
       {isConnected && !isCorrectNetwork && (
         <div className="text-center mt-4">
           <p className="text-sm text-orange-400">

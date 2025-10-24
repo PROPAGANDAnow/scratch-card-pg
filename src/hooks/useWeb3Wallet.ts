@@ -6,10 +6,10 @@
  */
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { 
-  useAccount, 
-  useConnect, 
-  useDisconnect, 
+import {
+  useAccount,
+  useConnect,
+  useDisconnect,
   useSwitchChain,
   useChainId
 } from 'wagmi';
@@ -27,31 +27,31 @@ export type WalletState = 'disconnected' | 'connecting' | 'connected' | 'wrong-n
 export interface UseWeb3WalletReturn {
   /** Current wallet state */
   state: WalletState;
-  
+
   /** Connected wallet address */
   address: Address | null;
-  
+
   /** Current chain ID */
   chainId: number | null;
-  
+
   /** Whether wallet is connected */
   isConnected: boolean;
-  
+
   /** Connection error message */
   error: string | null;
-  
+
   /** Connect wallet function */
   connect: () => Promise<void>;
-  
+
   /** Disconnect wallet function */
   disconnect: () => void;
-  
+
   /** Switch to Base network */
   switchToBase: () => Promise<void>;
-  
+
   /** Truncated address for display */
   displayAddress: string | null;
-  
+
   /** Whether we're on the correct network (Base) */
   isCorrectNetwork: boolean;
 }
@@ -60,15 +60,15 @@ export interface UseWeb3WalletReturn {
  * Custom hook for Web3 wallet management
  * Integrates with existing Farcaster Mini App architecture
  */
-export const useWeb3Wallet = (): UseWeb3WalletReturn => {
+export const useWallet = (): UseWeb3WalletReturn => {
   // Wagmi hooks
-  const { 
-    address, 
-    isConnected, 
-    isConnecting, 
+  const {
+    address,
+    isConnected,
+    isConnecting,
     isDisconnected
   } = useAccount();
-  
+
   const { connect: wagmiConnect, connectors } = useConnect();
   const { disconnect: wagmiDisconnect } = useDisconnect();
   const { switchChain, isPending: isSwitchingChain } = useSwitchChain();
@@ -105,11 +105,11 @@ export const useWeb3Wallet = (): UseWeb3WalletReturn => {
     try {
       setState('connecting');
       setError(null);
-      
+
       // Try to connect with available connectors
       // Prefer injected connectors (MetaMask, etc.)
       const injectedConnector = connectors.find(c => c.type === 'injected');
-      
+
       if (injectedConnector) {
         await wagmiConnect({ connector: injectedConnector });
       } else if (connectors.length > 0) {
@@ -173,8 +173,8 @@ export const useWeb3Wallet = (): UseWeb3WalletReturn => {
  * Hook to get wallet connection status for UI decisions
  */
 export const useWalletStatus = () => {
-  const { state, isConnected, isCorrectNetwork, address } = useWeb3Wallet();
-  
+  const { state, isConnected, isCorrectNetwork, address } = useWallet();
+
   return {
     canTransact: isConnected && isCorrectNetwork && !!address,
     needsConnection: state === 'disconnected',
@@ -188,23 +188,23 @@ export const useWalletStatus = () => {
  * Hook to handle wallet connection for specific actions
  */
 export const useWalletAction = () => {
-  const { connect, switchToBase } = useWeb3Wallet();
+  const { connect, switchToBase } = useWallet();
   const { needsConnection, needsNetworkSwitch } = useWalletStatus();
-  
+
   const ensureWalletReady = useCallback(async (): Promise<boolean> => {
     if (needsConnection) {
       await connect();
       return false;
     }
-    
+
     if (needsNetworkSwitch) {
       await switchToBase();
       return false;
     }
-    
+
     return true;
   }, [connect, switchToBase, needsConnection, needsNetworkSwitch]);
-  
+
   return {
     ensureWalletReady,
     needsConnection,

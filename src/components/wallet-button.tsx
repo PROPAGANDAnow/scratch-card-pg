@@ -10,21 +10,21 @@
 import { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
-import { useWeb3Wallet, useWalletStatus } from '~/hooks/useWeb3Wallet';
+import { useWallet, useWalletStatus } from '~/hooks/useWeb3Wallet';
 
 interface WalletButtonProps {
   /** Additional CSS classes */
   className?: string;
-  
+
   /** Show connection status text */
   showStatus?: boolean;
-  
+
   /** Custom button text */
   buttonText?: string;
-  
+
   /** Size variant */
   size?: 'sm' | 'md' | 'lg';
-  
+
   /** Click handler */
   onClick?: () => void;
 }
@@ -40,18 +40,18 @@ export const WalletButton = ({
   size = 'md',
   onClick,
 }: WalletButtonProps) => {
-  const { 
-    state, 
-    address, 
-    displayAddress, 
-    connect, 
+  const {
+    state,
+    address,
+    displayAddress,
+    connect,
     switchToBase
-  } = useWeb3Wallet();
-  
-  const { 
-    needsConnection, 
-    needsNetworkSwitch, 
-    isLoading 
+  } = useWallet();
+
+  const {
+    needsConnection,
+    needsNetworkSwitch,
+    isLoading
   } = useWalletStatus();
 
   // Size configurations
@@ -69,7 +69,7 @@ export const WalletButton = ({
   // Button text based on state
   const getButtonText = () => {
     if (buttonText) return buttonText;
-    
+
     switch (state) {
       case 'connecting':
         return 'Connecting...';
@@ -194,15 +194,15 @@ export const WalletButton = ({
             className="filter brightness-0 invert"
           />
         )}
-        
+
         {/* Connected indicator */}
         {state === 'connected' && (
           <div className="w-2 h-2 bg-white rounded-full" />
         )}
-        
+
         {/* Button text */}
         <span>{getButtonText()}</span>
-        
+
         {/* Loading spinner */}
         {isLoading && (
           <motion.div
@@ -212,10 +212,10 @@ export const WalletButton = ({
           />
         )}
       </motion.button>
-      
+
       {/* Status text */}
       <StatusIndicator />
-      
+
       {/* Network warning */}
       {state === 'wrong-network' && (
         <motion.p
@@ -227,7 +227,7 @@ export const WalletButton = ({
           Please switch to Base network to continue
         </motion.p>
       )}
-      
+
       {/* Connected address */}
       {state === 'connected' && address && (
         <motion.p
@@ -247,7 +247,7 @@ export const WalletButton = ({
  * Compact wallet button for tight spaces
  */
 export const CompactWalletButton = () => {
-  const { state, displayAddress, connect, switchToBase } = useWeb3Wallet();
+  const { state, displayAddress, connect, switchToBase } = useWallet();
   const { needsConnection, needsNetworkSwitch } = useWalletStatus();
 
   const handleClick = () => {
