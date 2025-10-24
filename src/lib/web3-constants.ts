@@ -38,23 +38,7 @@ export const BASE_CONFIG = {
   },
 } as const;
 
-/**
- * Base Sepolia testnet configuration
- */
-export const BASE_SEPOLIA_CONFIG = {
-  chainId: 84532,
-  name: 'Base Sepolia',
-  rpcUrls: [
-    process.env.NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL || 'https://sepolia.base.org',
-    'https://base-sepolia.blockpi.network/v1/rpc/public'
-  ],
-  blockExplorer: 'https://sepolia.basescan.org',
-  nativeCurrency: {
-    name: 'ETH',
-    symbol: 'ETH',
-    decimals: 18,
-  },
-} as const;
+
 
 // ========== Contract Configuration ==========
 
@@ -173,7 +157,7 @@ export const FEATURES = {
   ANALYTICS: process.env.NEXT_PUBLIC_ENABLE_ANALYTICS !== 'false',
   
   /** Enable testnet mode */
-  TESTNET_MODE: IS_DEVELOPMENT && process.env.NEXT_PUBLIC_TESTNET_MODE === 'true',
+  TESTNET_MODE: false, // Always use Base mainnet
 } as const;
 
 // ========== Utility Functions ==========
@@ -182,7 +166,7 @@ export const FEATURES = {
  * Get current network configuration
  */
 export const getCurrentNetwork = () => {
-  return FEATURES.TESTNET_MODE ? BASE_SEPOLIA_CONFIG : BASE_CONFIG;
+  return BASE_CONFIG; // Always use Base mainnet
 };
 
 /**
@@ -190,9 +174,7 @@ export const getCurrentNetwork = () => {
  */
 export const getContractAddresses = () => {
   return {
-    scratchCardNFT: FEATURES.TESTNET_MODE 
-      ? (process.env.NEXT_PUBLIC_SCRATCH_CARD_NFT_ADDRESS_SEPOLIA || SCRATCH_CARD_NFT_ADDRESS)
-      : SCRATCH_CARD_NFT_ADDRESS,
+    scratchCardNFT: SCRATCH_CARD_NFT_ADDRESS,
     usdc: USDC_ADDRESS,
     signer: SIGNER_ADDRESS,
     adminWallet: ADMIN_WALLET_ADDRESS,

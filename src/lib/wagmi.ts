@@ -7,10 +7,7 @@
 
 import { farcasterMiniApp as miniAppConnector } from '@farcaster/miniapp-wagmi-connector';
 import { createConfig, http } from 'wagmi';
-import { base, baseSepolia } from 'wagmi/chains';
-
-// Use Base Sepolia for development, Base for production
-const isDevelopment = process.env.NODE_ENV === 'development';
+import { base } from 'wagmi/chains';
 
 // Create Wagmi configuration
 export const wagmiConfig = createConfig({
@@ -40,7 +37,7 @@ export const getCurrentChain = () => {
 
 // Helper function to check if we're on testnet
 export const isTestnet = () => {
-  return isDevelopment;
+  return false; // Always use Base mainnet
 };
 
 // Helper function to get block explorer URL
@@ -59,8 +56,6 @@ export const formatChainName = (chainId: number): string => {
   switch (chainId) {
     case base.id:
       return 'Base';
-    case baseSepolia.id:
-      return 'Base Sepolia';
     default:
       return 'Unknown';
   }
