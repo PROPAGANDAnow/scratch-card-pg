@@ -5,6 +5,7 @@ import CardGrid from "~/components/card-grid";
 import { useRouter } from "next/navigation";
 import { motion, useAnimation } from "framer-motion";
 import { CircularProgress } from "~/components/circular-progress";
+import { useUserStats, useUserActivity } from "~/hooks";
 
 // Level calculation function
 function getLevelRequirement(level: number): number {
@@ -16,6 +17,8 @@ const ProfilePage = () => {
   const { push } = useRouter();
   const [displayAmount, setDisplayAmount] = useState(0);
   const controls = useAnimation();
+  const userStats = useUserStats();
+  const { } = useUserActivity();
 
   const handleViewAll = () => {
     push("/cards");
@@ -154,7 +157,7 @@ const ProfilePage = () => {
             animate={{ opacity: 1 }}
             transition={{ delay: 1.4, duration: 0.8 }}
           >
-            {state.user?.total_reveals || 0} SCRATCH OFFS
+            {userStats.totalMinted || state.user?.total_reveals || 0} SCRATCH OFFS
           </motion.p>
 
           {/* Animated underline */}

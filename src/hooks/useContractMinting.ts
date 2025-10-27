@@ -7,7 +7,8 @@
 
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useWriteContract, useWaitForTransactionReceipt, useReadContract, usePublicClient, useSwitchChain, useAccount } from 'wagmi';
-import { Address, formatUnits, base } from 'viem';
+import { Address, formatUnits } from 'viem';
+import { base } from 'wagmi/chains';
 import {
   SCRATCH_CARD_NFT_ADDRESS,
   SCRATCH_CARD_NFT_ABI,
@@ -88,7 +89,7 @@ export interface UseContractMintingReturn {
 export const useContractMinting = (): UseContractMintingReturn => {
   // Get public client for enhanced transaction handling
   const publicClient = usePublicClient();
-  
+
   // Mini-app and chain switching hooks
   const { switchChainAsync } = useSwitchChain();
   const { isInMiniApp } = useMiniApp();

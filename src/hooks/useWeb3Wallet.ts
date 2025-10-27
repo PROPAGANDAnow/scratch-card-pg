@@ -110,6 +110,8 @@ export const useWallet = (): UseWeb3WalletReturn => {
       setState('connecting');
       setError(null);
 
+      await switchToBase();
+
       // Try to connect with available connectors
       // Prefer injected connectors (MetaMask, etc.)
       const farcasterConnector = connectors.find(c => c.id === 'farcaster');
@@ -143,6 +145,7 @@ export const useWallet = (): UseWeb3WalletReturn => {
   const switchToBase = useCallback(async () => {
     try {
       setState('connecting');
+      console.log("🚀 ~ useWallet ~ base:", base)
       await switchChain({ chainId: base.id });
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to switch network';

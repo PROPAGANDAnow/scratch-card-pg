@@ -5,7 +5,7 @@ import { AppContext } from "../context";
 import { APP_COLORS } from "../../lib/constants";
 import { SET_APP_BACKGROUND, SET_APP_COLOR } from "../context/actions";
 import Leaderboard from "../../components/leaderboard";
-import Activity from "../../components/activity";
+import SubgraphActivity from "../../components/subgraph-activity";
 
 const Tabs = ({
   tabs,
@@ -152,7 +152,7 @@ const LeaderboardPage = () => {
             transition={{ duration: 0.3, ease: "easeInOut" }}
           >
             {activeTab === "leaderboard" && <Leaderboard />}
-            {activeTab === "activity" && <Activity />}
+            {activeTab === "activity" && <SubgraphActivity />}
           </motion.div>
         </motion.div>
       </div>
