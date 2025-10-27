@@ -14,6 +14,7 @@ import {
   GAME_CONFIG
 } from '~/lib/contracts';
 import { AddressPatterns } from '~/lib/blockchain-addresses';
+import { useERC20Approval } from './useERC20Approval';
 
 /**
  * Minting transaction states
@@ -79,18 +80,25 @@ export interface UseContractMintingReturn {
 
   /** Whether user can mint */
   canMint: boolean;
+
+  /** Approval state and functions */
+  approval: {
+    state: 'idle' | 'checking' | 'pending' | 'confirming' | 'success' | 'error';
+    needsApproval: boolean;
+    hasSufficientApproval: boolean;
+    approve: (amount: bigint) => Promise<void>;
+    approveUnlimited: () => Promise<void>;
+    error: string | null;
+  };
 }
 
 /**
  * Custom hook for contract minting functionality
  * Replaces the traditional API-based card purchasing
  */
-export const useContractMinting = (): UseContractMintingReturn => {
+export const useContractMinting = (userAddress: Address | null): UseContractMintingReturn => {
   // Get public client for enhanced transaction handling
   const publicClient = usePublicClient();
-
-
-
 
   // Contract write hooks
   const {
@@ -130,6 +138,22 @@ export const useContractMinting = (): UseContractMintingReturn => {
   const [error, setError] = useState<string | null>(null);
   const [enhancedReceipt, setEnhancedReceipt] = useState<TransactionReceipt | null>(null);
 
+  // Get minting cost for approval amount calculation
+  const { calculateCostBigInt } = useMintingCost();
+
+  // Maximum batch size
+  const maxBatchSize = useMemo(() => {
+    return Number(maxBatchSizeRaw || GAME_CONFIG.MAX_BATCH_SIZE);
+  }, [maxBatchSizeRaw]);
+
+  // Calculate required approval amount (for max batch size to avoid repeated approvals)
+  const requiredApprovalAmount = useMemo(() => {
+    return calculateCostBigInt(maxBatchSize);
+  }, [calculateCostBigInt, maxBatchSize]);
+
+  // ERC20 approval hook
+  const approvalHook = useERC20Approval(userAddress, SCRATCH_CARD_NFT_ADDRESS, requiredApprovalAmount);
+
   // Auto-switch to Base network for mini-app users
 
 
@@ -138,11 +162,6 @@ export const useContractMinting = (): UseContractMintingReturn => {
     if (!cardPriceRaw) return '0.00';
     return formatUnits(cardPriceRaw, 6); // USDC has 6 decimals
   }, [cardPriceRaw]);
-
-  // Maximum batch size
-  const maxBatchSize = useMemo(() => {
-    return Number(maxBatchSizeRaw || GAME_CONFIG.MAX_BATCH_SIZE);
-  }, [maxBatchSizeRaw]);
 
   // Enhanced receipt processing using publicClient
   useEffect(() => {
@@ -231,6 +250,11 @@ export const useContractMinting = (): UseContractMintingReturn => {
   // Mint single card
   const mintCard = useCallback(async (recipient?: Address) => {
     try {
+      // Check approval first
+      if (!approvalHook.hasSufficientApproval) {
+        throw new Error('Please approve USDC spending first');
+      }
+
       setState('pending');
       setError(null);
       setEnhancedReceipt(null);
@@ -256,7 +280,7 @@ export const useContractMinting = (): UseContractMintingReturn => {
       setEnhancedReceipt(null);
       console.error('Minting error:', err);
     }
-  }, [writeContract, publicClient]);
+  }, [writeContract, publicClient, approvalHook.hasSufficientApproval]);
 
   // Mint multiple cards
   const mintCardsBatch = useCallback(async (quantity: number, recipient?: Address) => {
@@ -268,6 +292,11 @@ export const useContractMinting = (): UseContractMintingReturn => {
 
       if (quantity > maxBatchSize) {
         throw new Error(`Maximum batch size is ${maxBatchSize}`);
+      }
+
+      // Check approval first
+      if (!approvalHook.hasSufficientApproval) {
+        throw new Error('Please approve USDC spending first');
       }
 
       setState('pending');
@@ -296,7 +325,7 @@ export const useContractMinting = (): UseContractMintingReturn => {
       setEnhancedReceipt(null);
       console.error('Batch minting error:', err);
     }
-  }, [writeContract, maxBatchSize, publicClient]);
+  }, [writeContract, maxBatchSize, publicClient, approvalHook.hasSufficientApproval]);
 
   // Reset state
   const reset = useCallback(() => {
@@ -321,6 +350,14 @@ export const useContractMinting = (): UseContractMintingReturn => {
     mintCardsBatch,
     reset,
     canMint,
+    approval: {
+      state: approvalHook.state,
+      needsApproval: approvalHook.needsApproval,
+      hasSufficientApproval: approvalHook.hasSufficientApproval,
+      approve: approvalHook.approve,
+      approveUnlimited: approvalHook.approveUnlimited,
+      error: approvalHook.error,
+    },
   };
 };
 
