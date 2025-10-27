@@ -6,13 +6,14 @@
  */
 
 import { useState, useCallback, useMemo, useEffect } from 'react';
-import { useWriteContract, useWaitForTransactionReceipt, useReadContract, usePublicClient } from 'wagmi';
-import { Address, formatUnits } from 'viem';
+import { useWriteContract, useWaitForTransactionReceipt, useReadContract, usePublicClient, useSwitchChain, useAccount } from 'wagmi';
+import { Address, formatUnits, base } from 'viem';
 import {
   SCRATCH_CARD_NFT_ADDRESS,
   SCRATCH_CARD_NFT_ABI,
   GAME_CONFIG
 } from '~/lib/contracts';
+import { useMiniApp } from '@neynar/react';
 
 /**
  * Minting transaction states
@@ -87,6 +88,10 @@ export interface UseContractMintingReturn {
 export const useContractMinting = (): UseContractMintingReturn => {
   // Get public client for enhanced transaction handling
   const publicClient = usePublicClient();
+  
+  // Mini-app and chain switching hooks
+  const { switchChainAsync } = useSwitchChain();
+  const { isInMiniApp } = useMiniApp();
 
   // Contract write hooks
   const {
@@ -126,6 +131,23 @@ export const useContractMinting = (): UseContractMintingReturn => {
   const [error, setError] = useState<string | null>(null);
   const [isWaitingForReceipt, setIsWaitingForReceipt] = useState(false);
   const [enhancedReceipt, setEnhancedReceipt] = useState<TransactionReceipt | null>(null);
+
+  // Get current chain info
+  const { chainId } = useAccount();
+
+  // Auto-switch to Base network for mini-app users
+  useEffect(() => {
+    const switchToBase = async () => {
+      if (isInMiniApp && chainId !== base.id) {
+        try {
+          await switchChainAsync({ chainId: base.id });
+        } catch (error) {
+          console.error("Failed to switch to Base:", error);
+        }
+      }
+    };
+    switchToBase();
+  }, [chainId, switchChainAsync, isInMiniApp]);
 
   // Format card price for display
   const cardPrice = useMemo(() => {
