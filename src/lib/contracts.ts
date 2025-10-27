@@ -13,7 +13,7 @@ import { Address } from 'viem';
  * Deployed Scratch Card NFT contract address on Base
  * Update this with your actual deployed contract address
  */
-export const SCRATCH_CARD_NFT_ADDRESS = '0x0d180F0374d87729B37114286369F2752F5FeF61' as Address;
+export const SCRATCH_CARD_NFT_ADDRESS = '0xca6ffd32f5070c862865eb86a89265962b33c8fb' as Address;
 
 /**
  * USDC contract address on Base
@@ -213,16 +213,16 @@ export const SCRATCH_CARD_NFT_ABI = [
 export const GAME_CONFIG = {
   /** Default card price in USDC (6 decimals) */
   CARD_PRICE: 1_000_000, // 1 USDC
-  
+
   /** Maximum batch size for minting */
   MAX_BATCH_SIZE: 50,
-  
+
   /** Contract name */
   NAME: 'Scratch Card NFT',
-  
+
   /** Contract symbol */
   SYMBOL: 'SCRATCH',
-  
+
   /** Base URI for token metadata */
   BASE_URI: 'https://api.scratchcards.com',
 } as const;

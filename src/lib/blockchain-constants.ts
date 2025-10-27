@@ -46,7 +46,7 @@ export const BASE_CONFIG = {
  * Scratch Card NFT contract address
  * Update this based on your deployment
  */
-export const SCRATCH_CARD_NFT_ADDRESS = (process.env.NEXT_PUBLIC_SCRATCH_CARD_NFT_ADDRESS || '0x0d180F0374d87729B37114286369F2752F5FeF61') as Address;
+export const SCRATCH_CARD_NFT_ADDRESS = (process.env.NEXT_PUBLIC_SCRATCH_CARD_NFT_ADDRESS || '0xca6ffd32f5070c862865eb86a89265962b33c8fb') as Address;
 
 /**
  * USDC contract address on Base
@@ -88,10 +88,10 @@ export const WALLETCONNECT_METADATA = {
 export const CARD_PRICING = {
   /** Base price in USDC (6 decimals) */
   BASE_PRICE: 1_000_000, // 1 USDC
-  
+
   /** Maximum batch size */
   MAX_BATCH_SIZE: 50,
-  
+
   /** Price tiers for bulk discounts */
   BULK_DISCOUNTS: [
     { min: 1, max: 4, discount: 0 },      // No discount for 1-4 cards
@@ -113,10 +113,10 @@ export const PRIZE_CONFIG = {
     { amount: 5, weight: 4, type: 'big-win' },     // 4% chance of 5 USDC
     { amount: -1, weight: 1, type: 'free-card' },   // 1% chance of free card
   ],
-  
+
   /** Maximum prize amount */
   MAX_PRIZE: 5, // 5 USDC
-  
+
   /** Free card configuration */
   FREE_CARD_CHANCE: 0.01, // 1%
 } as const;
@@ -129,11 +129,11 @@ export const PRIZE_CONFIG = {
 export const API_CONFIG = {
   /** Base URL for API calls */
   BASE_URL: process.env.NEXT_PUBLIC_URL || 'http://localhost:3000',
-  
+
   /** Neynar API configuration */
   NEYNAR_API_KEY: process.env.NEYNAR_API_KEY || '',
   NEYNAR_CLIENT_ID: process.env.NEYNAR_CLIENT_ID || '',
-  
+
   /** Basescan API key for transaction details */
   BASESCAN_API_KEY: process.env.NEXT_PUBLIC_BASESCAN_API_KEY || '',
 } as const;
@@ -146,16 +146,16 @@ export const API_CONFIG = {
 export const FEATURES = {
   /** Enable Web3 minting */
   WEB3_MINTING: process.env.NEXT_PUBLIC_ENABLE_WEB3_MINTING !== 'false',
-  
+
   /** Enable on-chain prize claiming */
   ON_CHAIN_CLAIMING: process.env.NEXT_PUBLIC_ENABLE_ON_CHAIN_CLAIMING !== 'false',
-  
+
   /** Enable social features */
   SOCIAL_FEATURES: process.env.NEXT_PUBLIC_ENABLE_SOCIAL_FEATURES !== 'false',
-  
+
   /** Enable analytics */
   ANALYTICS: process.env.NEXT_PUBLIC_ENABLE_ANALYTICS !== 'false',
-  
+
   /** Enable testnet mode */
   TESTNET_MODE: false, // Always use Base mainnet
 } as const;
@@ -186,16 +186,16 @@ export const getContractAddresses = () => {
  */
 export const calculatePrice = (quantity: number): { price: number; discount: number } => {
   const basePrice = CARD_PRICING.BASE_PRICE / 1_000_000; // Convert from USDC units
-  
+
   // Find applicable discount
   const discountTier = CARD_PRICING.BULK_DISCOUNTS.find(
     tier => quantity >= tier.min && quantity <= tier.max
   );
-  
+
   const discount = discountTier?.discount || 0;
   const discountedPrice = basePrice * (1 - discount);
   const totalPrice = discountedPrice * quantity;
-  
+
   return {
     price: totalPrice,
     discount: discount,
@@ -206,10 +206,10 @@ export const calculatePrice = (quantity: number): { price: number; discount: num
  * Format price for display
  */
 export const formatPrice = (price: number | bigint): string => {
-  const priceInUSDC = typeof price === 'bigint' 
-    ? Number(price) / 1_000_000 
+  const priceInUSDC = typeof price === 'bigint'
+    ? Number(price) / 1_000_000
     : price;
-  
+
   return priceInUSDC.toFixed(2);
 };
 
@@ -251,6 +251,6 @@ export const isAdminAddress = (address: Address): boolean => {
     ADMIN_WALLET_ADDRESS,
     // Add other admin addresses here
   ].filter(Boolean);
-  
+
   return adminAddresses.includes(address);
 };

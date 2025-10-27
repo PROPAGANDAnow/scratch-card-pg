@@ -118,7 +118,7 @@ export const useWallet = (): UseWeb3WalletReturn => {
         throw new Error('Farcaster connector not found');
       }
 
-      await wagmiConnect({ connector: farcasterConnector });
+      await wagmiConnect({ connector: connectors[0] });
 
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to connect wallet';
