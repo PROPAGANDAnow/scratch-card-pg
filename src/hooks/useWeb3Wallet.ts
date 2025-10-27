@@ -98,6 +98,10 @@ export const useWallet = (): UseWeb3WalletReturn => {
       setState('disconnected');
       setError(null);
     }
+
+    if (state !== 'connecting' && !isConnected && !isSwitchingChain) {
+      connect()
+    }
   }, [isConnected, isConnecting, isDisconnected, isCorrectNetwork, isSwitchingChain]);
 
   // Connect wallet function
@@ -108,15 +112,14 @@ export const useWallet = (): UseWeb3WalletReturn => {
 
       // Try to connect with available connectors
       // Prefer injected connectors (MetaMask, etc.)
-      const injectedConnector = connectors.find(c => c.type === 'injected');
+      const farcasterConnector = connectors.find(c => c.id === 'farcaster');
 
-      if (injectedConnector) {
-        await wagmiConnect({ connector: injectedConnector });
-      } else if (connectors.length > 0) {
-        await wagmiConnect({ connector: connectors[0] });
-      } else {
-        throw new Error('No wallet connectors available');
+      if (!farcasterConnector) {
+        throw new Error('Farcaster connector not found');
       }
+
+      await wagmiConnect({ connector: farcasterConnector });
+
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to connect wallet';
       setError(errorMessage);

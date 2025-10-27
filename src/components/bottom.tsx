@@ -110,8 +110,7 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
     } catch (error) {
       console.error("Error buying cards:", error);
       alert(
-        `Failed to buy cards: ${
-          error instanceof Error ? error.message : "Unknown error"
+        `Failed to buy cards: ${error instanceof Error ? error.message : "Unknown error"
         }`
       );
     } finally {
@@ -141,10 +140,10 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
       {/* Bottom Section - Controls */}
       <motion.div
         className="flex flex-col items-center justify-center gap-4 p-4 pb-9 w-full flex-shrink-0 z-0"
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: 0 }}
         animate={{
           opacity: loading ? 0 : 1,
-          y: loading ? 20 : 0,
+          y: loading ? "100%" : 0,
         }}
         transition={{
           duration: 0.6,
@@ -180,8 +179,7 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
           >
             <p className="text-[14px] leading-[90%] font-medium text-[#fff]">
               {mode === "swipeable" ? (
-                `${unscratchedCardsCount} card${
-                  unscratchedCardsCount !== 1 ? "s" : ""
+                `${unscratchedCardsCount} card${unscratchedCardsCount !== 1 ? "s" : ""
                 } left`
               ) : (
                 <>
@@ -373,21 +371,19 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
                   {[5, 10, 20].map((amount) => (
                     <button
                       key={amount}
-                      className={`py-[14px] px-[18px] rounded-[46px] transition-colors ${
-                        numBuyCards === amount
-                          ? "bg-white shadow-lg shadow-gray-600/50 hover:bg-white"
-                          : "bg-white/10 hover:bg-white/20"
-                      }`}
+                      className={`py-[14px] px-[18px] rounded-[46px] transition-colors ${numBuyCards === amount
+                        ? "bg-white shadow-lg shadow-gray-600/50 hover:bg-white"
+                        : "bg-white/10 hover:bg-white/20"
+                        }`}
                       onClick={() => {
                         setNumBuyCards(amount);
                       }}
                     >
                       <p
-                        className={`text-[15px] font-semibold font-mono leading-[100%] ${
-                          numBuyCards === amount
-                            ? "text-[#090909]"
-                            : "text-white"
-                        }`}
+                        className={`text-[15px] font-semibold font-mono leading-[100%] ${numBuyCards === amount
+                          ? "text-[#090909]"
+                          : "text-white"
+                          }`}
                       >
                         {amount}
                       </p>

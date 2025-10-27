@@ -214,7 +214,7 @@ export const WalletButton = ({
       </motion.button>
 
       {/* Status text */}
-      <StatusIndicator />
+      {/* <StatusIndicator /> */}
 
       {/* Network warning */}
       {state === 'wrong-network' && (
@@ -229,7 +229,7 @@ export const WalletButton = ({
       )}
 
       {/* Connected address */}
-      {state === 'connected' && address && (
+      {/* {state === 'connected' && address && (
         <motion.p
           className="text-xs text-white/60 text-center"
           initial={{ opacity: 0 }}
@@ -238,7 +238,7 @@ export const WalletButton = ({
         >
           {address}
         </motion.p>
-      )}
+      )} */}
     </motion.div>
   );
 };

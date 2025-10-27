@@ -225,42 +225,6 @@ const NftInitialScreen: FC<NftInitialScreenProps> = ({ onScratchNow }) => {
                 </>
               )}
 
-              {!isConnected && (
-                <motion.div
-                  className="text-center text-white/60 text-sm"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 1.0, duration: 0.3 }}
-                >
-                  <p>Connect your wallet to get started</p>
-                  <p className="mt-2 text-xs">
-                    Powered by Base network
-                  </p>
-                </motion.div>
-              )}
-            </motion.div>
-
-            {/* Features */}
-            <motion.div
-              className="mt-8 text-center"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 1.2, duration: 0.3 }}
-            >
-              <div className="flex justify-center gap-6 text-white/60 text-xs">
-                <div className="flex items-center gap-1">
-                  <div className="w-2 h-2 bg-green-500 rounded-full" />
-                  <span>On-Chain</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full" />
-                  <span>USDC Prizes</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <div className="w-2 h-2 bg-purple-500 rounded-full" />
-                  <span>NFTs</span>
-                </div>
-              </div>
             </motion.div>
           </motion.div>
         ) : (
