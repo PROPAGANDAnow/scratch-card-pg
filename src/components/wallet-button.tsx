@@ -42,6 +42,7 @@ export const WalletButton = ({
 }: WalletButtonProps) => {
   const {
     state,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     address,
     displayAddress,
     connect,
@@ -128,6 +129,7 @@ export const WalletButton = ({
   };
 
   // Status indicator
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const StatusIndicator = () => {
     if (!showStatus) return null;
 

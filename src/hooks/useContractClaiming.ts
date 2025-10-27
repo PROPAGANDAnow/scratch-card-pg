@@ -289,8 +289,11 @@ export const useTokenClaimability = (tokenId: number | null, userAddress: Addres
 export const useClaimSignature = () => {
   const createSignature = useCallback(async (
     tokenId: number,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _prizeAmount?: number,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _tokenAddress?: Address,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _deadline?: number
   ): Promise<ClaimSignature> => {
     try {

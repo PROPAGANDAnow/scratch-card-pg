@@ -206,7 +206,6 @@ export const useContractMinting = (): UseContractMintingReturn => {
     if (isWritePending) {
       setState('pending');
       setError(null);
-      setIsWaitingForReceipt(false);
       setEnhancedReceipt(null);
     } else if (hash && !isConfirming && !isConfirmed) {
       // Transaction submitted but not yet confirming
@@ -303,7 +302,6 @@ export const useContractMinting = (): UseContractMintingReturn => {
   const reset = useCallback(() => {
     setState('idle');
     setError(null);
-    setIsWaitingForReceipt(false);
     setEnhancedReceipt(null);
   }, []);
 
