@@ -16,7 +16,7 @@ import { AppContext } from "~/app/context";
 import { FC, useContext, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { WalletButton } from "./wallet-button";
-import { MintButton } from "./minting";
+import { MintCardForm } from "./mint-card-form";
 import { useWallet, useWalletStatus } from "~/hooks/useWeb3Wallet";
 import { useUserCards } from "~/hooks/useContractMinting";
 
@@ -237,7 +237,7 @@ const NftInitialScreen: FC<NftInitialScreenProps> = ({ onScratchNow }) => {
             transition={{ duration: 0.3 }}
           >
             <div className="w-full max-w-[360px]">
-              <MintButton
+              <MintCardForm
                 onSuccess={handleMintingSuccess}
                 onError={handleMintingError}
                 showQuantitySelector={true}

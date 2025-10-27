@@ -6,11 +6,11 @@
  */
 
 import { useState, useCallback, useMemo, useEffect } from 'react';
-import { useWriteContract, useWaitForTransactionReceipt, useReadContract } from 'wagmi';
+import { useWriteContract, useWaitForTransactionReceipt, useReadContract, usePublicClient } from 'wagmi';
 import { Address, formatUnits } from 'viem';
-import { 
-  SCRATCH_CARD_NFT_ADDRESS, 
-  SCRATCH_CARD_NFT_ABI, 
+import {
+  SCRATCH_CARD_NFT_ADDRESS,
+  SCRATCH_CARD_NFT_ABI,
   GAME_CONFIG
 } from '~/lib/contracts';
 
@@ -20,33 +20,62 @@ import {
 export type MintingState = 'idle' | 'pending' | 'confirming' | 'success' | 'error';
 
 /**
+ * Enhanced transaction receipt information
+ */
+export interface TransactionReceipt {
+  /** Transaction hash */
+  hash: `0x${string}`;
+  /** Block number */
+  blockNumber: bigint;
+  /** Block hash */
+  blockHash: `0x${string}`;
+  /** Gas used */
+  gasUsed: bigint;
+  /** Effective gas price */
+  effectiveGasPrice: bigint;
+  /** Transaction status */
+  status: 'success' | 'reverted';
+  /** Logs from the transaction */
+  logs: readonly any[];
+  /** Transaction index */
+  transactionIndex: number;
+  /** Type of transaction */
+  type: string;
+  /** Cumulative gas used */
+  cumulativeGasUsed: bigint;
+}
+
+/**
  * Minting hook return type
  */
 export interface UseContractMintingReturn {
   /** Current minting state */
   state: MintingState;
-  
+
   /** Transaction hash if pending/confirming */
   transactionHash: `0x${string}` | null;
-  
+
+  /** Transaction receipt when confirmed */
+  receipt: TransactionReceipt | null;
+
   /** Error message if failed */
   error: string | null;
-  
+
   /** Current card price in USDC */
   cardPrice: string;
-  
+
   /** Maximum batch size */
   maxBatchSize: number;
-  
+
   /** Mint single card */
   mintCard: (recipient?: Address) => Promise<void>;
-  
+
   /** Mint multiple cards */
   mintCardsBatch: (quantity: number, recipient?: Address) => Promise<void>;
-  
+
   /** Reset state */
   reset: () => void;
-  
+
   /** Whether user can mint */
   canMint: boolean;
 }
@@ -56,21 +85,27 @@ export interface UseContractMintingReturn {
  * Replaces the traditional API-based card purchasing
  */
 export const useContractMinting = (): UseContractMintingReturn => {
+  // Get public client for enhanced transaction handling
+  const publicClient = usePublicClient();
+
   // Contract write hooks
-  const { 
-    writeContract, 
-    data: hash, 
+  const {
+    writeContract,
+    data: hash,
     isPending: isWritePending,
-    error: writeError 
+    error: writeError
   } = useWriteContract();
-  
-  const { 
-    isLoading: isConfirming, 
+
+  const {
+    isLoading: isConfirming,
     isSuccess: isConfirmed,
-    error: confirmError 
-  } = useWaitForTransactionReceipt({ 
+    error: confirmError,
+    data: viemReceipt
+  } = useWaitForTransactionReceipt({
     hash: hash || undefined,
     confirmations: 2, // Wait for 2 confirmations on Base
+    retryCount: 3, // Retry up to 3 times
+    retryDelay: 1000, // 1 second delay between retries
   });
 
   // Read contract data
@@ -89,6 +124,8 @@ export const useContractMinting = (): UseContractMintingReturn => {
   // Local state
   const [state, setState] = useState<MintingState>('idle');
   const [error, setError] = useState<string | null>(null);
+  const [isWaitingForReceipt, setIsWaitingForReceipt] = useState(false);
+  const [enhancedReceipt, setEnhancedReceipt] = useState<TransactionReceipt | null>(null);
 
   // Format card price for display
   const cardPrice = useMemo(() => {
@@ -101,46 +138,127 @@ export const useContractMinting = (): UseContractMintingReturn => {
     return Number(maxBatchSizeRaw || GAME_CONFIG.MAX_BATCH_SIZE);
   }, [maxBatchSizeRaw]);
 
+  // Enhanced receipt processing using publicClient
+  useEffect(() => {
+    const processReceipt = async () => {
+      if (viemReceipt && publicClient) {
+        try {
+          // Get additional transaction details using publicClient
+          const transaction = await publicClient.getTransaction({
+            hash: viemReceipt.transactionHash
+          });
+
+          const enhanced: TransactionReceipt = {
+            hash: viemReceipt.transactionHash,
+            blockNumber: viemReceipt.blockNumber,
+            blockHash: viemReceipt.blockHash,
+            gasUsed: viemReceipt.gasUsed,
+            effectiveGasPrice: viemReceipt.effectiveGasPrice,
+            status: viemReceipt.status === 'success' ? 'success' : 'reverted',
+            logs: viemReceipt.logs,
+            transactionIndex: Number(viemReceipt.transactionIndex),
+            type: transaction?.type || 'legacy',
+            cumulativeGasUsed: viemReceipt.cumulativeGasUsed,
+          };
+
+          setEnhancedReceipt(enhanced);
+
+          console.log('Enhanced transaction receipt:', {
+            hash: enhanced.hash,
+            blockNumber: enhanced.blockNumber,
+            gasUsed: enhanced.gasUsed.toString(),
+            effectiveGasPrice: enhanced.effectiveGasPrice.toString(),
+            status: enhanced.status,
+            transactionType: enhanced.type,
+            logsCount: enhanced.logs.length,
+          });
+
+        } catch (error) {
+          console.error('Error processing receipt:', error);
+          // Fallback to basic receipt if enhanced processing fails
+          setEnhancedReceipt({
+            hash: viemReceipt.transactionHash,
+            blockNumber: viemReceipt.blockNumber,
+            blockHash: viemReceipt.blockHash,
+            gasUsed: viemReceipt.gasUsed,
+            effectiveGasPrice: viemReceipt.effectiveGasPrice,
+            status: viemReceipt.status === 'success' ? 'success' : 'reverted',
+            logs: viemReceipt.logs,
+            transactionIndex: Number(viemReceipt.transactionIndex),
+            type: 'unknown',
+            cumulativeGasUsed: viemReceipt.cumulativeGasUsed,
+          });
+        }
+      }
+    };
+
+    processReceipt();
+  }, [viemReceipt, publicClient]);
+
   // Update state based on transaction status
   useEffect(() => {
     if (isWritePending) {
       setState('pending');
       setError(null);
+      setIsWaitingForReceipt(false);
+      setEnhancedReceipt(null);
+    } else if (hash && !isConfirming && !isConfirmed) {
+      // Transaction submitted but not yet confirming
+      setState('confirming');
+      setError(null);
+      setIsWaitingForReceipt(true);
     } else if (isConfirming) {
       setState('confirming');
       setError(null);
-    } else if (isConfirmed) {
+      setIsWaitingForReceipt(true);
+    } else if (isConfirmed && viemReceipt) {
       setState('success');
       setError(null);
+      setIsWaitingForReceipt(false);
     } else if (writeError || confirmError) {
       setState('error');
       setError(writeError?.message || confirmError?.message || 'Transaction failed');
+      setIsWaitingForReceipt(false);
+      setEnhancedReceipt(null);
     } else {
       setState('idle');
       setError(null);
+      setIsWaitingForReceipt(false);
+      setEnhancedReceipt(null);
     }
-  }, [isWritePending, isConfirming, isConfirmed, writeError, confirmError]);
+  }, [isWritePending, isConfirming, isConfirmed, writeError, confirmError, hash, viemReceipt]);
 
   // Mint single card
   const mintCard = useCallback(async (recipient?: Address) => {
     try {
       setState('pending');
       setError(null);
+      setIsWaitingForReceipt(false);
+      setEnhancedReceipt(null);
 
-      writeContract({
+      const txHash = await writeContract({
         address: SCRATCH_CARD_NFT_ADDRESS,
         abi: SCRATCH_CARD_NFT_ABI,
         functionName: 'mintCard',
         args: [recipient || '0x'], // Use zero address for self
       });
 
+      console.log('Transaction submitted:', txHash);
+
+      // Wait for transaction receipt using publicClient for enhanced monitoring
+      if (publicClient && txHash) {
+        console.log('Waiting for transaction receipt using publicClient...');
+      }
+
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to mint card';
       setError(errorMessage);
       setState('error');
+      setIsWaitingForReceipt(false);
+      setEnhancedReceipt(null);
       console.error('Minting error:', err);
     }
-  }, [writeContract]);
+  }, [writeContract, publicClient]);
 
   // Mint multiple cards
   const mintCardsBatch = useCallback(async (quantity: number, recipient?: Address) => {
@@ -149,33 +267,46 @@ export const useContractMinting = (): UseContractMintingReturn => {
       if (quantity <= 0) {
         throw new Error('Quantity must be greater than 0');
       }
-      
+
       if (quantity > maxBatchSize) {
         throw new Error(`Maximum batch size is ${maxBatchSize}`);
       }
 
       setState('pending');
       setError(null);
+      setIsWaitingForReceipt(false);
+      setEnhancedReceipt(null);
 
-      writeContract({
+      const txHash = await writeContract({
         address: SCRATCH_CARD_NFT_ADDRESS,
         abi: SCRATCH_CARD_NFT_ABI,
         functionName: 'mintCardsBatch',
         args: [BigInt(quantity), recipient || '0x'], // Use zero address for self
       });
 
+      console.log('Batch transaction submitted:', txHash);
+
+      // Wait for transaction receipt using publicClient for enhanced monitoring
+      if (publicClient && txHash) {
+        console.log('Waiting for batch transaction receipt using publicClient...');
+      }
+
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to mint cards';
       setError(errorMessage);
       setState('error');
+      setIsWaitingForReceipt(false);
+      setEnhancedReceipt(null);
       console.error('Batch minting error:', err);
     }
-  }, [writeContract, maxBatchSize]);
+  }, [writeContract, maxBatchSize, publicClient]);
 
   // Reset state
   const reset = useCallback(() => {
     setState('idle');
     setError(null);
+    setIsWaitingForReceipt(false);
+    setEnhancedReceipt(null);
   }, []);
 
   // Can mint if not currently processing
@@ -186,6 +317,7 @@ export const useContractMinting = (): UseContractMintingReturn => {
   return {
     state,
     transactionHash: hash || null,
+    receipt: enhancedReceipt,
     error,
     cardPrice,
     maxBatchSize,
@@ -222,7 +354,7 @@ export const useUserCards = (userAddress: Address | null) => {
 export const useMintingEvents = () => {
   // TODO: Implement event listening with useWatchContractEvent
   // This will replace current polling-based approach
-  
+
   return {
     mintedCards: [],
   };

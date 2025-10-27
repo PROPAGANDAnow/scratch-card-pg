@@ -4,7 +4,7 @@ import { AppContext } from "~/app/context";
 import { FC, useContext, useEffect, useRef, useState } from "react";
 import { SET_BUY_CARDS } from "~/app/context/actions";
 import { usePathname, useRouter } from "next/navigation";
-import { MintButton } from "./minting";
+import { MintCardForm } from "./mint-card-form";
 import { useDetectClickOutside } from "~/hooks/useDetectClickOutside";
 
 const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
@@ -241,7 +241,7 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
               duration: 0.15,
             }}
           >
-            <MintButton />
+            <MintCardForm />
           </motion.div>
         )}
       </AnimatePresence>

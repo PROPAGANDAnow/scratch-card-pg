@@ -37,7 +37,7 @@ interface MintingProps {
  * NFT minting component for scratch card NFTs
  * Replaces API-based card purchasing with smart contract minting
  */
-export const MintButton = ({
+export const MintCardForm = ({
   onSuccess,
   onError,
   showQuantitySelector = true,
@@ -46,6 +46,7 @@ export const MintButton = ({
 }: MintingProps) => {
   // Web3 hooks
   const { isConnected, isCorrectNetwork } = useWallet();
+  console.log("🚀 ~ MintButton ~ isConnected:", isConnected)
   const { ensureWalletReady } = useWalletAction();
   const { haptics } = useMiniApp();
 
@@ -80,8 +81,8 @@ export const MintButton = ({
   const handleMint = useCallback(async () => {
     try {
       // Ensure wallet is ready
-      const walletReady = await ensureWalletReady();
-      if (!walletReady) return;
+      // const walletReady = await ensureWalletReady();
+      // if (!walletReady) return;
 
       // Validate quantity
       if (quantity <= 0 || quantity > maxBatchSize) {
