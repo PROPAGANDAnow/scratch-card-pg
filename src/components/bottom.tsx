@@ -1,14 +1,11 @@
 "use client";
 import { motion, AnimatePresence } from "framer-motion";
-import Image from "next/image";
 import { AppContext } from "~/app/context";
-import { FC, useContext, useEffect, useState } from "react";
-import { SET_CARDS, SET_BUY_CARDS } from "~/app/context/actions";
-import { encodeFunctionData, erc20Abi, parseUnits } from "viem";
-import { useMiniApp } from "@neynar/react";
-import sdk from "@farcaster/miniapp-sdk";
-import { USDC_ADDRESS } from "~/lib/constants";
+import { FC, useContext, useEffect, useRef, useState } from "react";
+import { SET_BUY_CARDS } from "~/app/context/actions";
 import { usePathname, useRouter } from "next/navigation";
+import { MintButton } from "./minting";
+import { useDetectClickOutside } from "~/hooks/useDetectClickOutside";
 
 const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
   mode = "normal",
@@ -16,13 +13,15 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
 }) => {
   const [state, dispatch] = useContext(AppContext);
   const [showBigBuy, setShowBigBuy] = useState(false);
-  const [numBuyCards, setNumBuyCards] = useState(5);
   const [unscratchedCardsCount, setUnscratchedCardsCount] = useState(0);
-  const [buyingCards, setBuyingCards] = useState(false);
   const [showBuyModal, setShowBuyModal] = useState(false);
-  const { haptics } = useMiniApp();
+
   const { push } = useRouter();
   const pathname = usePathname();
+
+  // Ref for buy modal to detect outside clicks
+  const buyModalRef = useRef<HTMLDivElement | null>(null);
+  useDetectClickOutside(buyModalRef, () => setShowBuyModal(false));
 
   // Calculate unscratched cards count
   useEffect(() => {
@@ -30,93 +29,6 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
       setUnscratchedCardsCount(state.unscratchedCards.length);
     }
   }, [state.unscratchedCards, mode]);
-
-  const buyCards = async (numberOfCards: number) => {
-    if (!state.publicKey) {
-      console.error("No wallet connected");
-      return;
-    }
-
-    try {
-      setBuyingCards(true);
-      const RECIPIENT_ADDRESS = process.env.NEXT_PUBLIC_ADMIN_WALLET_ADDRESS;
-
-      const data = encodeFunctionData({
-        abi: erc20Abi,
-        functionName: "transfer",
-        args: [
-          RECIPIENT_ADDRESS as `0x${string}`,
-          parseUnits(numberOfCards.toString(), 6),
-        ],
-      });
-
-      const provider = await sdk.wallet.getEthereumProvider();
-      const hash = await provider?.request({
-        method: "eth_sendTransaction",
-        params: [
-          {
-            to: USDC_ADDRESS,
-            data,
-            from: state.publicKey as `0x${string}`,
-          },
-        ],
-      });
-
-      if (!RECIPIENT_ADDRESS) {
-        console.error("Admin wallet address not configured");
-        return;
-      }
-
-      // Send request to backend to create cards
-      const backendResponse = await fetch("/api/cards/buy", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userWallet: state.publicKey,
-          userFid: state.user?.fid,
-          pfp: state.user?.pfp,
-          username: state.user?.username,
-          paymentTx: hash,
-          numberOfCards,
-          friends: state.bestFriends,
-        }),
-      });
-
-      if (!backendResponse.ok) {
-        const errorData = await backendResponse.json();
-        throw new Error(errorData.error || "Failed to create cards");
-      }
-
-      const result = await backendResponse.json();
-
-      // If multiple cards were created, refetch user cards to ensure all are loaded
-      if (result.totalCardsCreated > 1) {
-        setTimeout(async () => {
-          try {
-            const { fetchUserCards } = await import("~/lib/userapis");
-            const userCards = await fetchUserCards(state.publicKey);
-            if (userCards) {
-              dispatch({ type: SET_CARDS, payload: userCards });
-            }
-          } catch (error) {
-            console.error("Failed to refetch cards after purchase:", error);
-          }
-        }, 1000); // Wait 1 second for database to be fully updated
-      }
-
-      haptics.impactOccurred("medium");
-      haptics.notificationOccurred("success");
-      setShowBuyModal(false);
-    } catch (error) {
-      console.error("Error buying cards:", error);
-      alert(
-        `Failed to buy cards: ${error instanceof Error ? error.message : "Unknown error"
-        }`
-      );
-    } finally {
-      setBuyingCards(false);
-    }
-  };
 
   // Function to trigger buy modal - can be called from other components
   const triggerBuyModal = () => {
@@ -139,7 +51,7 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
     <>
       {/* Bottom Section - Controls */}
       <motion.div
-        className="flex flex-col items-center justify-center gap-4 p-4 pb-9 w-full flex-shrink-0 z-0"
+        className="flex flex-col items-center justify-center gap-4 px-6 pb-9 w-full flex-shrink-0 z-0"
         initial={{ opacity: 0, y: 0 }}
         animate={{
           opacity: loading ? 0 : 1,
@@ -278,7 +190,7 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
                 whileTap={{ scale: 0.98 }}
                 transition={{ duration: 0.1 }}
               >
-                Buy Cards
+                Buy Cards2
               </motion.button>
             </motion.div>
           )}
@@ -317,7 +229,8 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
       <AnimatePresence>
         {showBuyModal && (
           <motion.div
-            className="fixed bg-black/80 backdrop-blur-sm bottom-0 left-1/2 !translate-x-[-50%] !translate-y-[-16px] w-[96%] max-w-[400px] rounded-[24px] p-6 z-[54]"
+            ref={buyModalRef}
+            className="fixed  bottom-0 left-1/2 !translate-x-[-50%] !translate-y-[-16px] w-[96%] max-w-[400px] z-[54]"
             initial={{ opacity: 0, y: 20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
@@ -328,105 +241,7 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
               duration: 0.15,
             }}
           >
-            <div className="relative space-y-6">
-              <div className="flex justify-between items-center">
-                <p className="text-[18px] leading-[90%] text-white font-semibold">
-                  Buy cards
-                </p>
-                <button
-                  className="absolute top-[-16px] right-[-16px] p-2 rounded-full bg-white/[0.09] cursor-pointer"
-                  onClick={
-                    buyingCards ? undefined : () => setShowBuyModal(false)
-                  }
-                >
-                  <Image
-                    src={"/assets/cross-icon.svg"}
-                    alt="cross-icon"
-                    width={18}
-                    height={18}
-                    unoptimized
-                    priority
-                  />
-                </button>
-              </div>
-              <div className="flex flex-col gap-2 w-full">
-                <div className="py-[14px] px-[18px] rounded-[46px] bg-white/10 flex items-center justify-between w-full">
-                  <p
-                    className="text-[18px] font-semibold font-mono leading-[100%] text-white/90 cursor-pointer hover:text-white"
-                    onClick={() => setNumBuyCards(numBuyCards + 1)}
-                  >
-                    +
-                  </p>
-                  <p className="text-[15px] font-semibold font-mono leading-[100%] text-white">
-                    {numBuyCards}
-                  </p>
-                  <p
-                    className="text-[18px] font-semibold font-mono leading-[100%] text-white/90 cursor-pointer hover:text-white"
-                    onClick={() => setNumBuyCards(numBuyCards - 1)}
-                  >
-                    -
-                  </p>
-                </div>
-                <div className="grid grid-cols-3 gap-2">
-                  {[5, 10, 20].map((amount) => (
-                    <button
-                      key={amount}
-                      className={`py-[14px] px-[18px] rounded-[46px] transition-colors ${numBuyCards === amount
-                        ? "bg-white shadow-lg shadow-gray-600/50 hover:bg-white"
-                        : "bg-white/10 hover:bg-white/20"
-                        }`}
-                      onClick={() => {
-                        setNumBuyCards(amount);
-                      }}
-                    >
-                      <p
-                        className={`text-[15px] font-semibold font-mono leading-[100%] ${numBuyCards === amount
-                          ? "text-[#090909]"
-                          : "text-white"
-                          }`}
-                      >
-                        {amount}
-                      </p>
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between w-full">
-                  <div className="flex items-center gap-4">
-                    <span className="text-white/60 font-normal text-[15px] leading-[120%]">
-                      {numBuyCards}x
-                    </span>
-                    <span className="text-white font-normal text-[15px] leading-[120%]">
-                      Scratch-off Card
-                    </span>
-                  </div>
-                  <span className="text-white font-medium text-[15px] leading-[120%]">
-                    $1
-                  </span>
-                </div>
-                <hr className="border-[0.5px] border-white/10" />
-                <div className="flex items-center justify-between w-full">
-                  <span className="text-white font-normal text-[15px] leading-[120%]">
-                    Total
-                  </span>
-                  <span className="text-white font-medium text-[15px] leading-[120%]">
-                    ${numBuyCards}
-                  </span>
-                </div>
-              </div>
-              <button
-                className="w-full h-[44px] text-black font-semibold text-[14px] leading-[90%] rounded-[40px] shadow-lg shadow-gray-600/50 bg-white disabled:bg-white/80 disabled:cursor-not-allowed"
-                onClick={() => buyCards(numBuyCards)}
-                disabled={buyingCards}
-              >
-                {buyingCards ? (
-                  <>Please wait...</>
-                ) : (
-                  <>Buy Card{numBuyCards > 1 ? "s" : ""}</>
-                )}
-              </button>
-            </div>
+            <MintButton />
           </motion.div>
         )}
       </AnimatePresence>

@@ -213,11 +213,11 @@ const ScratchOff = ({
         payload: state.cards.map((card) =>
           card.id === cardData?.id
             ? {
-                ...card,
-                scratched: true,
-                scratched_at: new Date().toISOString(),
-                claimed: true,
-              }
+              ...card,
+              scratched: true,
+              scratched_at: new Date().toISOString(),
+              claimed: true,
+            }
             : card
         ),
       },
@@ -266,25 +266,25 @@ const ScratchOff = ({
         payload: state.leaderboard.map((user) =>
           user.wallet === cardData?.user_wallet
             ? {
-                ...user,
-                amount_won:
-                  (user.amount_won || 0) + (prizeAmount < 0 ? 0 : prizeAmount),
-                total_wins:
-                  (user.total_wins || 0) + (prizeAmount !== 0 ? 1 : 0),
-                total_reveals: (user.total_reveals || 0) + 1,
-                current_level:
-                  getRevealsToNextLevel(state.user?.current_level || 1) === 0
-                    ? (state.user?.current_level || 1) + 1
-                    : state.user?.current_level || 1,
-                reveals_to_next_level:
-                  (state.user?.reveals_to_next_level ||
-                    getRevealsToNextLevel(state.user?.current_level || 1)) === 0
-                    ? getRevealsToNextLevel(
-                        (state.user?.current_level || 1) + 1
-                      )
-                    : getRevealsToNextLevel(state.user?.current_level || 1),
-                last_active: new Date().toISOString(),
-              }
+              ...user,
+              amount_won:
+                (user.amount_won || 0) + (prizeAmount < 0 ? 0 : prizeAmount),
+              total_wins:
+                (user.total_wins || 0) + (prizeAmount !== 0 ? 1 : 0),
+              total_reveals: (user.total_reveals || 0) + 1,
+              current_level:
+                getRevealsToNextLevel(state.user?.current_level || 1) === 0
+                  ? (state.user?.current_level || 1) + 1
+                  : state.user?.current_level || 1,
+              reveals_to_next_level:
+                (state.user?.reveals_to_next_level ||
+                  getRevealsToNextLevel(state.user?.current_level || 1)) === 0
+                  ? getRevealsToNextLevel(
+                    (state.user?.current_level || 1) + 1
+                  )
+                  : getRevealsToNextLevel(state.user?.current_level || 1),
+              last_active: new Date().toISOString(),
+            }
             : user
         ),
       },
@@ -677,9 +677,8 @@ const ScratchOff = ({
         }}
       >
         <p
-          className={`font-[ABCGaisyr] text-center mb-1 font-bold italic rotate-[-4deg] ${
-            isPreScratchShared ? "text-[14px]" : "text-[30px]"
-          }`}
+          className={`font-[ABCGaisyr] text-center mb-1 font-bold italic rotate-[-4deg] ${isPreScratchShared ? "text-[14px]" : "text-[30px]"
+            }`}
           style={{
             visibility:
               cardData?.scratched || scratched || isPreScratchShared
@@ -688,13 +687,13 @@ const ScratchOff = ({
             color: isPreScratchShared
               ? "#fff"
               : cardData?.prize_amount || prizeAmount
-              ? "#fff"
-              : "rgba(255, 255, 255, 0.4)",
+                ? "#fff"
+                : "rgba(255, 255, 255, 0.4)",
             textShadow: isPreScratchShared
               ? "none"
               : cardData?.prize_amount || prizeAmount
-              ? "0px 0px 1px #00A34F, 0px 0px 2px #00A34F, 0px 0px 6px #00A34F, 0px 0px 12px #00A34F"
-              : "none",
+                ? "0px 0px 1px #00A34F, 0px 0px 2px #00A34F, 0px 0px 6px #00A34F, 0px 0px 12px #00A34F"
+                : "none",
           }}
         >
           {isPreScratchShared ? (
@@ -784,7 +783,7 @@ const ScratchOff = ({
                 }}
               />
               {cardData?.numbers_json &&
-              (cardData?.scratched || scratched || coverImageLoaded) ? (
+                (cardData?.scratched || scratched || coverImageLoaded) ? (
                 <div className="absolute inset-0 z-10 flex flex-col items-center justify-center text-center rotate-[-4deg]">
                   {(() => {
                     const rows = chunk3(cardData.numbers_json);
@@ -806,11 +805,10 @@ const ScratchOff = ({
                               {row.map((cell, cellIndex) => (
                                 <div
                                   key={`${cell.amount}-${cellIndex}`}
-                                  className={`w-[77px] h-[77px] rounded-[14px] font-[ABCGaisyr] font-bold text-[24px] leading-[90%] italic flex items-center justify-center ${
-                                    isWinning
-                                      ? "!text-[#00A151]/40 !bg-[#00A151]/15"
-                                      : "!text-[#000]/15 !bg-[#000]/10"
-                                  }`}
+                                  className={`w-[77px] h-[77px] rounded-[14px] font-[ABCGaisyr] font-bold text-[24px] leading-[90%] italic flex items-center justify-center ${isWinning
+                                    ? "!text-[#00A151]/40 !bg-[#00A151]/15"
+                                    : "!text-[#000]/15 !bg-[#000]/10"
+                                    }`}
                                   style={{
                                     filter:
                                       "drop-shadow(0px 0.5px 0.5px rgba(0, 0, 0, 0.15))",
@@ -823,9 +821,8 @@ const ScratchOff = ({
                                     <div className="relative">
                                       <Image
                                         src={cell.friend_pfp}
-                                        alt={`${
-                                          cell.friend_username || "Friend"
-                                        }`}
+                                        alt={`${cell.friend_username || "Friend"
+                                          }`}
                                         width={48}
                                         height={48}
                                         className="rounded-full object-cover"
@@ -1047,11 +1044,10 @@ const ScratchOff = ({
                     </button>
                     <button
                       onClick={handleLinkCopy}
-                      className={`rounded-full border border-[#fff]/[0.02] w-[64px] h-[64px] flex items-center justify-center transition-all duration-200 ${
-                        linkCopied
-                          ? `bg-[${APP_COLORS.WON}]/[0.2] border-[${APP_COLORS.WON}]/[0.5]`
-                          : "bg-[#fff]/[0.08] hover:bg-[#fff]/[0.15]"
-                      }`}
+                      className={`rounded-full border border-[#fff]/[0.02] w-[64px] h-[64px] flex items-center justify-center transition-all duration-200 ${linkCopied
+                        ? `bg-[${APP_COLORS.WON}]/[0.2] border-[${APP_COLORS.WON}]/[0.5]`
+                        : "bg-[#fff]/[0.08] hover:bg-[#fff]/[0.15]"
+                        }`}
                     >
                       {linkCopied ? (
                         <svg
@@ -1104,7 +1100,7 @@ const ScratchOff = ({
                       color: APP_COLORS.WON,
                     }}
                   >
-                    Buy Cards
+                    Buy Cards3
                   </button>
                 </div>
               ) : null}

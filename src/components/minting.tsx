@@ -37,7 +37,7 @@ interface MintingProps {
  * NFT minting component for scratch card NFTs
  * Replaces API-based card purchasing with smart contract minting
  */
-export const Minting = ({
+export const MintButton = ({
   onSuccess,
   onError,
   showQuantitySelector = true,
@@ -145,14 +145,22 @@ export const Minting = ({
 
   return (
     <motion.div
-      className={`bg-black/40 backdrop-blur-sm rounded-2xl p-6 ${className}`}
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
+      className={`bg-black/80 backdrop-blur-sm w-full rounded-[24px] p-6 ${className}`}
+      initial={{ opacity: 0, y: 20, scale: 0.95 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: 20, scale: 0.95 }}
+      transition={{
+        type: "spring",
+        stiffness: 700,
+        damping: 45,
+        duration: 0.15,
+      }}
     >
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-bold text-white">Mint Scratch Cards</h2>
+      <div className="flex justify-between items-center mb-6">
+        <p className="text-[18px] leading-[90%] text-white font-semibold">
+          Buy Cards
+        </p>
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 bg-green-500 rounded-full" />
           <span className="text-xs text-white/60">Live on Base</span>
@@ -160,53 +168,79 @@ export const Minting = ({
       </div>
 
       {/* Price Display */}
-      <div className="bg-white/10 rounded-xl p-4 mb-6">
+      {/* <div className="bg-white/10 rounded-xl p-4 mb-6">
         <div className="flex items-center justify-between">
-          <span className="text-white/60">Price per card</span>
-          <span className="text-2xl font-bold text-white">
+          <span className="text-white/60 font-normal text-[15px] leading-[120%]">Price per card</span>
+          <span className="text-white font-medium text-[15px] leading-[120%]">
             {singleCardPrice} USDC
           </span>
         </div>
-      </div>
+      </div> */}
 
       {/* Quantity Selector */}
       {showQuantitySelector && (
         <div className="mb-6">
-          <label className="text-sm text-white/60 mb-2 block">Quantity</label>
-          <div className="flex items-center gap-4">
-            <motion.button
-              className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white"
-              onClick={decrementQuantity}
-              disabled={quantity <= 1}
-              whileHover={{ scale: quantity > 1 ? 1.1 : 1 }}
-              whileTap={{ scale: quantity > 1 ? 0.9 : 1 }}
-            >
-              -
-            </motion.button>
+          {/* <label className="text-sm text-white/60 mb-2 block">Quantity</label> */}
+          <div className="flex flex-col gap-2 w-full">
+            <div className="py-[14px] px-[18px] rounded-[46px] bg-white/10 flex items-center justify-between w-full">
+              <motion.button
+                className="text-[18px] font-semibold font-mono leading-[100%] text-white/90 cursor-pointer hover:text-white"
+                onClick={incrementQuantity}
+                disabled={quantity >= maxBatchSize}
+                whileHover={{ scale: quantity < maxBatchSize ? 1.05 : 1 }}
+                whileTap={{ scale: quantity < maxBatchSize ? 0.95 : 1 }}
+              >
+                +
+              </motion.button>
 
-            <div className="flex-1 text-center">
-              <span className="text-3xl font-bold text-white">{quantity}</span>
+              <span className="text-[15px] font-semibold font-mono leading-[100%] text-white">
+                {quantity}
+              </span>
+
+              <motion.button
+                className="text-[18px] font-semibold font-mono leading-[100%] text-white/90 cursor-pointer hover:text-white"
+                onClick={decrementQuantity}
+                disabled={quantity <= 1}
+                whileHover={{ scale: quantity > 1 ? 1.05 : 1 }}
+                whileTap={{ scale: quantity > 1 ? 0.95 : 1 }}
+              >
+                -
+              </motion.button>
             </div>
 
-            <motion.button
-              className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white"
-              onClick={incrementQuantity}
-              disabled={quantity >= maxBatchSize}
-              whileHover={{ scale: quantity < maxBatchSize ? 1.1 : 1 }}
-              whileTap={{ scale: quantity < maxBatchSize ? 0.9 : 1 }}
-            >
-              +
-            </motion.button>
+            <div className="grid grid-cols-3 gap-2">
+              {[1, 5, 10].map((amount) => (
+                <button
+                  key={amount}
+                  className={`py-[14px] px-[18px] rounded-[46px] transition-colors ${quantity === amount
+                    ? "bg-white shadow-lg shadow-gray-600/50 hover:bg-white"
+                    : "bg-white/10 hover:bg-white/20"
+                    }`}
+                  onClick={() => {
+                    setQuantity(amount);
+                  }}
+                >
+                  <p
+                    className={`text-[15px] font-semibold font-mono leading-[100%] ${quantity === amount
+                      ? "text-[#090909]"
+                      : "text-white"
+                      }`}
+                  >
+                    {amount}
+                  </p>
+                </button>
+              ))}
+            </div>
           </div>
 
-          <div className="text-xs text-white/40 mt-2 text-center">
+          {/* <div className="text-xs text-white/40 mt-2 text-center">
             Max batch size: {maxBatchSize}
-          </div>
+          </div> */}
         </div>
       )}
 
       {/* Recipient Input */}
-      <div className="mb-6">
+      {/* <div className="mb-6">
         <motion.button
           className="flex items-center gap-2 text-sm text-white/60 mb-2"
           onClick={() => setShowRecipient(!showRecipient)}
@@ -240,13 +274,29 @@ export const Minting = ({
             </motion.div>
           )}
         </AnimatePresence>
-      </div>
+      </div> */}
 
       {/* Total Cost */}
-      <div className="bg-gradient-to-r from-purple-500/20 to-pink-500/20 rounded-xl p-4 mb-6">
-        <div className="flex items-center justify-between">
-          <span className="text-white/60">Total Cost</span>
-          <span className="text-2xl font-bold text-white">
+      <div className="space-y-2 mb-6">
+        <div className="flex items-center justify-between w-full">
+          <div className="flex items-center gap-4">
+            <span className="text-white/60 font-normal text-[15px] leading-[120%]">
+              {quantity}x
+            </span>
+            <span className="text-white font-normal text-[15px] leading-[120%]">
+              Scratch-off Card
+            </span>
+          </div>
+          <span className="text-white font-medium text-[15px] leading-[120%]">
+            {singleCardPrice} USDC
+          </span>
+        </div>
+        <hr className="border-[0.5px] border-white/10" />
+        <div className="flex items-center justify-between w-full">
+          <span className="text-white font-normal text-[15px] leading-[120%]">
+            Total
+          </span>
+          <span className="text-white font-medium text-[15px] leading-[120%]">
             {totalCost} USDC
           </span>
         </div>
@@ -257,10 +307,10 @@ export const Minting = ({
         {mintingState !== 'idle' && (
           <motion.div
             className={`rounded-xl p-4 mb-6 ${mintingState === 'success'
-                ? 'bg-green-500/20 text-green-400'
-                : mintingState === 'error'
-                  ? 'bg-red-500/20 text-red-400'
-                  : 'bg-yellow-500/20 text-yellow-400'
+              ? 'bg-green-500/20 text-green-400'
+              : mintingState === 'error'
+                ? 'bg-red-500/20 text-red-400'
+                : 'bg-yellow-500/20 text-yellow-400'
               }`}
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -321,12 +371,13 @@ export const Minting = ({
       {/* Mint Button */}
       <motion.button
         className={`
-          w-full py-3 rounded-full font-semibold text-white transition-all duration-200
-          ${canProceed
-            ? 'bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600'
-            : 'bg-gray-500 cursor-not-allowed'
+            w-full py-2 rounded-[40px] font-semibold text-[14px] h-11 transition-colors
+             border border-white
+            ${canProceed
+            ? 'bg-white/80 hover:bg-white text-black'
+            : 'bg-white/20 text-white/60 cursor-not-allowed'
           }
-        `}
+          `}
         onClick={handleMint}
         disabled={!canProceed || mintingState === 'pending' || mintingState === 'confirming'}
         whileHover={canProceed ? { scale: 1.02 } : {}}
