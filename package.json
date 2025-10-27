@@ -22,7 +22,6 @@
     "cleanup": "node scripts/cleanup.js"
   },
   "dependencies": {
-    "@apollo/client": "^3.14.0",
     "@farcaster/auth-client": ">=0.3.0 <1.0.0",
     "@farcaster/auth-kit": ">=0.6.0 <1.0.0",
     "@farcaster/mini-app-solana": ">=0.0.17 <1.0.0",
@@ -41,6 +40,7 @@
     "dotenv": "^16.4.7",
     "framer-motion": "^12.23.3",
     "graphql": "^16.11.0",
+    "graphql-request": "^7.3.1",
     "inquirer": "^12.9.6",
     "lucide-react": "^0.469.0",
     "mipd": "^0.0.7",

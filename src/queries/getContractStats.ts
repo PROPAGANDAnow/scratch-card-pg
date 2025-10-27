@@ -1,4 +1,4 @@
-import { gql } from '@apollo/client'
+import { gql } from '~/lib/graphql-client'
 
 export const GET_CONTRACT_STATS = gql`
   query GetContractStats {

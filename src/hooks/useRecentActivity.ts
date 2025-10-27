@@ -1,7 +1,8 @@
 'use client'
 
-import { useQuery } from '@apollo/client/react'
+import { useQuery } from '@tanstack/react-query'
 import { GET_RECENT_ACTIVITY } from '../queries'
+import { makeGraphQLRequest } from '~/lib/graphql-client'
 import { formatEther } from 'viem'
 import { formatDistanceToNow } from 'date-fns'
 
@@ -46,10 +47,12 @@ export interface UseRecentActivityReturn {
 }
 
 export function useRecentActivity(limit = 10): UseRecentActivityReturn {
-  const { data, loading, error, refetch } = useQuery(GET_RECENT_ACTIVITY, {
-    variables: { first: limit },
-    errorPolicy: 'all',
-    pollInterval: 15000, // Refresh every 15 seconds
+  const { data, isLoading: loading, error, refetch } = useQuery({
+    queryKey: ['recentActivity', limit],
+    queryFn: () => makeGraphQLRequest<{ mintOperations: RecentMint[], prizeClaims: RecentClaim[] }>(GET_RECENT_ACTIVITY, { first: limit }),
+    refetchInterval: 15000, // Refresh every 15 seconds
+    retry: 3,
+    staleTime: 7000,
   })
 
   const recentMints = (data?.mintOperations || []).map((mint: RecentMint): FormattedRecentMint => ({

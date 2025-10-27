@@ -1,4 +1,4 @@
-import { gql } from '@apollo/client'
+import { gql } from '~/lib/graphql-client'
 
 export const GET_STATE_CHANGES = gql`
   query GetStateChanges($first: Int = 20) {

@@ -1,7 +1,8 @@
 'use client'
 
-import { useQuery } from '@apollo/client/react'
+import { useQuery } from '@tanstack/react-query'
 import { GET_CONTRACT_STATS } from '../queries'
+import { makeGraphQLRequest } from '~/lib/graphql-client'
 import { formatEther } from 'viem'
 
 export interface ContractStats {
@@ -35,10 +36,12 @@ export interface UseContractStatsReturn {
 }
 
 export function useContractStats(): UseContractStatsReturn {
-  const { data, loading, error, refetch } = useQuery(GET_CONTRACT_STATS, {
-    errorPolicy: 'all',
-    pollInterval: 10000, // Refresh every 10 seconds
-    notifyOnNetworkStatusChange: true,
+  const { data, isLoading: loading, error, refetch } = useQuery({
+    queryKey: ['contractStats'],
+    queryFn: () => makeGraphQLRequest<{ contracts: ContractStats[] }>(GET_CONTRACT_STATS),
+    refetchInterval: 10000, // Refresh every 10 seconds
+    retry: 3,
+    staleTime: 5000,
   })
 
   const stats = data?.contracts?.[0] || null

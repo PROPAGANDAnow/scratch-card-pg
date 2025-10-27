@@ -1,4 +1,4 @@
-import { gql } from '@apollo/client'
+import { gql } from '~/lib/graphql-client'
 
 export const GET_USER_MINTS = gql`
   query GetUserMints($userAddress: Bytes!, $first: Int = 50, $skip: Int = 0) {

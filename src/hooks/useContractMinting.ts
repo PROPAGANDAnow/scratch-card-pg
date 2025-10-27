@@ -92,7 +92,7 @@ export const useContractMinting = (): UseContractMintingReturn => {
 
   // Mini-app and chain switching hooks
   const { switchChainAsync } = useSwitchChain();
-  const { isInMiniApp } = useMiniApp();
+
 
   // Contract write hooks
   const {
@@ -137,18 +137,7 @@ export const useContractMinting = (): UseContractMintingReturn => {
   const { chainId } = useAccount();
 
   // Auto-switch to Base network for mini-app users
-  useEffect(() => {
-    const switchToBase = async () => {
-      if (isInMiniApp && chainId !== base.id) {
-        try {
-          await switchChainAsync({ chainId: base.id });
-        } catch (error) {
-          console.error("Failed to switch to Base:", error);
-        }
-      }
-    };
-    switchToBase();
-  }, [chainId, switchChainAsync, isInMiniApp]);
+
 
   // Format card price for display
   const cardPrice = useMemo(() => {

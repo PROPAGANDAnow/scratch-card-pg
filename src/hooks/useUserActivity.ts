@@ -1,9 +1,10 @@
 'use client'
 
 import { useState, useCallback } from 'react'
-import { useQuery } from '@apollo/client/react'
+import { useQuery } from '@tanstack/react-query'
 import { useAccount } from 'wagmi'
 import { GET_USER_MINTS, GET_USER_CLAIMS } from '../queries'
+import { makeGraphQLRequest } from '~/lib/graphql-client'
 
 export interface MintOperation {
   id: string
@@ -43,25 +44,28 @@ export function useUserActivity(limit = 20): UserActivity {
   const { address } = useAccount()
   const [page, setPage] = useState(0)
 
-  const { data: mintsData, loading: mintsLoading, error: mintsError, fetchMore: fetchMoreMints } = useQuery(GET_USER_MINTS, {
-    variables: {
+  const { data: mintsData, isLoading: mintsLoading, error: mintsError, refetch: refetchMints } = useQuery({
+    queryKey: ['userMints', address?.toLowerCase(), page, limit],
+    queryFn: () => makeGraphQLRequest<{ mintOperations: MintOperation[] }>(GET_USER_MINTS, {
       userAddress: address?.toLowerCase() || '',
       first: limit,
       skip: page * limit,
-    },
-    skip: !address,
-    errorPolicy: 'all',
-    notifyOnNetworkStatusChange: true,
+    }),
+    enabled: !!address,
+    retry: 3,
+    staleTime: 30000,
   })
 
-  const { data: claimsData, loading: claimsLoading, error: claimsError, fetchMore: fetchMoreClaims } = useQuery(GET_USER_CLAIMS, {
-    variables: {
+  const { data: claimsData, isLoading: claimsLoading, error: claimsError, refetch: refetchClaims } = useQuery({
+    queryKey: ['userClaims', address?.toLowerCase(), page, limit],
+    queryFn: () => makeGraphQLRequest<{ prizeClaims: PrizeClaim[] }>(GET_USER_CLAIMS, {
       userAddress: address?.toLowerCase() || '',
       first: limit,
       skip: page * limit,
-    },
-    skip: !address,
-    errorPolicy: 'all',
+    }),
+    enabled: !!address,
+    retry: 3,
+    staleTime: 30000,
   })
 
   const mints = mintsData?.mintOperations || []
@@ -70,48 +74,14 @@ export function useUserActivity(limit = 20): UserActivity {
   const error = mintsError || claimsError
 
   const refetch = useCallback(() => {
-    fetchMoreMints?.()
-    fetchMoreClaims?.()
+    refetchMints()
+    refetchClaims()
     setPage(0)
-  }, [fetchMoreMints, fetchMoreClaims])
+  }, [refetchMints, refetchClaims])
 
   const loadMore = useCallback(() => {
-    if (fetchMoreMints && mints.length === limit) {
-      fetchMoreMints({
-        variables: {
-          skip: (page + 1) * limit,
-        },
-        updateQuery: (prev, { fetchMoreResult }) => {
-          if (!fetchMoreResult) return prev
-          return {
-            mintOperations: [
-              ...(prev?.mintOperations || []),
-              ...(fetchMoreResult.mintOperations || []),
-            ],
-          }
-        },
-      })
-    }
-
-    if (fetchMoreClaims && claims.length === limit) {
-      fetchMoreClaims({
-        variables: {
-          skip: (page + 1) * limit,
-        },
-        updateQuery: (prev, { fetchMoreResult }) => {
-          if (!fetchMoreResult) return prev
-          return {
-            prizeClaims: [
-              ...(prev?.prizeClaims || []),
-              ...(fetchMoreResult.prizeClaims || []),
-            ],
-          }
-        },
-      })
-    }
-
     setPage(prev => prev + 1)
-  }, [fetchMoreMints, fetchMoreClaims, mints.length, claims.length, page, limit])
+  }, [])
 
   const hasMore = mints.length === limit || claims.length === limit
 
