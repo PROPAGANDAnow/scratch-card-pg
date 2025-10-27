@@ -10,7 +10,7 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
-import { Address } from 'viem';
+
 import { useContractMinting, useMintingCost } from '~/hooks/useContractMinting';
 import { useWallet, useWalletAction } from '~/hooks/useWeb3Wallet';
 import { useMiniApp } from '@neynar/react';
@@ -64,8 +64,6 @@ export const MintCardForm = ({
 
   // Local state
   const [quantity, setQuantity] = useState(defaultQuantity);
-  const [recipient, setRecipient] = useState<Address | ''>('');
-  const [showRecipient, setShowRecipient] = useState(false);
 
   // Calculate total cost
   const totalCost = useMemo(() => {
@@ -81,8 +79,8 @@ export const MintCardForm = ({
   const handleMint = useCallback(async () => {
     try {
       // Ensure wallet is ready
-      // const walletReady = await ensureWalletReady();
-      // if (!walletReady) return;
+      const walletReady = await ensureWalletReady();
+      if (!walletReady) return;
 
       // Validate quantity
       if (quantity <= 0 || quantity > maxBatchSize) {
@@ -92,7 +90,7 @@ export const MintCardForm = ({
       // Mint cards
       await mintCardsBatch(
         quantity,
-        recipient || undefined
+        undefined // No recipient - mint to caller
       );
 
       // Haptic feedback
@@ -107,7 +105,6 @@ export const MintCardForm = ({
     ensureWalletReady,
     quantity,
     maxBatchSize,
-    recipient,
     mintCardsBatch,
     haptics,
     onError

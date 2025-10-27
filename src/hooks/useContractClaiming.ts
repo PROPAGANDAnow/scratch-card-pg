@@ -15,6 +15,7 @@ import {
   ClaimSignature,
   validateClaimSignature
 } from '~/lib/contracts';
+import { AddressPatterns } from '~/lib/blockchain-addresses';
 
 /**
  * Claiming transaction states
@@ -124,7 +125,7 @@ export const useContractClaiming = (): UseContractClaimingReturn => {
         args: [
           BigInt(tokenId),
           claimSig,
-          recipient || '0x' // Use zero address for self
+          AddressPatterns.safeRecipient(recipient) // Use zero address for self
         ],
       });
 
@@ -163,7 +164,7 @@ export const useContractClaiming = (): UseContractClaimingReturn => {
         args: [
           BigInt(tokenId),
           claimSig,
-          recipient || '0x', // Use zero address for self
+          AddressPatterns.safeRecipient(recipient), // Use zero address for self
           bonusRecipient
         ],
       });

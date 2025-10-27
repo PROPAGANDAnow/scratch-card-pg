@@ -6,15 +6,14 @@
  */
 
 import { useState, useCallback, useMemo, useEffect } from 'react';
-import { useWriteContract, useWaitForTransactionReceipt, useReadContract, usePublicClient, useSwitchChain, useAccount } from 'wagmi';
+import { useWriteContract, useWaitForTransactionReceipt, useReadContract, usePublicClient } from 'wagmi';
 import { Address, formatUnits } from 'viem';
-import { base } from 'wagmi/chains';
 import {
   SCRATCH_CARD_NFT_ADDRESS,
   SCRATCH_CARD_NFT_ABI,
   GAME_CONFIG
 } from '~/lib/contracts';
-import { useMiniApp } from '@neynar/react';
+import { AddressPatterns } from '~/lib/blockchain-addresses';
 
 /**
  * Minting transaction states
@@ -38,7 +37,7 @@ export interface TransactionReceipt {
   /** Transaction status */
   status: 'success' | 'reverted';
   /** Logs from the transaction */
-  logs: readonly any[];
+  logs: readonly unknown[];
   /** Transaction index */
   transactionIndex: number;
   /** Type of transaction */
@@ -90,8 +89,7 @@ export const useContractMinting = (): UseContractMintingReturn => {
   // Get public client for enhanced transaction handling
   const publicClient = usePublicClient();
 
-  // Mini-app and chain switching hooks
-  const { switchChainAsync } = useSwitchChain();
+
 
 
   // Contract write hooks
@@ -130,11 +128,7 @@ export const useContractMinting = (): UseContractMintingReturn => {
   // Local state
   const [state, setState] = useState<MintingState>('idle');
   const [error, setError] = useState<string | null>(null);
-  const [isWaitingForReceipt, setIsWaitingForReceipt] = useState(false);
   const [enhancedReceipt, setEnhancedReceipt] = useState<TransactionReceipt | null>(null);
-
-  // Get current chain info
-  const { chainId } = useAccount();
 
   // Auto-switch to Base network for mini-app users
 
@@ -218,24 +212,19 @@ export const useContractMinting = (): UseContractMintingReturn => {
       // Transaction submitted but not yet confirming
       setState('confirming');
       setError(null);
-      setIsWaitingForReceipt(true);
     } else if (isConfirming) {
       setState('confirming');
       setError(null);
-      setIsWaitingForReceipt(true);
     } else if (isConfirmed && viemReceipt) {
       setState('success');
       setError(null);
-      setIsWaitingForReceipt(false);
     } else if (writeError || confirmError) {
       setState('error');
       setError(writeError?.message || confirmError?.message || 'Transaction failed');
-      setIsWaitingForReceipt(false);
       setEnhancedReceipt(null);
     } else {
       setState('idle');
       setError(null);
-      setIsWaitingForReceipt(false);
       setEnhancedReceipt(null);
     }
   }, [isWritePending, isConfirming, isConfirmed, writeError, confirmError, hash, viemReceipt]);
@@ -245,14 +234,13 @@ export const useContractMinting = (): UseContractMintingReturn => {
     try {
       setState('pending');
       setError(null);
-      setIsWaitingForReceipt(false);
       setEnhancedReceipt(null);
 
       const txHash = await writeContract({
         address: SCRATCH_CARD_NFT_ADDRESS,
         abi: SCRATCH_CARD_NFT_ABI,
         functionName: 'mintCard',
-        args: [recipient || '0x'], // Use zero address for self
+        args: [AddressPatterns.safeRecipient(recipient)], // Use zero address for self
       });
 
       console.log('Transaction submitted:', txHash);
@@ -266,7 +254,6 @@ export const useContractMinting = (): UseContractMintingReturn => {
       const errorMessage = err instanceof Error ? err.message : 'Failed to mint card';
       setError(errorMessage);
       setState('error');
-      setIsWaitingForReceipt(false);
       setEnhancedReceipt(null);
       console.error('Minting error:', err);
     }
@@ -286,14 +273,14 @@ export const useContractMinting = (): UseContractMintingReturn => {
 
       setState('pending');
       setError(null);
-      setIsWaitingForReceipt(false);
       setEnhancedReceipt(null);
 
+      console.log("🚀 ~ useContractMinting ~ SCRATCH_CARD_NFT_ADDRESS:", SCRATCH_CARD_NFT_ADDRESS)
       const txHash = await writeContract({
         address: SCRATCH_CARD_NFT_ADDRESS,
         abi: SCRATCH_CARD_NFT_ABI,
         functionName: 'mintCardsBatch',
-        args: [BigInt(quantity), recipient || '0x'], // Use zero address for self
+        args: [BigInt(quantity), AddressPatterns.safeRecipient(recipient)], // Use zero address for self
       });
 
       console.log('Batch transaction submitted:', txHash);
@@ -307,7 +294,6 @@ export const useContractMinting = (): UseContractMintingReturn => {
       const errorMessage = err instanceof Error ? err.message : 'Failed to mint cards';
       setError(errorMessage);
       setState('error');
-      setIsWaitingForReceipt(false);
       setEnhancedReceipt(null);
       console.error('Batch minting error:', err);
     }
