@@ -161,7 +161,7 @@ export const CANVAS_HEIGHT = 418;
 // High-DPI scaling factor for crisp rendering
 // Increased to 3 for even higher quality on modern displays
 export const CANVAS_DPI_SCALE = 3;
-export const SCRATCH_RADIUS = 24;
+export const SCRATCH_RADIUS = 12;
 export const APP_COLORS = {
   DEFAULT: "#7727DE",
   WON: "#00A151",

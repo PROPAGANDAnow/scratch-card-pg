@@ -355,18 +355,18 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
                 <div className="py-[14px] px-[18px] rounded-[46px] bg-white/10 flex items-center justify-between w-full">
                   <p
                     className="text-[18px] font-semibold font-mono leading-[100%] text-white/90 cursor-pointer hover:text-white"
-                    onClick={() => setNumBuyCards(numBuyCards + 1)}
+                    onClick={() => setNumBuyCards(numBuyCards - 1)}
                   >
-                    +
+                    -
                   </p>
                   <p className="text-[15px] font-semibold font-mono leading-[100%] text-white">
                     {numBuyCards}
                   </p>
                   <p
                     className="text-[18px] font-semibold font-mono leading-[100%] text-white/90 cursor-pointer hover:text-white"
-                    onClick={() => setNumBuyCards(numBuyCards - 1)}
+                    onClick={() => setNumBuyCards(numBuyCards + 1)}
                   >
-                    -
+                    +
                   </p>
                 </div>
                 <div className="grid grid-cols-3 gap-2">
