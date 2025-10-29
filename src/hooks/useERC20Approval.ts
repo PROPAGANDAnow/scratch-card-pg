@@ -6,7 +6,7 @@
  */
 
 import { useState, useCallback, useMemo, useEffect } from 'react';
-import { useWriteContract, useWaitForTransactionReceipt, useReadContract } from 'wagmi';
+import { useWriteContract, useWaitForTransactionReceipt, useReadContract, usePublicClient, useWalletClient, useAccount } from 'wagmi';
 import { Address, formatUnits, maxUint256 } from 'viem';
 import { USDC_ADDRESS, USDC_ABI, SCRATCH_CARD_NFT_ADDRESS } from '~/lib/contracts';
 
@@ -59,6 +59,8 @@ export const useERC20Approval = (
   spenderAddress: Address = SCRATCH_CARD_NFT_ADDRESS,
   requiredAmount: bigint = BigInt(0)
 ): UseERC20ApprovalReturn => {
+  const publicClient = usePublicClient()
+  const walletClient = useWalletClient()
   // Contract write hooks for approval
   const {
     writeContract,
@@ -140,7 +142,7 @@ export const useERC20Approval = (
   // Check current allowance
   const checkAllowance = useCallback(async () => {
     if (!userAddress || !spenderAddress) return;
-    
+
     setIsChecking(true);
     try {
       // The useReadContract hook will automatically refetch when dependencies change
@@ -165,15 +167,47 @@ export const useERC20Approval = (
       setState('pending');
       setError(null);
 
-      const txHash = await writeContract({
+      // const txHash = await writeContract({
+      //   address: USDC_ADDRESS,
+      //   abi: USDC_ABI,
+      //   functionName: 'approve',
+      //   args: [spenderAddress, amount],
+      // });
+
+      // console.log('Approval transaction submitted:', txHash);
+
+      if (!publicClient) return
+      if (!userAddress) return
+
+      // Step 1: Simulate the transaction (optional but recommended)
+      const { request } = await publicClient.simulateContract({
         address: USDC_ADDRESS,
-        abi: USDC_ABI,
+        abi: [{
+          name: 'approve',
+          type: 'function',
+          stateMutability: 'nonpayable',
+          inputs: [
+            { name: 'spender', type: 'address' },
+            { name: 'amount', type: 'uint256' }
+          ],
+          outputs: [{ type: 'bool' }]
+        }],
         functionName: 'approve',
         args: [spenderAddress, amount],
+        account: userAddress
       });
 
-      console.log('Approval transaction submitted:', txHash);
+      // Step 2: Send the transaction
+      const hash = await walletClient.data?.writeContract(request);
+      console.log('Transaction hash:', hash);
 
+      if (!hash) return
+
+      // Step 3: Wait for the transaction to be mined
+      await publicClient.waitForTransactionReceipt({
+        hash,
+        confirmations: 1 // Wait for 1 confirmation (default)
+      });
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to approve';
       setError(errorMessage);

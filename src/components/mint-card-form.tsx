@@ -71,37 +71,17 @@ export const MintCardForm = ({
     return calculateCost(quantity);
   }, [calculateCost, quantity]);
 
-  // Can mint based on wallet state and minting state
+  // Can proceed with batched approval + minting
   const canProceed = useMemo(() => {
-    return isConnected && isCorrectNetwork && canMint && quantity > 0 && approval.hasSufficientApproval;
-  }, [isConnected, isCorrectNetwork, canMint, quantity, approval.hasSufficientApproval]);
+    return isConnected && isCorrectNetwork && canMint && quantity > 0;
+  }, [isConnected, isCorrectNetwork, canMint, quantity]);
 
   // Need approval based on wallet state and approval state
   const needsApproval = useMemo(() => {
     return isConnected && isCorrectNetwork && approval.needsApproval && quantity > 0;
   }, [isConnected, isCorrectNetwork, approval.needsApproval, quantity]);
 
-  // Handle approval
-  const handleApprove = useCallback(async () => {
-    try {
-      // Ensure wallet is ready
-      const walletReady = await ensureWalletReady();
-      if (!walletReady) return;
-
-      // Approve unlimited amount to avoid repeated approvals
-      await approval.approveUnlimited();
-
-      // Haptic feedback
-      haptics.impactOccurred('light');
-
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Approval failed';
-      console.error('Approval error:', error);
-      onError?.(errorMessage);
-    }
-  }, [ensureWalletReady, approval.approveUnlimited, haptics, onError]);
-
-  // Handle minting
+// Handle batched approval + minting
   const handleMint = useCallback(async () => {
     try {
       // Ensure wallet is ready
@@ -111,6 +91,13 @@ export const MintCardForm = ({
       // Validate quantity
       if (quantity <= 0 || quantity > maxBatchSize) {
         throw new Error(`Quantity must be between 1 and ${maxBatchSize}`);
+      }
+
+      // Check if approval is needed first
+      if (approval.needsApproval) {
+        // Approve unlimited amount to avoid repeated approvals
+        await approval.approveUnlimited();
+        haptics.impactOccurred('light');
       }
 
       // Mint cards
@@ -127,15 +114,18 @@ export const MintCardForm = ({
       console.error('Minting error:', error);
       onError?.(errorMessage);
     }
-  }, [
+}, [
     ensureWalletReady,
     quantity,
     maxBatchSize,
     mintCardsBatch,
     haptics,
     onError,
-    approval
+    approval.needsApproval,
+    approval.approveUnlimited
   ]);
+
+  
 
   // Handle success
   useEffect(() => {
@@ -456,28 +446,7 @@ export const MintCardForm = ({
         )}
       </AnimatePresence>
 
-      {/* Approval Button (shown when approval is needed) */}
-      <AnimatePresence>
-        {needsApproval && (
-          <motion.button
-            className={`
-                w-full py-2 rounded-[40px] font-semibold text-[14px] h-11 transition-colors
-                 border border-white bg-orange-500/20 hover:bg-orange-500/30 text-orange-300
-              `}
-            onClick={handleApprove}
-            disabled={approval.state === 'pending' || approval.state === 'confirming'}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-          >
-            {approval.state === 'pending' && 'Approving...'}
-            {approval.state === 'confirming' && 'Confirming Approval...'}
-            {approval.state === 'idle' && 'Approve USDC Spending'}
-          </motion.button>
-        )}
-      </AnimatePresence>
+
 
       {/* Mint Button */}
       <motion.button
@@ -490,10 +459,11 @@ export const MintCardForm = ({
           }
           `}
         onClick={handleMint}
-        disabled={!canProceed || mintingState === 'pending' || mintingState === 'confirming'}
+        disabled={!canProceed || mintingState === 'pending' || mintingState === 'confirming' || approval.state === 'pending' || approval.state === 'confirming'}
         whileHover={canProceed ? { scale: 1.02 } : {}}
         whileTap={canProceed ? { scale: 0.98 } : {}}
       >
+        {(approval.state === 'pending' || approval.state === 'confirming') && 'Approving...'}
         {mintingState === 'pending' && 'Minting...'}
         {mintingState === 'confirming' && 'Confirming...'}
         {mintingState === 'success' && 'Minted Successfully!'}
@@ -501,8 +471,7 @@ export const MintCardForm = ({
         {mintingState === 'idle' && (
           !isConnected ? 'Connect Wallet' :
             !isCorrectNetwork ? 'Switch to Base' :
-              !approval.hasSufficientApproval ? 'Approve USDC First' :
-                `Mint ${quantity} Card${quantity > 1 ? 's' : ''}`
+              `Mint ${quantity} Card${quantity > 1 ? 's' : ''}`
         )}
       </motion.button>
 
