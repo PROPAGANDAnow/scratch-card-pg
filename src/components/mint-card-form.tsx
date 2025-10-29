@@ -7,13 +7,13 @@
 
 'use client';
 
-import { useState, useCallback, useMemo, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import Image from 'next/image';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
+import { useMiniApp } from '@neynar/react';
 import { useContractMinting, useMintingCost } from '~/hooks/useContractMinting';
 import { useWallet, useWalletAction } from '~/hooks/useWeb3Wallet';
-import { useMiniApp } from '@neynar/react';
 
 
 interface MintingProps {
@@ -58,7 +58,7 @@ export const MintCardForm = ({
     canMint,
     error: mintingError,
     reset: resetMinting,
-    approval
+    approval,
   } = useContractMinting(address);
 
   const { calculateCost, singleCardPrice } = useMintingCost();
@@ -76,12 +76,9 @@ export const MintCardForm = ({
     return isConnected && isCorrectNetwork && canMint && quantity > 0;
   }, [isConnected, isCorrectNetwork, canMint, quantity]);
 
-  // Need approval based on wallet state and approval state
-  const needsApproval = useMemo(() => {
-    return isConnected && isCorrectNetwork && approval.needsApproval && quantity > 0;
-  }, [isConnected, isCorrectNetwork, approval.needsApproval, quantity]);
 
-// Handle batched approval + minting
+
+  // Handle batched approval + minting
   const handleMint = useCallback(async () => {
     try {
       // Ensure wallet is ready
@@ -100,6 +97,8 @@ export const MintCardForm = ({
         haptics.impactOccurred('light');
       }
 
+      if (!address) return
+
       // Mint cards
       await mintCardsBatch(
         quantity,
@@ -114,7 +113,7 @@ export const MintCardForm = ({
       console.error('Minting error:', error);
       onError?.(errorMessage);
     }
-}, [
+  }, [
     ensureWalletReady,
     quantity,
     maxBatchSize,
@@ -125,7 +124,7 @@ export const MintCardForm = ({
     approval.approveUnlimited
   ]);
 
-  
+
 
   // Handle success
   useEffect(() => {
@@ -329,11 +328,10 @@ export const MintCardForm = ({
       <AnimatePresence>
         {approval.state !== 'idle' && approval.state !== 'success' && (
           <motion.div
-            className={`rounded-xl p-4 mb-6 ${
-              approval.state === 'pending' || approval.state === 'confirming'
-                ? 'bg-yellow-500/20 text-yellow-400'
-                : 'bg-red-500/20 text-red-400'
-            }`}
+            className={`rounded-xl p-4 mb-6 ${approval.state === 'pending' || approval.state === 'confirming'
+              ? 'bg-yellow-500/20 text-yellow-400'
+              : 'bg-red-500/20 text-red-400'
+              }`}
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
