@@ -18,7 +18,7 @@ export const SCRATCH_CARD_NFT_ADDRESS = '0xca6ffd32f5070c862865eb86a89265962b33c
 /**
  * USDC contract address on Base
  */
-export const USDC_ADDRESS = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913' as Address;
+export const USDC_ADDRESS = '0x902C0EB8E7654B15EEc93499587e56eF75fa6AdD' as Address;
 
 /**
  * USDC ERC20 ABI (minimal - only approve function needed)

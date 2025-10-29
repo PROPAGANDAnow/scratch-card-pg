@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useContext } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { useAccount } from 'wagmi'
 import { GET_USER_MINTS, GET_USER_CLAIMS } from '../queries'
 import { makeGraphQLRequest } from '~/lib/graphql-client'
+import { AppContext } from '~/app/context'
 
 export interface MintOperation {
   id: string
@@ -41,29 +41,30 @@ export interface UserActivity {
 }
 
 export function useUserActivity(limit = 20): UserActivity {
-  const { address } = useAccount()
+  const [state] = useContext(AppContext)
+  const userAddress = state.user?.wallet
   const [page, setPage] = useState(0)
 
   const { data: mintsData, isLoading: mintsLoading, error: mintsError, refetch: refetchMints } = useQuery({
-    queryKey: ['userMints', address?.toLowerCase(), page, limit],
+    queryKey: ['userMints', userAddress?.toLowerCase(), page, limit],
     queryFn: () => makeGraphQLRequest<{ mintOperations: MintOperation[] }>(GET_USER_MINTS, {
-      userAddress: address?.toLowerCase() || '',
+      userAddress: userAddress?.toLowerCase() || '',
       first: limit,
       skip: page * limit,
     }),
-    enabled: !!address,
+    enabled: !!userAddress,
     retry: 3,
     staleTime: 30000,
   })
 
   const { data: claimsData, isLoading: claimsLoading, error: claimsError, refetch: refetchClaims } = useQuery({
-    queryKey: ['userClaims', address?.toLowerCase(), page, limit],
+    queryKey: ['userClaims', userAddress?.toLowerCase(), page, limit],
     queryFn: () => makeGraphQLRequest<{ prizeClaims: PrizeClaim[] }>(GET_USER_CLAIMS, {
-      userAddress: address?.toLowerCase() || '',
+      userAddress: userAddress?.toLowerCase() || '',
       first: limit,
       skip: page * limit,
     }),
-    enabled: !!address,
+    enabled: !!userAddress,
     retry: 3,
     staleTime: 30000,
   })

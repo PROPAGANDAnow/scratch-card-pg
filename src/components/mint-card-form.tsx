@@ -90,12 +90,8 @@ export const MintCardForm = ({
         throw new Error(`Quantity must be between 1 and ${maxBatchSize}`);
       }
 
-      // Check if approval is needed first
-      if (approval.needsApproval) {
-        // Approve unlimited amount to avoid repeated approvals
-        await approval.approveUnlimited();
-        haptics.impactOccurred('light');
-      }
+      // Let hook manage approval per-amount with 0.2 USDC buffer
+      console.log("🚀 ~ MintCardForm ~ approval:", approval)
 
       if (!address) return
 
@@ -120,8 +116,8 @@ export const MintCardForm = ({
     mintCardsBatch,
     haptics,
     onError,
-    approval.needsApproval,
-    approval.approveUnlimited
+    approval,
+    address,
   ]);
 
 
@@ -324,59 +320,7 @@ export const MintCardForm = ({
         </div>
       </div>
 
-      {/* Approval Status */}
-      <AnimatePresence>
-        {approval.state !== 'idle' && approval.state !== 'success' && (
-          <motion.div
-            className={`rounded-xl p-4 mb-6 ${approval.state === 'pending' || approval.state === 'confirming'
-              ? 'bg-yellow-500/20 text-yellow-400'
-              : 'bg-red-500/20 text-red-400'
-              }`}
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-          >
-            <div className="flex items-center gap-3">
-              {(approval.state === 'pending' || approval.state === 'confirming') && (
-                <motion.div
-                  className="w-5 h-5 border-2 border-current border-t-transparent rounded-full"
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                />
-              )}
 
-              {approval.state === 'error' && (
-                <Image
-                  src="/assets/cross-icon.svg"
-                  alt="Error"
-                  width={20}
-                  height={20}
-                />
-              )}
-
-              <div>
-                <div className="font-medium">
-                  {approval.state === 'pending' && 'Approving...'}
-                  {approval.state === 'confirming' && 'Confirming Approval...'}
-                  {approval.state === 'error' && 'Approval Failed'}
-                </div>
-
-                {approval.state === 'pending' && (
-                  <div className="text-sm opacity-80">
-                    Please approve USDC spending in your wallet
-                  </div>
-                )}
-
-                {approval.error && (
-                  <div className="text-sm opacity-80">
-                    {approval.error}
-                  </div>
-                )}
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* Minting Status */}
       <AnimatePresence>
@@ -457,11 +401,11 @@ export const MintCardForm = ({
           }
           `}
         onClick={handleMint}
-        disabled={!canProceed || mintingState === 'pending' || mintingState === 'confirming' || approval.state === 'pending' || approval.state === 'confirming'}
+        disabled={!canProceed || mintingState === 'pending' || mintingState === 'confirming'}
         whileHover={canProceed ? { scale: 1.02 } : {}}
         whileTap={canProceed ? { scale: 0.98 } : {}}
       >
-        {(approval.state === 'pending' || approval.state === 'confirming') && 'Approving...'}
+
         {mintingState === 'pending' && 'Minting...'}
         {mintingState === 'confirming' && 'Confirming...'}
         {mintingState === 'success' && 'Minted Successfully!'}

@@ -6,7 +6,7 @@
  */
 
 import { useState, useCallback, useMemo, useEffect } from 'react';
-import { useWriteContract, useWaitForTransactionReceipt, useReadContract, usePublicClient, useWalletClient, useAccount } from 'wagmi';
+import { useWriteContract, useWaitForTransactionReceipt, useReadContract, usePublicClient, useWalletClient } from 'wagmi';
 import { Address, formatUnits, maxUint256 } from 'viem';
 import { USDC_ADDRESS, USDC_ABI, SCRATCH_CARD_NFT_ADDRESS } from '~/lib/contracts';
 
@@ -215,7 +215,7 @@ export const useERC20Approval = (
       console.error('Approval error:', err);
       throw err;
     }
-  }, [writeContract, userAddress, spenderAddress]);
+  }, [writeContract, userAddress, spenderAddress, publicClient, walletClient.data]);
 
   // Approve unlimited amount
   const approveUnlimited = useCallback(async () => {

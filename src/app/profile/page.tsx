@@ -2,6 +2,8 @@
 import { AppContext } from "../context";
 import { useContext, useEffect, useState } from "react";
 import CardGrid from "~/components/card-grid";
+import UserCards from "~/components/user-cards";
+import UserWinnings from "~/components/user-winnings";
 import { useRouter } from "next/navigation";
 import { motion, useAnimation } from "framer-motion";
 import { CircularProgress } from "~/components/circular-progress";
@@ -16,6 +18,7 @@ const ProfilePage = () => {
   const [state] = useContext(AppContext);
   const { push } = useRouter();
   const [displayAmount, setDisplayAmount] = useState(0);
+  const [activeTab, setActiveTab] = useState<'overview' | 'cards' | 'winnings'>('overview');
   const controls = useAnimation();
   const userStats = useUserStats();
   const { } = useUserActivity();
@@ -169,18 +172,62 @@ const ProfilePage = () => {
           />
         </motion.div>
 
-        {/* Card Grid with staggered animation */}
+        {/* Tab Navigation */}
         <motion.div
-          initial={{ opacity: 0, y: 50 }}
+          initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 1.8, duration: 0.8 }}
+          transition={{ delay: 1.4, duration: 0.6 }}
+          className="flex space-x-1 bg-white/10 backdrop-blur-sm rounded-xl p-1 mb-6"
         >
-          <CardGrid
-            cards={state.cards || []}
-            showViewAll={true}
-            onCardSelect={() => {}}
-            onViewAll={handleViewAll}
-          />
+          {[
+            { id: 'overview', label: 'Overview' },
+            { id: 'cards', label: 'My Cards' },
+            { id: 'winnings', label: 'Winnings' }
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as typeof activeTab)}
+              className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all duration-200 ${
+                activeTab === tab.id
+                  ? 'bg-white/20 text-white shadow-lg'
+                  : 'text-white/60 hover:text-white/80 hover:bg-white/5'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </motion.div>
+
+        {/* Tab Content */}
+        <motion.div
+          key={activeTab}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+          className="flex-1"
+        >
+          {activeTab === 'overview' && (
+            <motion.div
+              initial={{ opacity: 0, y: 50 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 1.8, duration: 0.8 }}
+            >
+              <CardGrid
+                cards={state.cards || []}
+                showViewAll={true}
+                onCardSelect={() => {}}
+                onViewAll={handleViewAll}
+              />
+            </motion.div>
+          )}
+
+          {activeTab === 'cards' && (
+            <UserCards />
+          )}
+
+          {activeTab === 'winnings' && (
+            <UserWinnings />
+          )}
         </motion.div>
       </motion.div>
     </>

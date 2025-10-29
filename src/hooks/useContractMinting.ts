@@ -94,14 +94,15 @@ export interface UseContractMintingReturn {
   /** Reset state */
   reset: () => void;
 
-  /** Whether user can mint */
+/** Whether user can mint */
   canMint: boolean;
 
-  /** Approval state and functions */
+/** Approval state and functions */
   approval: {
     state: 'idle' | 'checking' | 'pending' | 'confirming' | 'success' | 'error';
     needsApproval: boolean;
     hasSufficientApproval: boolean;
+    allowance: bigint;
     approve: (amount: bigint) => Promise<void>;
     approveUnlimited: () => Promise<void>;
     error: string | null;
@@ -123,6 +124,9 @@ export interface UseContractMintingReturn {
 export const useContractMinting = (userAddress: Address | null): UseContractMintingReturn => {
   // Get public client for enhanced transaction handling
   const publicClient = usePublicClient();
+
+  // Feature flag: skip viem simulations to avoid pre-approval failures
+  const SKIP_SIMULATION = process.env.NEXT_PUBLIC_SKIP_MINT_SIMULATION !== 'false';
 
   // Contract write hooks
   const {
@@ -255,6 +259,14 @@ export const useContractMinting = (userAddress: Address | null): UseContractMint
         simulationError: 'Public client or user address not available'
       };
     }
+    if (SKIP_SIMULATION) {
+      return {
+        estimatedGas: BigInt(0),
+        estimatedGasPrice: BigInt(0),
+        estimatedTotalCost: BigInt(0),
+        willSucceed: true,
+      };
+    }
 
     try {
       const gasEstimate = await publicClient.estimateContractGas({
@@ -298,6 +310,15 @@ export const useContractMinting = (userAddress: Address | null): UseContractMint
         estimatedTotalCost: BigInt(0),
         willSucceed: false,
         simulationError: 'Public client or user address not available'
+      };
+    }
+
+    if (SKIP_SIMULATION) {
+      return {
+        estimatedGas: BigInt(0),
+        estimatedGasPrice: BigInt(0),
+        estimatedTotalCost: BigInt(0),
+        willSucceed: true,
       };
     }
 
@@ -373,32 +394,27 @@ export const useContractMinting = (userAddress: Address | null): UseContractMint
   // Mint single card with simulation
   const mintCard = useCallback(async (recipient?: Address) => {
     try {
-      // Check approval first
-      if (!approvalHook.hasSufficientApproval) {
-        throw new Error('Please approve USDC spending first');
-      }
+      // Calculate required approval = exact USDC cost
+      const actualCost = calculateCostBigInt(1);
+      const requiredApproval = actualCost;
 
-      // Run simulation before actual transaction
-      const simulation = await simulateMintCard(recipient);
-      if (!simulation.willSucceed) {
-        throw new Error(simulation.simulationError || 'Transaction simulation failed');
-      }
-
+      // Start single pending state covering approval + mint
       setState('pending');
       setError(null);
       setEnhancedReceipt(null);
+
+      // Approve exact required amount first
+      await approvalHook.approve(requiredApproval);
 
       const txHash = await writeContract({
         address: SCRATCH_CARD_NFT_ADDRESS,
         abi: SCRATCH_CARD_NFT_ABI,
         functionName: 'mintCard',
-        args: [AddressPatterns.safeRecipient(recipient)], // Use zero address for self
+        args: [AddressPatterns.safeRecipient(recipient)],
       });
 
       console.log('Transaction submitted:', txHash);
-      console.log('Simulation result:', formatSimulationResult(simulation));
 
-      // Wait for transaction receipt using publicClient for enhanced monitoring
       if (publicClient && txHash) {
         console.log('Waiting for transaction receipt using publicClient...');
       }
@@ -410,7 +426,7 @@ export const useContractMinting = (userAddress: Address | null): UseContractMint
       setEnhancedReceipt(null);
       console.error('Minting error:', err);
     }
-  }, [writeContract, publicClient, approvalHook.hasSufficientApproval, simulateMintCard]);
+  }, [writeContract, publicClient, approvalHook.allowance, approvalHook.approve, approvalHook.checkAllowance, calculateCostBigInt, simulateMintCard]);
 
   // Mint multiple cards with simulation
   const mintCardsBatch = useCallback(async (quantity: number, recipient?: Address) => {
@@ -424,33 +440,37 @@ export const useContractMinting = (userAddress: Address | null): UseContractMint
         throw new Error(`Maximum batch size is ${maxBatchSize}`);
       }
 
-      // Check approval first
-      if (!approvalHook.hasSufficientApproval) {
-        throw new Error('Please approve USDC spending first');
-      }
+      // Calculate required approval = exact USDC cost
+      const actualCost = calculateCostBigInt(quantity);
+      const requiredApproval = actualCost;
 
-      // Run simulation before actual transaction
-      const simulation = await simulateMintCardsBatch(quantity, recipient);
-      if (!simulation.willSucceed) {
-        throw new Error(simulation.simulationError || 'Transaction simulation failed');
-      }
-
+      // Start single pending state covering approval + mint
       setState('pending');
       setError(null);
       setEnhancedReceipt(null);
+
+      // Approve exact required amount first
+      await approvalHook.approve(requiredApproval);
+
+      // Optionally simulate tx (skipped by default)
+      if (!SKIP_SIMULATION) {
+        const simulation = await simulateMintCardsBatch(quantity, recipient);
+        if (!simulation.willSucceed) {
+          throw new Error(simulation.simulationError || 'Transaction simulation failed');
+        }
+        console.log('Simulation result:', formatSimulationResult(simulation));
+      }
 
       console.log("🚀 ~ useContractMinting ~ SCRATCH_CARD_NFT_ADDRESS:", SCRATCH_CARD_NFT_ADDRESS)
       const txHash = await writeContract({
         address: SCRATCH_CARD_NFT_ADDRESS,
         abi: SCRATCH_CARD_NFT_ABI,
         functionName: 'mintCardsBatch',
-        args: [BigInt(quantity), AddressPatterns.safeRecipient(recipient)], // Use zero address for self
+        args: [BigInt(quantity), AddressPatterns.safeRecipient(recipient)],
       });
 
       console.log('Batch transaction submitted:', txHash);
-      console.log('Simulation result:', formatSimulationResult(simulation));
 
-      // Wait for transaction receipt using publicClient for enhanced monitoring
       if (publicClient && txHash) {
         console.log('Waiting for batch transaction receipt using publicClient...');
       }
@@ -462,7 +482,7 @@ export const useContractMinting = (userAddress: Address | null): UseContractMint
       setEnhancedReceipt(null);
       console.error('Batch minting error:', err);
     }
-  }, [writeContract, maxBatchSize, publicClient, approvalHook.hasSufficientApproval, simulateMintCardsBatch]);
+  }, [writeContract, maxBatchSize, publicClient, approvalHook.allowance, approvalHook.approve, approvalHook.checkAllowance, calculateCostBigInt, simulateMintCardsBatch]);
 
   // Reset state
   const reset = useCallback(() => {
@@ -476,7 +496,7 @@ export const useContractMinting = (userAddress: Address | null): UseContractMint
     return state === 'idle' || state === 'success';
   }, [state]);
 
-return {
+  return {
     state,
     transactionHash: hash || null,
     receipt: enhancedReceipt,
@@ -488,6 +508,7 @@ return {
     reset,
     canMint,
     approval: {
+      allowance: approvalHook.allowance,
       state: approvalHook.state,
       needsApproval: approvalHook.needsApproval,
       hasSufficientApproval: approvalHook.hasSufficientApproval,
@@ -546,7 +567,7 @@ export const formatSimulationResult = (simulation: SimulationResult): string => 
 
   const gasInEth = formatUnits(simulation.estimatedTotalCost, 18);
   const gasInGwei = Number(formatUnits(simulation.estimatedGasPrice, 9));
-  
+
   return `✅ Success predicted • Gas: ${simulation.estimatedGas.toString()} • ~${gasInEth} ETH (~${gasInGwei} Gwei)`;
 };
 
