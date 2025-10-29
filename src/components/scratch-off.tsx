@@ -543,7 +543,7 @@ const ScratchOff = ({
       }
       const percent = (transparent / (actualWidth * actualHeight)) * 100;
 
-      if (percent > 40 && !scratched && !isProcessing) {
+      if (percent > 50 && !scratched && !isProcessing) {
         // Use debounced scratch detection instead of immediate processing
         debouncedScratchDetection();
       }
