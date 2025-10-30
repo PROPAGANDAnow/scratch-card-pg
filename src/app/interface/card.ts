@@ -12,6 +12,7 @@ export interface Card {
   payout_tx?: string;
   created_at: string;
   scratched: boolean;
+  prize_won?: boolean;
   card_no: number;
   shared_to: {
     fid: string;

@@ -9,19 +9,75 @@ import { AppContext } from "~/app/context";
 import { SET_CURRENT_CARD_INDEX, SET_NEXT_CARD } from "~/app/context/actions";
 
 interface SwipeableCardStackProps {
-  cards: Card[];
+  userWallet: string;
+  tokenIds: number[];
   initialIndex?: number;
 }
 
 export default function SwipeableCardStack({
-  cards,
+  userWallet,
+  tokenIds,
   initialIndex = 0,
 }: SwipeableCardStackProps) {
   const [, dispatch] = useContext(AppContext);
+  const [cards, setCards] = useState<Card[]>([]);
+  const [loading, setLoading] = useState(true);
   const [currentCardNo, setCurrentCardNo] = useState<number | null>(null);
   const [direction, setDirection] = useState<1 | -1>(1);
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
   const cardRef = useRef<HTMLDivElement>(null);
+
+  // Fetch or create cards for tokenIds
+  useEffect(() => {
+    const fetchCards = async () => {
+      if (!userWallet) {
+        console.error('No userWallet provided');
+        setLoading(false);
+        return;
+      }
+
+      setLoading(true);
+      const fetchedCards: Card[] = [];
+
+      for (const tokenId of tokenIds) {
+        try {
+          // Try to get existing card
+          const response = await fetch(`/api/cards/${tokenId}`);
+          if (response.ok) {
+            const data = await response.json();
+            fetchedCards.push(data.card);
+          } else if (response.status === 404) {
+            // Card doesn't exist, create it
+            const createResponse = await fetch('/api/cards/buy', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ tokenId, userWallet, friends: [] }),
+            });
+            if (createResponse.ok) {
+              const createData = await createResponse.json();
+              fetchedCards.push(createData.card);
+            } else {
+              const errorData = await createResponse.json().catch(() => ({}));
+              console.error(`Failed to create card for tokenId ${tokenId}:`, errorData.error || createResponse.statusText);
+            }
+          } else {
+            console.error(`Failed to fetch card for tokenId ${tokenId}: ${response.statusText}`);
+          }
+        } catch (error) {
+          console.error(`Error fetching/creating card for tokenId ${tokenId}:`, error);
+        }
+      }
+
+      setCards(fetchedCards);
+      setLoading(false);
+    };
+
+    if (userWallet && tokenIds.length > 0) {
+      fetchCards();
+    } else {
+      setLoading(false);
+    }
+  }, [userWallet, tokenIds]);
 
   // Initialize current card number
   useEffect(() => {
@@ -184,7 +240,11 @@ export default function SwipeableCardStack({
 
             {/* Center 60% for scratching */}
             <div className="w-full h-[auto]">
-              {cards.length ? (
+              {loading ? (
+                <div className="flex items-center justify-center h-full">
+                  <div className="text-white">Loading cards...</div>
+                </div>
+              ) : cards.length ? (
                 <ScratchOff
                   cardData={current || null}
                   isDetailView

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabaseAdmin } from "~/lib/supabaseAdmin";
+import { prisma } from "~/lib/prisma";
 import axios from "axios";
 import { BestFriend } from "~/app/interface/bestFriends";
 
@@ -72,21 +72,20 @@ export async function POST(request: NextRequest) {
 
     if (bestFriendFids.length > 0) {
       try {
-        const { data: users, error: dbError } = await supabaseAdmin
-          .from("users")
-          .select("fid, username, notification_enabled, notification_token")
-          .in("fid", bestFriendFids)
-          .eq("notification_enabled", true);
+        const users = await prisma.user.findMany({
+          where: {
+            fid: { in: bestFriendFids },
+            notification_enabled: true
+          },
+          select: {
+            fid: true,
+            username: true,
+            notification_enabled: true,
+            notification_token: true
+          }
+        });
 
-        if (dbError) {
-          console.error("Error fetching users from database:", dbError);
-          return NextResponse.json(
-            { error: "Failed to fetch users from database" },
-            { status: 500 }
-          );
-        }
-
-        usersToNotify = users || [];
+        usersToNotify = users;
         console.log(
           `Found ${usersToNotify.length} users with notifications enabled`
         );

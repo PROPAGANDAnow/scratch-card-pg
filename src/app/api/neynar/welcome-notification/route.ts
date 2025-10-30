@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabaseAdmin } from "~/lib/supabaseAdmin";
+import { prisma } from "~/lib/prisma";
 import axios from "axios";
 
 export async function POST(request: NextRequest) {
@@ -14,36 +14,24 @@ export async function POST(request: NextRequest) {
     }
 
     // Find user by FID
-    const { data: user, error: userError } = await supabaseAdmin
-      .from("users")
-      .select("*")
-      .eq("fid", fid)
-      .single();
+    const user = await prisma.user.findFirst({
+      where: { fid: fid }
+    });
 
-    if (userError || !user) {
-      console.error("Error finding user by FID:", userError);
+    if (!user) {
+      console.error("User not found by FID:", fid);
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
     // Update user with notification settings
-    const { data: updatedUser, error: updateError } = await supabaseAdmin
-      .from("users")
-      .update({
+    const updatedUser = await prisma.user.update({
+      where: { wallet: user.wallet },
+      data: {
         notification_enabled: true,
         notification_token: notification_token,
-        last_active: new Date().toISOString(),
-      })
-      .eq("fid", fid)
-      .select()
-      .single();
-
-    if (updateError) {
-      console.error("Error updating user notification settings:", updateError);
-      return NextResponse.json(
-        { error: "Failed to update notification settings" },
-        { status: 500 }
-      );
-    }
+        last_active: new Date(),
+      }
+    });
 
     // Send notification via Neynar
     const neynarApiKey = process.env.NEYNAR_API_KEY;

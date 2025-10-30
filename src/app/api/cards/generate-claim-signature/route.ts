@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { encodeAbiParameters, keccak256 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { supabaseAdmin } from "~/lib/supabaseAdmin";
+import { prisma } from "~/lib/prisma";
 import { USDC_ADDRESS } from "~/lib/constants";
 
 // Type definitions
@@ -13,7 +13,7 @@ interface ClaimSignature {
 }
 
 interface GenerateSignatureRequest {
-  tokenId: number;
+  tokenId: string;
   userWallet: string;
 }
 
@@ -58,15 +58,19 @@ export async function POST(request: NextRequest) {
     }
 
     // Fetch card data from database to verify ownership and prize
-    const { data: card, error: cardError } = await supabaseAdmin
-      .from("cards")
-      .select(
-        "id, user_wallet, prize_amount, prize_asset_contract, scratched, claimed"
-      )
-      .eq("id", tokenId)
-      .single();
+    const card = await prisma.card.findUnique({
+      where: { id: tokenId },
+      select: {
+        id: true,
+        user_wallet: true,
+        prize_amount: true,
+        prize_asset_contract: true,
+        scratched: true,
+        claimed: true
+      }
+    });
 
-    if (cardError || !card) {
+    if (!card) {
       return NextResponse.json(
         { error: "Card not found" },
         { status: 404 }

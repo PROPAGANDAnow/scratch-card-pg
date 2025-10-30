@@ -1,0 +1,85 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  wallet                String   @id
+  fid                   Int?     @unique // Made unique for notification relations
+  username              String?
+  pfp                   String?
+  created_at            DateTime @default(now()) @db.Timestamp(6)
+  amount_won            Float    @default(0)
+  cards_count           Int      @default(0)
+  last_active           DateTime @default(now()) @db.Timestamp(6)
+  total_reveals         Int      @default(0)
+  total_wins            Int      @default(0)
+  notification_enabled  Boolean? @default(false)
+  notification_token    String?
+  current_level         Int      @default(1)
+  reveals_to_next_level Int      @default(10) // Assuming default level requirement
+  is_pro                Boolean  @default(false)
+
+  // Relations
+  cards        Card[]
+  notifications Notification[]
+
+  @@map("users")
+}
+
+model Card {
+  id                   String    @id @default(cuid())
+  user_wallet          String
+  payment_tx           String
+  prize_amount         Float
+  scratched_at         DateTime? @db.Timestamp(6)
+  prize_asset_contract String
+  numbers_json         Json // Array of CardCell objects
+  claimed              Boolean   @default(false)
+  payout_tx            String?
+  created_at           DateTime  @default(now()) @db.Timestamp(6)
+  scratched            Boolean   @default(false)
+  prize_won            Boolean   @default(false) // New field to track if prize was won
+  token_id              Int 
+  shared_to            Json? // Object with fid, username, pfp, wallet
+  shared_from          Json? // Object with fid, username, pfp, wallet
+
+  // Relations
+  user User @relation(fields: [user_wallet], references: [wallet], onDelete: Cascade)
+
+  @@unique([token_id]) // Assuming card_no should be unique
+  @@map("cards")
+}
+
+model Notification {
+  id         String   @id @default(cuid())
+  user_fid   Int      // User's Farcaster FID
+  app_fid    Int      // Farcaster app FID
+  token      String   // Notification token for this app
+  created_at DateTime @default(now()) @db.Timestamp(6)
+  updated_at DateTime @updatedAt @db.Timestamp(6)
+
+  // Relations
+  user User @relation(fields: [user_fid], references: [fid], onDelete: Cascade)
+
+  @@unique([user_fid, app_fid]) // One token per user per app
+  @@map("notifications")
+}
+
+model Stats {
+  id         Int      @id @default(1)
+  cards      Int      @default(0)
+  reveals    Int      @default(0)
+  winnings   Float    @default(0)
+  created_at DateTime @default(now()) @db.Timestamp(6)
+  updated_at DateTime @updatedAt @db.Timestamp(6)
+
+  @@map("stats")
+}

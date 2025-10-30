@@ -76,7 +76,7 @@ export default function Home() {
 
   return (
     <>
-      <SwipeableCardStack cards={state.localCards} />
+      <SwipeableCardStack userWallet={state.user?.wallet || ''} tokenIds={[1, 2, 3]} />
     </>
   );
 }
