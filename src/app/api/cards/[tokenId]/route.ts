@@ -15,9 +15,17 @@ export async function GET(
       );
     }
 
+    const cardId = parseInt(tokenId, 10);
+    if (isNaN(cardId)) {
+      return NextResponse.json(
+        { error: "Invalid tokenId parameter" },
+        { status: 400 }
+      );
+    }
+
     // Fetch the card by tokenId (card_no)
     const card = await prisma.card.findUnique({
-      where: { card_no: parseInt(tokenId) },
+      where: { id: cardId },
       select: {
         id: true,
         user_wallet: true,
@@ -25,7 +33,6 @@ export async function GET(
         prize_asset_contract: true,
         numbers_json: true,
         scratched: true,
-        card_no: true
       }
     });
 
@@ -41,7 +48,6 @@ export async function GET(
       success: true,
       card: {
         id: card.id,
-        tokenId: card.card_no,
         userWallet: card.user_wallet,
         prizeAmount: card.prize_amount,
         prizeAsset: card.prize_asset_contract,

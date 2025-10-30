@@ -28,14 +28,14 @@ model User {
   is_pro                Boolean  @default(false)
 
   // Relations
-  cards        Card[]
+  cards         Card[]
   notifications Notification[]
 
   @@map("users")
 }
 
 model Card {
-  id                   String    @id @default(cuid())
+  id                   Int       @id
   user_wallet          String
   payment_tx           String
   prize_amount         Float
@@ -47,22 +47,20 @@ model Card {
   created_at           DateTime  @default(now()) @db.Timestamp(6)
   scratched            Boolean   @default(false)
   prize_won            Boolean   @default(false) // New field to track if prize was won
-  token_id              Int 
   shared_to            Json? // Object with fid, username, pfp, wallet
   shared_from          Json? // Object with fid, username, pfp, wallet
 
   // Relations
   user User @relation(fields: [user_wallet], references: [wallet], onDelete: Cascade)
 
-  @@unique([token_id]) // Assuming card_no should be unique
   @@map("cards")
 }
 
 model Notification {
   id         String   @id @default(cuid())
-  user_fid   Int      // User's Farcaster FID
-  app_fid    Int      // Farcaster app FID
-  token      String   // Notification token for this app
+  user_fid   Int // User's Farcaster FID
+  app_fid    Int // Farcaster app FID
+  token      String // Notification token for this app
   created_at DateTime @default(now()) @db.Timestamp(6)
   updated_at DateTime @updatedAt @db.Timestamp(6)
 
