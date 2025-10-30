@@ -28,7 +28,6 @@ export const fetchUserCards = async (userWallet: string) => {
   try {
     const data = await prisma.card.findMany({
       where: { user_wallet: userWallet },
-      orderBy: { card_no: 'desc' },
       take: 1000
     });
 

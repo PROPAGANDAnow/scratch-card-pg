@@ -1100,7 +1100,7 @@ const ScratchOff = ({
                       color: APP_COLORS.WON,
                     }}
                   >
-                    Buy Cards3
+                    Buy Cards
                   </button>
                 </div>
               ) : null}

@@ -41,7 +41,6 @@ export default function NftHome() {
       payout_tx: undefined,
       created_at: new Date().toISOString(),
       scratched: false,
-      card_no: index + 1,
       shared_to: null,
       shared_from: null,
     } as Card));
@@ -170,7 +169,7 @@ export default function NftHome() {
             >
               <div className="w-full aspect-square bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-lg mb-2 flex items-center justify-center">
                 <span className="text-2xl font-bold text-white">
-                  #{card.card_no}
+                  #{card.id}
                 </span>
               </div>
 
@@ -189,7 +188,7 @@ export default function NftHome() {
               )}
 
               <div className="text-sm text-white/80">
-                Card #{card.card_no}
+                Card #{card.id}
               </div>
             </motion.button>
           ))}

@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
 
     // Check if card already exists for this tokenId
     const existingCard = await prisma.card.findUnique({
-      where: { card_no: tokenId }
+      where: { id: tokenId }
     });
 
     if (existingCard) {
@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
         prize_amount: prize,
         prize_asset_contract: prizeAsset,
         numbers_json: numbers as any, // JSON field
-        card_no: tokenId, // Use tokenId as card_no
+        id: tokenId, // Use tokenId as card_no
         prize_won: prize > 0, // Set prize_won based on prize amount
         shared_to: shared_to as any, // JSON field
         shared_from: null as any // JSON field
