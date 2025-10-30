@@ -1,8 +1,9 @@
 /**
- * Web3 Home Page
+ * Web3 Home Page with Subgraph Integration
  * 
  * Replaces traditional home page with Web3 functionality
  * Integrates NFT cards and on-chain interactions
+ * Includes subgraph data fetching for enhanced functionality
  */
 
 "use client";
@@ -14,6 +15,8 @@ import NftInitialScreen from "~/components/nft-initial-screen";
 import NftScratchOff from "~/components/nft-scratch-off";
 import { useWallet } from "~/hooks/useWeb3Wallet";
 import { useUserCards } from "~/hooks/useContractMinting";
+import { useContractStats } from "~/hooks/useContractStats";
+import { useUserActivity } from "~/hooks/useUserActivity";
 import { Card } from "./interface/card";
 
 export default function NftHome() {
@@ -24,6 +27,10 @@ export default function NftHome() {
   // Web3 hooks
   const { address } = useWallet();
   const { tokenIds } = useUserCards(address);
+
+  // Subgraph hooks for enhanced functionality
+  const { isPaused, formattedStats } = useContractStats();
+  const { mints, claims, loading: activityLoading } = useUserActivity();
 
   // Convert token IDs to card format for compatibility
   const nftCards = useMemo(() => {
@@ -196,6 +203,62 @@ export default function NftHome() {
             </motion.button>
           ))}
         </div>
+
+        {/* Subgraph Data Section */}
+        {formattedStats && (
+          <div className="w-full mb-8 bg-white/10 rounded-xl p-4">
+            <h3 className="text-lg font-semibold text-white mb-3">Contract Stats</h3>
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <div className="bg-white/5 rounded-lg p-3">
+                <p className="text-white/60 text-xs">Total Minted</p>
+                <p className="text-white font-semibold">{formattedStats.totalMinted.toLocaleString()}</p>
+              </div>
+              <div className="bg-white/5 rounded-lg p-3">
+                <p className="text-white/60 text-xs">Prizes Claimed</p>
+                <p className="text-white font-semibold">{formattedStats.totalClaimed.toLocaleString()}</p>
+              </div>
+              <div className="bg-white/5 rounded-lg p-3">
+                <p className="text-white/60 text-xs">Card Price</p>
+                <p className="text-white font-semibold">{formattedStats.currentPrice} ETH</p>
+              </div>
+              <div className="bg-white/5 rounded-lg p-3">
+                <p className="text-white/60 text-xs">Status</p>
+                <p className={`font-semibold ${isPaused ? 'text-red-400' : 'text-green-400'}`}>
+                  {isPaused ? 'Paused' : 'Active'}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* User Activity from Subgraph */}
+        {!activityLoading && (mints.length > 0 || claims.length > 0) && (
+          <div className="w-full mb-8 bg-white/10 rounded-xl p-4">
+            <h3 className="text-lg font-semibold text-white mb-3">Your Activity</h3>
+            <div className="space-y-2 max-h-40 overflow-y-auto">
+              {mints.slice(0, 3).map((mint) => (
+                <div key={mint.id} className="bg-white/5 rounded-lg p-2 text-xs">
+                  <div className="flex justify-between items-center">
+                    <span className="text-white/80">Minted {mint.quantity} cards</span>
+                    <span className="text-white/60">
+                      {new Date(Number(mint.timestamp) * 1000).toLocaleDateString()}
+                    </span>
+                  </div>
+                </div>
+              ))}
+              {claims.slice(0, 3).map((claim) => (
+                <div key={claim.id} className="bg-green-500/20 rounded-lg p-2 text-xs">
+                  <div className="flex justify-between items-center">
+                    <span className="text-white/80">Won prize on token #{claim.tokenId}</span>
+                    <span className="text-white/60">
+                      {new Date(Number(claim.claimedAt) * 1000).toLocaleDateString()}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="flex gap-4">
           <motion.button

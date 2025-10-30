@@ -1,6 +1,25 @@
-# Subgraph Integration
+# Subgraph Integration Implementation
 
-This document outlines the subgraph integration that has been implemented for the Scratch Card NFT application.
+This document outlines the complete subgraph integration implementation for the Scratch Card NFT application, including the latest updates with The Graph production endpoints and React Query integration.
+
+## 🚀 Latest Updates (New Implementation)
+
+### Production Subgraph Integration
+- **Subgraph ID**: Go4V8UMVoFXFSoRsMHpFVmdQD9dcFDQojWzxNFZUmxTp
+- **Network**: Base (Mainnet)
+- **Status**: Published, Version 0.1.1
+- **Owner**: 0xbhaisaab.eth
+
+### React Query Integration
+- **Server-Side Rendering**: Implemented with `HydrationBoundary`
+- **Client Components**: Optimized data fetching with `useQuery`
+- **Caching**: Intelligent caching with proper stale times
+- **Error Handling**: Comprehensive error handling with retry logic
+
+### Fixed API Issues
+- **curl Command**: Fixed tokenId format issue (string vs number)
+- **Validation**: Updated request validation schema
+- **Error Responses**: Improved error messages and status codes
 
 ## 🚀 What's Been Integrated
 

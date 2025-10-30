@@ -13,7 +13,7 @@ import { Address } from 'viem';
  * Deployed Scratch Card NFT contract address on Base
  * Update this with your actual deployed contract address
  */
-export const SCRATCH_CARD_NFT_ADDRESS = '0xca6ffd32f5070c862865eb86a89265962b33c8fb' as Address;
+export const SCRATCH_CARD_NFT_ADDRESS = '0x60F8B620D3741FE7A628CF9066229D5388723827' as Address;
 
 /**
  * USDC contract address on Base

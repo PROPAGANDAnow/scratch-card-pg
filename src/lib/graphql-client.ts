@@ -2,8 +2,11 @@ import { gql, request } from 'graphql-request'
 
 // Subgraph configuration
 export const SUBGRAPH_CONFIG = {
-  // The Graph Studio (Recommended for production)
-  url: process.env.NEXT_PUBLIC_SUBGRAPH_URL || 'https://api.studio.thegraph.com/query/89373/scratch-card-pg/version/latest',
+  // Production URL from The Graph (Base network)
+  url: process.env.NEXT_PUBLIC_SUBGRAPH_URL || 'https://gateway.thegraph.com/api/subgraphs/id/Go4V8UMVoFXFSoRsMHpFVmdQD9dcFDQojWzxNFZUmxTp',
+
+  // Development URL from The Graph Studio
+  devUrl: 'https://api.studio.thegraph.com/query/89373/scratch-card-pg/version/latest',
 
   // Authentication token for The Graph Studio
   authToken: process.env.SUBGRAPH_API_KEY,
@@ -14,9 +17,16 @@ export const SUBGRAPH_CONFIG = {
 
 // Get the appropriate URL based on environment
 export const getSubgraphUrl = () => {
-  // if (process.env.NODE_ENV === 'development' && process.env.NEXT_PUBLIC_SUBGRAPH_URL === SUBGRAPH_CONFIG.localUrl) {
-  //   return SUBGRAPH_CONFIG.localUrl
-  // }
+  // Use production URL by default
+  if (process.env.NEXT_PUBLIC_SUBGRAPH_URL) {
+    return process.env.NEXT_PUBLIC_SUBGRAPH_URL
+  }
+  
+  // For development, you can switch to devUrl
+  if (process.env.NODE_ENV === 'development') {
+    return SUBGRAPH_CONFIG.devUrl
+  }
+  
   return SUBGRAPH_CONFIG.url
 }
 
