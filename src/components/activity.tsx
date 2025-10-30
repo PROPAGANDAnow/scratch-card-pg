@@ -96,9 +96,9 @@ const Activity = () => {
             transition={{ duration: 0.2, delay: index * 0.01 }}
           >
             <div className="flex items-center gap-3">
-              <Image
-                src={reveal.pfp || "/assets/splash-image.png"}
-                alt={reveal.username}
+               <Image
+                 src={reveal.pfp || "/assets/splash-image.png"}
+                 alt={reveal.username || "Unknown"}
                 width={48}
                 height={48}
                 loading="lazy"
@@ -124,7 +124,7 @@ const Activity = () => {
               </div>
             </div>
             <p className="text-[12px] font-medium leading-[90%] text-white/60">
-              {formatTimeAgo(reveal.updated_at)}
+              {reveal.updated_at ? formatTimeAgo(reveal.updated_at.toISOString()) : 'Unknown'}
             </p>
           </motion.div>
         ))}

@@ -98,7 +98,7 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
                   Cards{" "}
                   {state.selectedCard ? (
                     <>
-                      {state.selectedCard.card_no}
+                      {state.selectedCard.token_id}
                       <span className="text-[#fff]/40">
                         /{state.cards.length}
                       </span>

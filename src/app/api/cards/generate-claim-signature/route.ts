@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
 
     // Fetch card data from database to verify ownership and prize
     const card = await prisma.card.findUnique({
-      where: { id: tokenId },
+      where: { token_id: parseInt(tokenId) },
       select: {
         id: true,
         user_wallet: true,

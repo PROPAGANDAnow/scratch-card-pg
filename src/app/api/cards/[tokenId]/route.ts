@@ -23,9 +23,9 @@ export async function GET(
       );
     }
 
-    // Fetch the card by tokenId (card_no)
+    // Fetch the card by tokenId
     const card = await prisma.card.findUnique({
-      where: { id: cardId },
+      where: { token_id: cardId },
       select: {
         id: true,
         user_wallet: true,

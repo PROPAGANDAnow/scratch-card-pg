@@ -64,7 +64,8 @@ export async function POST(request: NextRequest) {
         prize_amount: prize,
         prize_asset_contract: prizeAsset,
         numbers_json: numbers as any, // JSON field
-        id: tokenId, // Use tokenId as card_no
+        token_id: parseInt(tokenId), // Use tokenId as token_id
+        contract_address: "0x0000000000000000000000000000000000000000", // Placeholder for NFT contract
         prize_won: prize > 0, // Set prize_won based on prize amount
         shared_to: shared_to as any, // JSON field
         shared_from: null as any // JSON field

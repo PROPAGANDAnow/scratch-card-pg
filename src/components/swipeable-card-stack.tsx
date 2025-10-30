@@ -83,14 +83,14 @@ export default function SwipeableCardStack({
   useEffect(() => {
     if (cards.length > 0 && !currentCardNo) {
       const initialCard = cards[initialIndex] || cards[0];
-      setCurrentCardNo(initialCard.card_no);
+      setCurrentCardNo(initialCard.token_id);
     }
   }, [cards, initialIndex, currentCardNo]);
 
   // Find current card and index
-  const current = cards.find((card) => card.card_no === currentCardNo);
+  const current = cards.find((card) => card.token_id === currentCardNo);
   const currentIndex = current
-    ? cards.findIndex((card) => card.card_no === currentCardNo)
+    ? cards.findIndex((card) => card.token_id === currentCardNo)
     : -1;
 
   const canGoPrev = currentIndex > 0;
@@ -102,7 +102,7 @@ export default function SwipeableCardStack({
       if (canGoNext) {
         setDirection(1);
         const nextCard = cards[currentIndex + 1];
-        if (nextCard) setCurrentCardNo(nextCard.card_no);
+        if (nextCard) setCurrentCardNo(nextCard.token_id);
       }
     };
 
@@ -134,7 +134,7 @@ export default function SwipeableCardStack({
     if (canGoPrev) {
       setDirection(-1);
       const prevCard = cards[currentIndex - 1];
-      if (prevCard) setCurrentCardNo(prevCard.card_no);
+      if (prevCard) setCurrentCardNo(prevCard.token_id);
     }
   }, [canGoPrev, currentIndex, cards]);
 
@@ -143,7 +143,7 @@ export default function SwipeableCardStack({
     if (canGoNext) {
       setDirection(1);
       const nextCard = cards[currentIndex + 1];
-      if (nextCard) setCurrentCardNo(nextCard.card_no);
+      if (nextCard) setCurrentCardNo(nextCard.token_id);
     }
   }, [canGoNext, currentIndex, cards]);
 
@@ -151,7 +151,7 @@ export default function SwipeableCardStack({
     if (canGoNext) {
       setDirection(1);
       const nextCard = cards[currentIndex + 1];
-      if (nextCard) setCurrentCardNo(nextCard.card_no);
+      if (nextCard) setCurrentCardNo(nextCard.token_id);
     }
   }, [canGoNext, currentIndex, cards]);
 

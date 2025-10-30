@@ -39,8 +39,11 @@ export default function NftHome() {
       numbers_json: [], // Will be generated when scratching
       claimed: false,
       payout_tx: undefined,
-      created_at: new Date().toISOString(),
+      created_at: new Date(),
       scratched: false,
+      prize_won: false,
+      token_id: Number(tokenId),
+      contract_address: '0x0000000000000000000000000000000000000000', // Placeholder
       shared_to: null,
       shared_from: null,
     } as Card));

@@ -91,7 +91,8 @@ export async function GET(request: NextRequest) {
                 prize_amount: prize,
                 prize_asset_contract: prizeAsset,
                 numbers_json: numbers as any,
-                card_no: (user.cards_count || 0) + 1,
+                token_id: (user.cards_count || 0) + 1,
+                contract_address: "0x0000000000000000000000000000000000000000", // Placeholder for free cards
                 prize_won: prize > 0,
                 shared_to: null as any,
                 shared_from: null as any,

@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import Image from "next/image";
 import { chunk3, findWinningRow } from "~/lib/winningRow";
 import { formatCell } from "~/lib/formatCell";
-import { Card } from "~/app/interface/card";
+import { Card, CardCell } from "~/app/interface/card";
 import { USDC_ADDRESS } from "~/lib/constants";
 import { useRouter } from "next/navigation";
 
@@ -58,9 +58,10 @@ export default function CardGrid({
               {card.scratched && card.numbers_json ? (
                 <div className="absolute inset-0 z-20 flex flex-col items-center justify-center text-center rotate-[-4deg]">
                   {(() => {
-                    const rows = chunk3(card.numbers_json);
-                    const winningRowIdx = findWinningRow(
-                      card.numbers_json,
+                     const numbersJson = card.numbers_json as CardCell[];
+                     const rows = chunk3(numbersJson);
+                     const winningRowIdx = findWinningRow(
+                       numbersJson,
                       card.prize_amount,
                       card.prize_asset_contract || ""
                     );

@@ -28,7 +28,7 @@ import {
   USDC_ADDRESS,
 } from "~/lib/constants";
 import { useMiniApp } from "@neynar/react";
-import { Card } from "~/app/interface/card";
+import { Card, CardCell } from "~/app/interface/card";
 import { formatCell } from "~/lib/formatCell";
 import { chunk3, findWinningRow } from "~/lib/winningRow";
 import { getLevelRequirement, getRevealsToNextLevel } from "~/lib/level";
@@ -606,7 +606,8 @@ const ScratchOff = ({
       cardData?.shared_to &&
       cardData?.shared_to?.wallet
     ) {
-      const friendCell = cardData.numbers_json.find(
+      const numbersJson = cardData.numbers_json as CardCell[];
+      const friendCell = numbersJson.find(
         (cell) => cell.friend_wallet === cardData?.shared_to?.wallet
       );
 
@@ -786,9 +787,10 @@ const ScratchOff = ({
                 (cardData?.scratched || scratched || coverImageLoaded) ? (
                 <div className="absolute inset-0 z-10 flex flex-col items-center justify-center text-center rotate-[-4deg]">
                   {(() => {
-                    const rows = chunk3(cardData.numbers_json);
+                    const numbersJson = cardData.numbers_json as CardCell[];
+                    const rows = chunk3(numbersJson);
                     const winningRowIdx = findWinningRow(
-                      cardData.numbers_json,
+                      numbersJson,
                       cardData.prize_amount,
                       cardData.prize_asset_contract
                     );
