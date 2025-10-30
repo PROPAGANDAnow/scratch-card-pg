@@ -29,16 +29,16 @@ export default function NftHome() {
   const nftCards = useMemo(() => {
     if (!tokenIds || !Array.isArray(tokenIds) || tokenIds.length === 0) return [];
 
-    return tokenIds.map((tokenId: bigint, index: number) => ({
+    return tokenIds.map((tokenId: bigint) => ({
       id: tokenId.toString(),
       user_wallet: address || '',
       payment_tx: '', // Will be populated from transaction events
       prize_amount: 0, // Will be determined when scratching
-      scratched_at: undefined,
+      scratched_at: null,
       prize_asset_contract: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', // USDC
       numbers_json: [], // Will be generated when scratching
       claimed: false,
-      payout_tx: undefined,
+      payout_tx: null,
       created_at: new Date(),
       scratched: false,
       prize_won: false,

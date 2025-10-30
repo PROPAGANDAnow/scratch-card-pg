@@ -20,7 +20,7 @@ import {
   SET_USER,
 } from "~/app/context/actions";
 import { Card } from "~/app/interface/card";
-import { subscribeToTable } from "~/lib/supabase";
+
 import {
   fetchActivity,
   fetchAppStats,
@@ -106,10 +106,10 @@ const Wrapper: FC<{ children: React.ReactNode }> = ({ children }) => {
       const { fetchUserCards } = await import("~/lib/userapis");
       const userCards = await fetchUserCards(state.publicKey);
       if (userCards) {
-        dispatch({ type: SET_CARDS, payload: userCards as Card[] });
+        dispatch({ type: SET_CARDS, payload: userCards as unknown as Card[] });
         dispatch({
           type: SET_UNSCRATCHED_CARDS,
-          payload: getUnscratchedCards(userCards),
+          payload: getUnscratchedCards(userCards as unknown as Card[]),
         });
 
         // If there's a selected card, update it with the latest data to preserve its state

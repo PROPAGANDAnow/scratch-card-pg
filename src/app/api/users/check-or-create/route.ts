@@ -60,7 +60,11 @@ export async function POST(request: NextRequest) {
       });
     } else {
       // Update last_active for existing user, and add fid/username if missing
-      const updateData: any = { last_active: new Date() };
+      const updateData: {
+        last_active: Date;
+        fid?: number;
+        username?: string;
+      } = { last_active: new Date() };
 
       // Add fid if provided and user doesn't have it
       if (fid && !existingUser.fid) {

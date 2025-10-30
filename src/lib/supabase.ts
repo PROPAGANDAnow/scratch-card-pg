@@ -2,12 +2,8 @@
 // For Neon PostgreSQL, consider using database triggers with webhooks or polling
 // This is a placeholder that does nothing for now
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const subscribeToTable = (
-  table: string,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  callback: (payload: any) => void,
-  userWallet?: string
+  table: string
 ) => {
   // TODO: Implement real-time subscriptions for Neon PostgreSQL
   // For now, return a dummy unsubscribe function

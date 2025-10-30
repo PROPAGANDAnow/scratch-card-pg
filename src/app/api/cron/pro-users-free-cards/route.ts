@@ -3,6 +3,7 @@ import { prisma } from "~/lib/prisma";
 import { drawPrize } from "~/lib/drawPrize";
 import { generateNumbers } from "~/lib/generateNumbers";
 import { PRIZE_ASSETS, USDC_ADDRESS } from "~/lib/constants";
+import { Prisma } from "@prisma/client";
 
 const BATCH_SIZE = 50; // Process 50 users at a time to avoid timeouts
 
@@ -82,22 +83,22 @@ export async function GET(request: NextRequest) {
             continue;
           }
 
-          // Create the free card
-          try {
-            await prisma.card.create({
-              data: {
-                user_wallet: user.wallet,
-                payment_tx: "FREE_CARD_PRO_USER",
-                prize_amount: prize,
-                prize_asset_contract: prizeAsset,
-                numbers_json: numbers as any,
-                token_id: (user.cards_count || 0) + 1,
-                contract_address: "0x0000000000000000000000000000000000000000", // Placeholder for free cards
-                prize_won: prize > 0,
-                shared_to: null as any,
-                shared_from: null as any,
-              }
-            });
+           // Create the free card
+           try {
+             const cardData: Prisma.CardUncheckedCreateInput = {
+               user_wallet: user.wallet,
+               payment_tx: "FREE_CARD_PRO_USER",
+               prize_amount: prize,
+               prize_asset_contract: prizeAsset,
+               numbers_json: numbers as Prisma.InputJsonValue,
+               token_id: (user.cards_count || 0) + 1,
+               contract_address: "0x0000000000000000000000000000000000000000", // Placeholder for free cards
+               prize_won: prize > 0,
+             };
+
+             await prisma.card.create({
+               data: cardData
+             });
 
             // Update user's cards_count
             await prisma.user.update({

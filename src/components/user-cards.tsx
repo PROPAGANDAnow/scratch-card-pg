@@ -8,7 +8,7 @@ import { formatDistanceToNow } from "date-fns";
 
 const UserCards = () => {
   const { mints, loading: mintsLoading, error: mintsError } = useUserActivity(20);
-  const { tokens, availableCards, loading: tokensLoading, error: tokensError } = useUserTokens();
+  const { availableCards, loading: tokensLoading, error: tokensError } = useUserTokens();
   const [state] = useContext(AppContext);
 
   const loading = mintsLoading || tokensLoading;
