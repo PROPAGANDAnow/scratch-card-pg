@@ -7,7 +7,7 @@ export const FidSchema = z.number().int().positive('FID must be a positive integ
 
 export const UsernameSchema = z.string().min(1, 'Username cannot be empty').max(100, 'Username too long');
 
-export const TokenIdSchema = z.string().regex(/^\d+$/, 'Token ID must be a positive integer');
+export const TokenIdSchema = z.coerce.number().int().positive('Token ID must be a positive integer');
 
 // Card validation schemas
 export const BuyCardSchema = z.object({

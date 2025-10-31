@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
 
     // Check if card already exists for this tokenId
     const existingCard = await prisma.card.findUnique({
-      where: { id: tokenId }
+      where: { token_id: tokenId }
     });
 
     if (existingCard) {
@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
       prize_amount: prize,
       prize_asset_contract: prizeAsset,
       numbers_json: numbers as Prisma.InputJsonValue,
-      token_id: parseInt(tokenId), // Use tokenId as token_id
+      token_id: tokenId, // Use tokenId as token_id
       contract_address: "0x0000000000000000000000000000000000000000", // Placeholder for NFT contract
       prize_won: prize > 0, // Set prize_won based on prize amount
       shared_to: shared_to as unknown as Prisma.InputJsonValue,
