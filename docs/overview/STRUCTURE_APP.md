@@ -30,7 +30,8 @@ Contains verification files for services like Farcaster frame validation.
 Serverless API routes for backend functionality.
 
 **Key Routes**:
-- `/api/cards/buy` - Card purchase verification
+- `/api/cards/buy` - Batch card creation (accepts array of tokenIds)
+- `/api/cards/batch-check` - Check which cards already exist for given tokenIds
 - `/api/cards/generate-claim-signature` - Claim signature generation
 - `/api/cards/process-prize` - Prize processing
 - `/api/cron/pro-users-free-cards` - Cron job for pro users

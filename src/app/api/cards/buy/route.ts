@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { tokenId, userWallet, friends = [] } = validation.data;
+    const { tokenIds, userWallet, friends = [] } = validation.data;
 
     // Ensure user exists (avoid FK constraint on card.user_wallet)
     try {
@@ -36,63 +36,88 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if card already exists for this tokenId
-    const existingCard = await prisma.card.findUnique({
-      where: { token_id: tokenId }
+    // Check if any cards already exist for these tokenIds
+    const existingCards = await prisma.card.findMany({
+      where: { 
+        token_id: { in: tokenIds }
+      }
     });
 
-    if (existingCard) {
+    if (existingCards.length > 0) {
+      const existingTokenIds = existingCards.map(card => card.token_id);
       return NextResponse.json(
-        { error: "Card already exists for this tokenId" },
+        { 
+          error: "Cards already exist for these tokenIds", 
+          existingTokenIds 
+        },
         { status: 400 }
       );
     }
 
-    // Generate prize and card data
-    const prize = drawPrize(friends.length > 0); // e.g., 0 | 0.5 | 1 | 2 (check if friends available for free cards)
-    // pick prize asset randomly (today pool contains USDC; add more later)
-    // const prizeAsset =
-    //   PRIZE_ASSETS[Math.floor(Math.random() * PRIZE_ASSETS.length)] || USDC_ADDRESS;
-    const prizeAsset =
-      PRIZE_ASSETS[Math.floor(Math.random() * PRIZE_ASSETS.length)] || USDC_ADDRESS;
-    // build 12 cells (3x4) with one winning row if prize > 0
-    const numbers = generateNumbers({
-      prizeAmount: prize,
-      prizeAsset,
-      decoyAmounts: [0.5, 0.75, 1, 1.5, 2, 5, 10],
-      decoyAssets: PRIZE_ASSETS as unknown as string[],
-      friends: friends || [],
-    });
+    // Generate cards data for each tokenId
+    const cardsData: Prisma.CardUncheckedCreateInput[] = [];
+    
+    for (const tokenId of tokenIds) {
+      // Generate prize and card data for each token
+      const prize = drawPrize(friends.length > 0); // e.g., 0 | 0.5 | 1 | 2 (check if friends available for free cards)
+      // pick prize asset randomly (today pool contains USDC; add more later)
+      // const prizeAsset =
+      //   PRIZE_ASSETS[Math.floor(Math.random() * PRIZE_ASSETS.length)] || USDC_ADDRESS;
+      const prizeAsset =
+        PRIZE_ASSETS[Math.floor(Math.random() * PRIZE_ASSETS.length)] || USDC_ADDRESS;
+      // build 12 cells (3x4) with one winning row if prize > 0
+      const numbers = generateNumbers({
+        prizeAmount: prize,
+        prizeAsset,
+        decoyAmounts: [0.5, 0.75, 1, 1.5, 2, 5, 10],
+        decoyAssets: PRIZE_ASSETS as unknown as string[],
+        friends: friends || [],
+      });
 
-    let shared_to: SharedUser | null = null;
-    if (prize === -1) {
-      const winningRow = findWinningRow(numbers, prize, prizeAsset);
-      if (winningRow !== null && winningRow !== -1) {
-        const friendCell = numbers[winningRow * 3];
-        shared_to = {
-          fid: friendCell.friend_fid?.toString() || "0",
-          username: friendCell.friend_username || "",
-          pfp: friendCell.friend_pfp || "",
-          wallet: friendCell.friend_wallet || ""
-        };
+      let shared_to: SharedUser | null = null;
+      if (prize === -1) {
+        const winningRow = findWinningRow(numbers, prize, prizeAsset);
+        if (winningRow !== null && winningRow !== -1) {
+          const friendCell = numbers[winningRow * 3];
+          shared_to = {
+            fid: friendCell.friend_fid?.toString() || "0",
+            username: friendCell.friend_username || "",
+            pfp: friendCell.friend_pfp || "",
+            wallet: friendCell.friend_wallet || ""
+          };
+        }
       }
+
+      // Create card data for this token
+      const cardData: Prisma.CardUncheckedCreateInput = {
+        user_wallet: userWallet,
+        payment_tx: "MINTED_NFT", // Indicate it's from NFT minting
+        prize_amount: prize,
+        prize_asset_contract: prizeAsset,
+        numbers_json: numbers as Prisma.InputJsonValue,
+        token_id: tokenId, // Use tokenId as token_id
+        contract_address: "0x0000000000000000000000000000000000000000", // Placeholder for NFT contract
+        prize_won: prize > 0, // Set prize_won based on prize amount
+        shared_to: shared_to as unknown as Prisma.InputJsonValue,
+      };
+
+      cardsData.push(cardData);
     }
 
-    // Create the card
-    const cardData: Prisma.CardUncheckedCreateInput = {
-      user_wallet: userWallet,
-      payment_tx: "MINTED_NFT", // Indicate it's from NFT minting
-      prize_amount: prize,
-      prize_asset_contract: prizeAsset,
-      numbers_json: numbers as Prisma.InputJsonValue,
-      token_id: tokenId, // Use tokenId as token_id
-      contract_address: "0x0000000000000000000000000000000000000000", // Placeholder for NFT contract
-      prize_won: prize > 0, // Set prize_won based on prize amount
-      shared_to: shared_to as unknown as Prisma.InputJsonValue,
-    };
+    // Create all cards in a batch
+    await prisma.card.createMany({
+      data: cardsData
+    });
 
-    const newCard = await prisma.card.create({
-      data: cardData
+    // Fetch the created cards to return them
+    const createdCards = await prisma.card.findMany({
+      where: {
+        token_id: { in: tokenIds },
+        user_wallet: userWallet
+      },
+      orderBy: {
+        token_id: 'asc'
+      }
     });
 
     // Update user's cards_count
@@ -100,7 +125,7 @@ export async function POST(request: NextRequest) {
       await prisma.user.update({
         where: { wallet: userWallet },
         data: {
-          cards_count: { increment: 1 },
+          cards_count: { increment: tokenIds.length },
           last_active: new Date()
         }
       });
@@ -114,12 +139,12 @@ export async function POST(request: NextRequest) {
       await prisma.stats.upsert({
         where: { id: 1 },
         update: {
-          cards: { increment: 1 },
+          cards: { increment: tokenIds.length },
           updated_at: new Date()
         },
         create: {
           id: 1,
-          cards: 1,
+          cards: tokenIds.length,
           reveals: 0,
           winnings: 0
         }
@@ -131,7 +156,8 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      card: newCard
+      cards: createdCards,
+      count: createdCards.length
     });
 
   } catch (error) {

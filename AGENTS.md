@@ -16,10 +16,11 @@ No test framework configured. Add testing setup before implementing tests.
 
 ## User Journey
 1. **Authentication**: User connects wallet → `/api/users/check-or-create` creates/updates user
-2. **Card Purchase**: User buys cards with USDC → `/api/cards/buy` verifies payment & creates cards
-3. **Scratching**: User scratches cards → Frontend detects scratch → `/api/cards/process-prize` handles winnings
-4. **Winning**: Prize payouts via Base blockchain, friend wins create free cards for both users
-5. **Sharing**: Winners can share on Farcaster → `/api/frame-share` generates shareable frames
+2. **Card Purchase**: User buys cards with USDC → `/api/cards/buy` creates cards in batches (accepts array of tokenIds)
+3. **Card Checking**: Frontend checks existing cards → `/api/cards/batch-check` returns existing cards for given tokenIds
+4. **Scratching**: User scratches cards → Frontend detects scratch → `/api/cards/process-prize` handles winnings
+5. **Winning**: Prize payouts via Base blockchain, friend wins create free cards for both users
+6. **Sharing**: Winners can share on Farcaster → `/api/frame-share` generates shareable frames
 
 ## State Management
 - Context API with reducer pattern (`src/app/context/`)
@@ -30,7 +31,8 @@ No test framework configured. Add testing setup before implementing tests.
 
 ## Core APIs
 - `POST /api/users/check-or-create` - User authentication/creation
-- `POST /api/cards/buy` - Purchase cards (verifies Base chain USDC payments)
+- `POST /api/cards/buy` - Batch create cards (accepts array of tokenIds)
+- `GET /api/cards/batch-check` - Check existing cards for given tokenIds
 - `POST /api/cards/process-prize` - Handle card reveals, payouts, level progression
 - `GET /api/users/best-friends?fid=X` - Fetch user's reciprocal followers
 

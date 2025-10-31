@@ -40,35 +40,79 @@ export default function SwipeableCardStack({
       setLoading(true);
       const fetchedCards: Card[] = [];
 
-      for (const tokenId of tokenIds) {
-        try {
-          // Try to get existing card
-          const response = await fetch(`/api/cards/${tokenId}`);
-          if (response.ok) {
-            const data = await response.json();
-            fetchedCards.push(data.card);
-          } else if (response.status === 404) {
-            // Card doesn't exist, create it
+      try {
+        // First, check which cards already exist
+        const existingCardsResponse = await fetch(`/api/cards/batch-check?tokenIds=${tokenIds.join(',')}&userWallet=${userWallet}`);
+        
+        if (existingCardsResponse.ok) {
+          const existingData = await existingCardsResponse.json();
+          const existingTokenIds = new Set(existingData.existingCards.map((card: Card) => card.token_id));
+          
+          // Add existing cards to fetchedCards
+          fetchedCards.push(...existingData.existingCards);
+          
+          // Find tokenIds that need to be created
+          const tokenIdsToCreate = tokenIds.filter(tokenId => !existingTokenIds.has(tokenId));
+          
+          if (tokenIdsToCreate.length > 0) {
+            // Create missing cards in batch
             const createResponse = await fetch('/api/cards/buy', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ tokenId, userWallet, friends: [] }),
+              body: JSON.stringify({ 
+                tokenIds: tokenIdsToCreate, 
+                userWallet, 
+                friends: [] 
+              }),
             });
+            
             if (createResponse.ok) {
               const createData = await createResponse.json();
-              fetchedCards.push(createData.card);
+              fetchedCards.push(...createData.cards);
             } else {
               const errorData = await createResponse.json().catch(() => ({}));
-              console.error(`Failed to create card for tokenId ${tokenId}:`, errorData.error || createResponse.statusText);
+              console.error(`Failed to create cards:`, errorData.error || createResponse.statusText);
             }
-          } else {
-            console.error(`Failed to fetch card for tokenId ${tokenId}: ${response.statusText}`);
           }
-        } catch (error) {
-          console.error(`Error fetching/creating card for tokenId ${tokenId}:`, error);
+        } else {
+          // Fallback to individual card creation if batch check fails
+          for (const tokenId of tokenIds) {
+            try {
+              const response = await fetch(`/api/cards/${tokenId}`);
+              if (response.ok) {
+                const data = await response.json();
+                fetchedCards.push(data.card);
+              } else if (response.status === 404) {
+                const createResponse = await fetch('/api/cards/buy', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ 
+                    tokenIds: [tokenId], 
+                    userWallet, 
+                    friends: [] 
+                  }),
+                });
+                if (createResponse.ok) {
+                  const createData = await createResponse.json();
+                  fetchedCards.push(...createData.cards);
+                } else {
+                  const errorData = await createResponse.json().catch(() => ({}));
+                  console.error(`Failed to create card for tokenId ${tokenId}:`, errorData.error || createResponse.statusText);
+                }
+              } else {
+                console.error(`Failed to fetch card for tokenId ${tokenId}: ${response.statusText}`);
+              }
+            } catch (error) {
+              console.error(`Error fetching/creating card for tokenId ${tokenId}:`, error);
+            }
+          }
         }
+      } catch (error) {
+        console.error('Error in batch card fetching:', error);
       }
 
+      // Sort cards by token_id to maintain order
+      fetchedCards.sort((a, b) => a.token_id - b.token_id);
       setCards(fetchedCards);
       setLoading(false);
     };
