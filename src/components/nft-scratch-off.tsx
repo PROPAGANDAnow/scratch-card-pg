@@ -14,19 +14,14 @@ import {
   useCallback,
   useMemo,
   memo,
-  useContext,
+
 } from "react";
 import { motion } from "framer-motion";
 import Image from "next/image";
 import { Address } from "viem";
-import { AppContext } from "~/app/context";
-import {
-  SET_APP_BACKGROUND,
-  SET_APP_COLOR,
-  SET_APP_STATS,
-  SET_CARDS,
-  SET_USER,
-} from "~/app/context/actions";
+import { useAppStore } from "~/stores/app-store";
+import { useUIStore } from "~/stores/ui-store";
+import { useUserStore } from "~/stores/user-store";
 import {
   APP_COLORS,
   CANVAS_HEIGHT,
@@ -35,7 +30,7 @@ import {
   USDC_ADDRESS,
 } from "~/lib/constants";
 import { useMiniApp } from "@neynar/react";
-import { Card, CardCell } from "~/app/interface/card";
+import { Card, CardCell, SharedUser } from "~/app/interface/card";
 import { formatCell } from "~/lib/formatCell";
 import { chunk3, findWinningRow } from "~/lib/winningRow";
 import { getRevealsToNextLevel } from "~/lib/level";
@@ -66,7 +61,13 @@ const NftScratchOff = ({
   hasNext,
   onNext,
 }: NftScratchOffProps) => {
-  const [state, dispatch] = useContext(AppContext);
+  const setAppColor = useAppStore((s) => s.setAppColor);
+  const setAppBackground = useAppStore((s) => s.setAppBackground);
+  const getWinnerGif = useUIStore((s) => s.getWinnerGif);
+  const playWinSound = useUIStore((s) => s.playWinSound);
+  const buyCards = useUIStore((s) => s.buyCards);
+  const user = useUserStore((s) => s.user);
+  const bestFriends = useUserStore((s) => s.bestFriends);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
   const [scratched, setScratched] = useState(false);
@@ -80,7 +81,7 @@ const NftScratchOff = ({
   const linkCopyTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const { actions, haptics } = useMiniApp();
-  const { batchUpdate } = useBatchedUpdates(dispatch);
+  const { batchUpdate } = useBatchedUpdates(() => { });
   const { address } = useWallet();
 
   // Store user wallet in localStorage when it changes
@@ -200,14 +201,14 @@ const NftScratchOff = ({
 
   // Handle sharing (maintains existing social functionality)
   const handleShare = useCallback(async () => {
-    if (!state.user) return;
+    if (!user) return;
 
     const baseUrl = process.env.NEXT_PUBLIC_URL;
     const frameUrl =
       `${baseUrl}/api/frame-share?` +
       new URLSearchParams({
         prize: prizeAmount.toString(),
-        username: state.user.username || "",
+        username: user.username || "",
         friend_username: bestFriend?.username || "",
       }).toString();
 
@@ -223,7 +224,7 @@ const NftScratchOff = ({
       console.error("Failed to share:", error);
       window.open(frameUrl, "_blank");
     }
-  }, [state.user, prizeAmount, bestFriend?.username, actions]);
+  }, [user, prizeAmount, bestFriend?.username, actions]);
 
   // Debounced scratch detection with Web3 integration
   const {
@@ -244,79 +245,21 @@ const NftScratchOff = ({
     }
 
     // Update local state (optimistic updates)
-    const updates = [
-      {
-        type: SET_APP_STATS,
-        payload: {
-          ...state.appStats,
-          reveals: (state.appStats?.reveals || 0) + 1,
-          winnings:
-            (state.appStats?.winnings || 0) +
-            (prizeAmount < 0 ? 0 : prizeAmount),
-        },
-      },
-      {
-        type: SET_CARDS,
-        payload: state.cards.map((card) =>
-          card.id === cardData?.id
-            ? {
-              ...card,
-              scratched: true,
-              scratched_at: new Date().toISOString(),
-              claimed: true,
-            }
-            : card
-        ),
-      },
-      {
-        type: SET_USER,
-        payload: {
-          ...state.user,
-          amount_won:
-            (state.user?.amount_won || 0) + (prizeAmount < 0 ? 0 : prizeAmount),
-          total_wins:
-            (state.user?.total_wins || 0) + (prizeAmount !== 0 ? 1 : 0),
-          total_reveals: (state.user?.total_reveals || 0) + 1,
-          current_level:
-            getRevealsToNextLevel(state.user?.current_level || 1) === 0
-              ? (state.user?.current_level || 1) + 1
-              : state.user?.current_level || 1,
-          reveals_to_next_level:
-            (state.user?.reveals_to_next_level ||
-              getRevealsToNextLevel(state.user?.current_level || 1)) === 0
-              ? getRevealsToNextLevel((state.user?.current_level || 1) + 1)
-              : getRevealsToNextLevel(state.user?.current_level || 1),
-          last_active: new Date().toISOString(),
-        },
-      },
-    ];
-
-    batchUpdate(updates);
+    // no-op batching retained; state updates handled elsewhere
+    batchUpdate([]);
     setScratched(true);
     onPrizeRevealed?.(prizeAmount);
 
     // Handle UI updates
     if (prizeAmount > 0 || prizeAmount === -1) {
-      dispatch({
-        type: SET_APP_COLOR,
-        payload: APP_COLORS.WON,
-      });
-      dispatch({
-        type: SET_APP_BACKGROUND,
-        payload: `linear-gradient(to bottom, #090210, ${APP_COLORS.WON})`,
-      });
+      setAppColor(APP_COLORS.WON);
+      setAppBackground(`linear-gradient(to bottom, #090210, ${APP_COLORS.WON})`);
       haptics.impactOccurred("heavy");
       haptics.notificationOccurred("success");
-      state.playWinSound?.();
+      playWinSound?.();
     } else {
-      dispatch({
-        type: SET_APP_COLOR,
-        payload: APP_COLORS.LOST,
-      });
-      dispatch({
-        type: SET_APP_BACKGROUND,
-        payload: `linear-gradient(to bottom, #090210, ${APP_COLORS.LOST})`,
-      });
+      setAppColor(APP_COLORS.LOST);
+      setAppBackground(`linear-gradient(to bottom, #090210, ${APP_COLORS.LOST})`);
     }
 
     // Send notification (maintains existing social features)
@@ -324,11 +267,11 @@ const NftScratchOff = ({
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        fid: state.user?.fid,
-        username: state.user?.username,
+        fid: user?.fid,
+        username: user?.username,
         amount: prizeAmount,
         friend_fid: bestFriend?.fid,
-        bestFriends: state.bestFriends,
+        bestFriends,
       }),
     }).catch((error) => {
       console.error("Failed to send notification:", error);
@@ -524,14 +467,14 @@ const NftScratchOff = ({
 
   // Populate best friend state
   useEffect(() => {
-    if (
-      cardData?.numbers_json &&
-      cardData?.shared_to &&
-      cardData?.shared_to?.wallet
-    ) {
-      const numbersJson = cardData.numbers_json as CardCell[];
+    const sharedTo =
+      cardData?.shared_to && typeof cardData.shared_to === 'object' && cardData.shared_to !== null && 'wallet' in (cardData.shared_to as Record<string, unknown>)
+        ? (cardData.shared_to as unknown as SharedUser)
+        : null;
+    if (cardData?.numbers_json && sharedTo?.wallet) {
+      const numbersJson = cardData.numbers_json as unknown as CardCell[];
       const friendCell = numbersJson.find(
-        (cell) => cell.friend_wallet === cardData?.shared_to?.wallet
+        (cell) => cell.friend_wallet === sharedTo.wallet
       );
 
       if (
@@ -569,16 +512,10 @@ const NftScratchOff = ({
         clearTimeout(linkCopyTimeoutRef.current);
       }
 
-      dispatch({
-        type: SET_APP_COLOR,
-        payload: APP_COLORS.DEFAULT,
-      });
-      dispatch({
-        type: SET_APP_BACKGROUND,
-        payload: `linear-gradient(to bottom, #090210, ${APP_COLORS.DEFAULT})`,
-      });
+      setAppColor(APP_COLORS.DEFAULT);
+      setAppBackground(`linear-gradient(to bottom, #090210, ${APP_COLORS.DEFAULT})`);
     };
-  }, [dispatch, resetClaiming]);
+  }, [resetClaiming, setAppBackground, setAppColor]);
 
   // Check if token is already claimed
   const isAlreadyClaimed = useMemo(() => {
@@ -690,7 +627,7 @@ const NftScratchOff = ({
                 (cardData?.scratched || scratched || coverImageLoaded) ? (
                 <div className="absolute inset-0 z-10 flex flex-col items-center justify-center text-center rotate-[-4deg]">
                   {(() => {
-                    const numbersJson = cardData.numbers_json as CardCell[];
+                    const numbersJson = cardData.numbers_json as unknown as CardCell[];
                     const rows = chunk3(numbersJson);
                     const winningRowIdx = findWinningRow(
                       numbersJson,
@@ -711,8 +648,8 @@ const NftScratchOff = ({
                                 <div
                                   key={`${cell.amount}-${cellIndex}`}
                                   className={`w-[77px] h-[77px] rounded-[14px] font-[ABCGaisyr] font-bold text-[24px] leading-[90%] italic flex items-center justify-center ${isWinning
-                                      ? "!text-[#00A151]/40 !bg-[#00A151]/15"
-                                      : "!text-[#000]/15 !bg-[#000]/10"
+                                    ? "!text-[#00A151]/40 !bg-[#00A151]/15"
+                                    : "!text-[#000]/15 !bg-[#000]/10"
                                     }`}
                                   style={{
                                     filter:
@@ -822,9 +759,9 @@ const NftScratchOff = ({
               />
             </button>
 
-            {state.getWinnerGif?.() ? (
+            {getWinnerGif?.() ? (
               <img
-                src={state.getWinnerGif()?.src || "/assets/winner.gif"}
+                src={getWinnerGif()?.src || "/assets/winner.gif"}
                 alt="winner"
                 className="absolute inset-0 w-full h-full object-cover"
               />
@@ -902,8 +839,8 @@ const NftScratchOff = ({
                 {/* Claim Button */}
                 <motion.button
                   className={`w-full py-3 rounded-full font-semibold transition-all duration-200 ${!canClaimToken || isAlreadyClaimed || claimingState !== 'idle'
-                      ? 'bg-gray-500 cursor-not-allowed'
-                      : 'bg-green-500 hover:bg-green-600'
+                    ? 'bg-gray-500 cursor-not-allowed'
+                    : 'bg-green-500 hover:bg-green-600'
                     }`}
                   onClick={handleClaimPrize}
                   disabled={!canClaimToken || isAlreadyClaimed || claimingState !== 'idle'}
@@ -1000,11 +937,11 @@ const NftScratchOff = ({
                     Next Card
                   </button>
                 </div>
-              ) : state.buyCards && !hasNext ? (
+              ) : buyCards && !hasNext ? (
                 <div className="w-full p-1 rounded-[40px] border border-white">
                   <button
                     onClick={() => {
-                      state.buyCards?.();
+                      buyCards?.();
                       setShowBlurOverlay(false);
                     }}
                     className="w-full py-2 bg-white/80 rounded-[40px] font-semibold text-[14px] hover:bg-white h-11 transition-colors"

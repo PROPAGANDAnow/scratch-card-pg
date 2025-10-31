@@ -1,6 +1,5 @@
 "use client";
-import { AppContext } from "../context";
-import { useContext, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import CardGrid from "~/components/card-grid";
 import UserCards from "~/components/user-cards";
 import UserWinnings from "~/components/user-winnings";
@@ -8,6 +7,8 @@ import { useRouter } from "next/navigation";
 import { motion, useAnimation } from "framer-motion";
 import { CircularProgress } from "~/components/circular-progress";
 import { useUserStats, useUserActivity } from "~/hooks";
+import { useUserStore } from "~/stores/user-store";
+import { useCardStore } from "~/stores/card-store";
 
 // Level calculation function
 function getLevelRequirement(level: number): number {
@@ -15,7 +16,8 @@ function getLevelRequirement(level: number): number {
 }
 
 const ProfilePage = () => {
-  const [state] = useContext(AppContext);
+  const user = useUserStore((s) => s.user);
+  const cards = useCardStore((s) => s.cards);
   const { push } = useRouter();
   const [displayAmount, setDisplayAmount] = useState(0);
   const [activeTab, setActiveTab] = useState<'overview' | 'cards' | 'winnings'>('overview');
@@ -29,7 +31,7 @@ const ProfilePage = () => {
 
   // Animate the total winnings number
   useEffect(() => {
-    const targetAmount = state.user?.amount_won || 0;
+    const targetAmount = user?.amount_won || 0;
     const duration = 2000; // 2 seconds
     const steps = 60; // 60 steps for smooth animation
     const increment = (targetAmount - 0.01) / steps;
@@ -46,7 +48,7 @@ const ProfilePage = () => {
     }, duration / steps);
 
     return () => clearInterval(timer);
-  }, [state.user?.amount_won]);
+  }, [user?.amount_won]);
 
   // Trigger entrance animations
   useEffect(() => {
@@ -119,7 +121,7 @@ const ProfilePage = () => {
 
         <motion.div className="mb-16 flex items-center justify-center gap-2">
           <motion.p className="text-white text-[16px] font-medium leading-[90%]">
-            Level {state.user?.current_level || 1}
+            Level {user?.current_level || 1}
           </motion.p>
           <motion.div
             className="bg-white/20 rounded-full"
@@ -133,17 +135,17 @@ const ProfilePage = () => {
             transition={{ delay: 0.8, duration: 0.6, ease: "easeOut" }}
           >
             <CircularProgress
-              revealsToNextLevel={state.user?.reveals_to_next_level || 25}
+              revealsToNextLevel={user?.reveals_to_next_level || 25}
               totalRevealsForLevel={getLevelRequirement(
-                (state.user?.current_level || 1) + 1
+                (user?.current_level || 1) + 1
               )}
             />
           </motion.div>
 
           <motion.p className="text-white text-[14px] font-medium leading-[90%] text-center">
-            {state.user?.reveals_to_next_level || 25} win
-            {state.user?.reveals_to_next_level !== 1 ? "s" : ""} away from level{" "}
-            {(state.user?.current_level || 1) + 1}
+            {user?.reveals_to_next_level || 25} win
+            {user?.reveals_to_next_level !== 1 ? "s" : ""} away from level{" "}
+            {(user?.current_level || 1) + 1}
           </motion.p>
         </motion.div>
 
@@ -160,7 +162,7 @@ const ProfilePage = () => {
             animate={{ opacity: 1 }}
             transition={{ delay: 1.4, duration: 0.8 }}
           >
-            {userStats.totalMinted || state.user?.total_reveals || 0} SCRATCH OFFS
+            {userStats.totalMinted || user?.total_reveals || 0} SCRATCH OFFS
           </motion.p>
 
           {/* Animated underline */}
@@ -187,11 +189,10 @@ const ProfilePage = () => {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as typeof activeTab)}
-              className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all duration-200 ${
-                activeTab === tab.id
-                  ? 'bg-white/20 text-white shadow-lg'
-                  : 'text-white/60 hover:text-white/80 hover:bg-white/5'
-              }`}
+              className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all duration-200 ${activeTab === tab.id
+                ? 'bg-white/20 text-white shadow-lg'
+                : 'text-white/60 hover:text-white/80 hover:bg-white/5'
+                }`}
             >
               {tab.label}
             </button>
@@ -213,9 +214,9 @@ const ProfilePage = () => {
               transition={{ delay: 1.8, duration: 0.8 }}
             >
               <CardGrid
-                cards={state.cards || []}
+                cards={cards || []}
                 showViewAll={true}
-                onCardSelect={() => {}}
+                onCardSelect={() => { }}
                 onViewAll={handleViewAll}
               />
             </motion.div>

@@ -7,10 +7,10 @@
  */
 
 "use client";
-import { useContext, useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { motion } from "framer-motion";
-import { AppContext } from "./context";
-import { SET_LOCAL_CARDS, SET_SWIPABLE_MODE } from "./context/actions";
+import { useAppStore } from "~/stores/app-store";
+import { useCardStore } from "~/stores/card-store";
 import NftInitialScreen from "~/components/nft-initial-screen";
 import NftScratchOff from "~/components/nft-scratch-off";
 import { useWallet } from "~/hooks/useWeb3Wallet";
@@ -20,7 +20,9 @@ import { useUserActivity } from "~/hooks/useUserActivity";
 import { Card } from "./interface/card";
 
 export default function NftHome() {
-  const [state, dispatch] = useContext(AppContext);
+  const setSwipableMode = useAppStore((s) => s.setSwipableMode);
+  const localCards = useCardStore((s) => s.localCards);
+  const setLocalCards = useCardStore((s) => s.setLocalCards);
   const [currentView, setCurrentView] = useState<'initial' | 'scratching' | 'cards'>('initial');
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
 
@@ -58,21 +60,21 @@ export default function NftHome() {
 
   // Initialize swipable mode
   useEffect(() => {
-    dispatch({ type: SET_SWIPABLE_MODE, payload: true });
+    setSwipableMode(true);
     return () => {
-      dispatch({ type: SET_SWIPABLE_MODE, payload: false });
-      dispatch({ type: SET_LOCAL_CARDS, payload: [] });
+      setSwipableMode(false);
+      setLocalCards([]);
     };
-  }, [dispatch]);
+  }, [setSwipableMode, setLocalCards]);
 
   // Sync local cards with NFT cards
   useEffect(() => {
-    if (nftCards.length > 0 || state.localCards.length > 0) {
+    if (nftCards.length > 0 || localCards.length > 0) {
       // Create a set of NFT card IDs for quick lookup
       const nftCardIds = new Set(nftCards.map(card => card.id));
 
       // Update existing cards
-      const updatedCards = state.localCards.map(card => {
+      const updatedCards = localCards.map((card: Card) => {
         if (nftCardIds.has(card.id)) {
           // Card exists in NFTs, sync scratched status
           const nftCard = nftCards.find(nft => nft.id === card.id);
@@ -82,18 +84,18 @@ export default function NftHome() {
       });
 
       // Add new NFT cards that don't exist locally
-      const existingIds = new Set(state.localCards.map(card => card.id));
+      const existingIds = new Set(localCards.map((card: Card) => card.id));
       const newCards = nftCards.filter(card => !existingIds.has(card.id));
 
       const newLocalCards = [...updatedCards, ...newCards];
 
       // Only update if there are actual changes
-      const hasChanges = JSON.stringify(newLocalCards) !== JSON.stringify(state.localCards);
+      const hasChanges = JSON.stringify(newLocalCards) !== JSON.stringify(localCards);
       if (hasChanges) {
-        dispatch({ type: SET_LOCAL_CARDS, payload: newLocalCards });
+        setLocalCards(newLocalCards);
       }
     }
-  }, [nftCards, state.localCards, dispatch]);
+  }, [nftCards, localCards, setLocalCards]);
 
   // Handle scratch now
   const handleScratchNow = useCallback(() => {
@@ -121,13 +123,13 @@ export default function NftHome() {
   const handlePrizeRevealed = useCallback((prizeAmount: number) => {
     console.log('Prize revealed:', prizeAmount);
     // Update card state in context
-    const updatedCards = state.localCards.map(card =>
+    const updatedCards = localCards.map((card: Card) =>
       card.id === nftCards[currentCardIndex]?.id
         ? { ...card, scratched: true, prize_amount: prizeAmount }
         : card
     );
-    dispatch({ type: SET_LOCAL_CARDS, payload: updatedCards });
-  }, [state.localCards, nftCards, currentCardIndex, dispatch]);
+    setLocalCards(updatedCards);
+  }, [localCards, nftCards, currentCardIndex, setLocalCards]);
 
   // Current card for scratching
   const currentCard = useMemo(() => {

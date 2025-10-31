@@ -1,8 +1,9 @@
 "use client";
-import { useContext, useEffect, useMemo } from "react";
-import { AppContext } from "./context";
+import { useEffect, useMemo } from "react";
+import { useAppStore } from "~/stores/app-store";
+import { useCardStore } from "~/stores/card-store";
+import { useUserStore } from "~/stores/user-store";
 import SwipeableCardStack from "~/components/swipeable-card-stack";
-import { SET_LOCAL_CARDS, SET_SWIPABLE_MODE } from "./context/actions";
 import { useContractStats } from "~/hooks";
 import { useUserTokens } from "~/hooks";
 import type { Token } from "~/hooks/useUserTokens";
@@ -19,7 +20,11 @@ function extractUnclaimedTokenIds(cards: Token[] = []): number[] {
 }
 
 export default function Home() {
-  const [state, dispatch] = useContext(AppContext);
+  const setSwipableMode = useAppStore((s) => s.setSwipableMode);
+  const localCards = useCardStore((s) => s.localCards);
+  const setLocalCards = useCardStore((s) => s.setLocalCards);
+  const unscratchedCards = useCardStore((s) => s.unscratchedCards);
+  const userWallet = useUserStore((s) => s.user?.wallet || "");
   const { isPaused, formattedStats } = useContractStats();
   const { availableCards } = useUserTokens();
 
@@ -27,21 +32,21 @@ export default function Home() {
   const tokenIds = useMemo(() => extractUnclaimedTokenIds(availableCards), [availableCards]);
 
   useEffect(() => {
-    dispatch({ type: SET_SWIPABLE_MODE, payload: true });
+    setSwipableMode(true);
     return () => {
-      dispatch({ type: SET_SWIPABLE_MODE, payload: false });
-      dispatch({ type: SET_LOCAL_CARDS, payload: [] });
+      setSwipableMode(false);
+      setLocalCards([]);
     };
-  }, [dispatch]);
+  }, [setSwipableMode, setLocalCards]);
 
   // Sync localCards with unscratched cards and update scratched status
   useEffect(() => {
-    if (state.unscratchedCards.length > 0 || state.localCards.length > 0) {
+    if (unscratchedCards.length > 0 || localCards.length > 0) {
       // Create a set of unscratched card IDs for quick lookup
-      const unscratchedIds = new Set(state.unscratchedCards.map(card => card.id));
+      const unscratchedIds = new Set(unscratchedCards.map(card => card.id));
 
       // Update existing cards: only mark as scratched if explicitly scratched in the cards array
-      const updatedCards = state.localCards.map(card => {
+      const updatedCards = localCards.map(card => {
         if (unscratchedIds.has(card.id)) {
           // Card is in unscratchedCards, ensure it's not marked as scratched
           return { ...card, scratched: false };
@@ -53,18 +58,18 @@ export default function Home() {
       });
 
       // Add new unscratched cards that don't exist locally
-      const existingIds = new Set(state.localCards.map(card => card.id));
-      const newCards = state.unscratchedCards.filter(card => !existingIds.has(card.id));
+      const existingIds = new Set(localCards.map(card => card.id));
+      const newCards = unscratchedCards.filter(card => !existingIds.has(card.id));
 
       const newLocalCards = [...updatedCards, ...newCards];
 
       // Only update if there are actual changes to prevent infinite loop
-      const hasChanges = JSON.stringify(newLocalCards) !== JSON.stringify(state.localCards);
+      const hasChanges = JSON.stringify(newLocalCards) !== JSON.stringify(localCards);
       if (hasChanges) {
-        dispatch({ type: SET_LOCAL_CARDS, payload: newLocalCards });
+        setLocalCards(newLocalCards);
       }
     }
-  }, [state.unscratchedCards, dispatch]);
+  }, [unscratchedCards, localCards, setLocalCards]);
 
   // Show contract pause overlay if contract is paused
   if (isPaused && formattedStats) {
@@ -93,7 +98,7 @@ export default function Home() {
 
   return (
     <>
-      <SwipeableCardStack userWallet={state.user?.wallet || ''} tokenIds={tokenIds} />
+      <SwipeableCardStack userWallet={userWallet} tokenIds={tokenIds} />
     </>
   );
 }

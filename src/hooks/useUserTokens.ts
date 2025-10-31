@@ -1,10 +1,10 @@
 'use client'
 
-import { useCallback, useContext } from 'react'
+import { useCallback } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { GET_USER_TOKENS, GET_USER_AVAILABLE_CARDS } from '../queries'
 import { makeGraphQLRequest } from '~/lib/graphql-client'
-import { AppContext } from '~/app/context'
+import { useUserStore } from '~/stores/user-store'
 
 export interface Token {
   id: string
@@ -32,8 +32,7 @@ export interface UseUserTokensReturn {
 }
 
 export function useUserTokens(): UseUserTokensReturn {
-  const [state] = useContext(AppContext)
-  const userAddress = state.user?.wallet
+  const userAddress = useUserStore((s) => s.user?.wallet)
 
   const { data: tokensData, isLoading: tokensLoading, error: tokensError, refetch: refetchTokens } = useQuery({
     queryKey: ['userTokens', userAddress?.toLowerCase()],

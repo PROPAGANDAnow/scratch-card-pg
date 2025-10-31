@@ -6,13 +6,13 @@ import {
   CANVAS_WIDTH,
   INITIAL_SCREEN_KEY,
 } from "~/lib/constants";
-import { AppContext } from "~/app/context";
-import { FC, useContext } from "react";
+import { FC } from "react";
+import { useAppStore } from "~/stores/app-store";
 import { motion } from "framer-motion";
 import { setInLocalStorage } from "~/lib/utils";
 
 const InitialScreen: FC<{ onScratchNow: () => void }> = ({ onScratchNow }) => {
-  const [state] = useContext(AppContext);
+  const appBackground = useAppStore((s) => s.appBackground);
 
   const textShadowStyle = {
     textShadow: `1px 1px 0px #7727DE33,
@@ -34,7 +34,7 @@ const InitialScreen: FC<{ onScratchNow: () => void }> = ({ onScratchNow }) => {
   return (
     <div
       className="h-[100dvh] relative w-full max-w-[400px] mx-auto"
-      style={{ background: state.appBackground }}
+      style={{ background: appBackground }}
     >
       <Image
         width={CANVAS_WIDTH}

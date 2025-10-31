@@ -1,11 +1,10 @@
 "use client";
-import { useContext } from "react";
+import { useAppStore } from "~/stores/app-store";
 import Image from "next/image";
 import { motion } from "framer-motion";
-import { AppContext } from "~/app/context";
 
 const Leaderboard = () => {
-  const [state] = useContext(AppContext);
+  const leaderboard = useAppStore((s) => s.leaderboard);
 
   const textShadowStyle = {
     textShadow:
@@ -26,7 +25,7 @@ const Leaderboard = () => {
   };
 
   const getTopThree = () => {
-    const topThree = state.leaderboard.slice(0, 3);
+    const topThree = leaderboard.slice(0, 3);
     return {
       first: topThree[0] || null,
       second: topThree[1] || null,
@@ -35,13 +34,13 @@ const Leaderboard = () => {
   };
 
   const getRestOfUsers = () => {
-    return state.leaderboard.slice(3);
+    return leaderboard.slice(3);
   };
 
   const { first, second, third } = getTopThree();
   const restOfUsers = getRestOfUsers();
 
-  if (state.leaderboard.length === 0) {
+  if (leaderboard.length === 0) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-white/60 text-center">
@@ -60,7 +59,7 @@ const Leaderboard = () => {
       >
         <div className="flex items-start justify-center gap-5">
           {/* Second Place */}
-          <motion.div 
+          <motion.div
             className="w-[80px] pt-12 flex flex-col items-center gap-4"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -95,7 +94,7 @@ const Leaderboard = () => {
           </motion.div>
 
           {/* First Place */}
-          <motion.div 
+          <motion.div
             className="w-[112px] flex flex-col items-center gap-4"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -131,7 +130,7 @@ const Leaderboard = () => {
           </motion.div>
 
           {/* Third Place */}
-          <motion.div 
+          <motion.div
             className="w-[80px] pt-16 flex flex-col items-center gap-4"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -165,7 +164,7 @@ const Leaderboard = () => {
             </div>
           </motion.div>
         </div>
-        <motion.p 
+        <motion.p
           className="w-full text-center font-medium text-[12px] leading-[90%] text-white/60 mt-4 mb-6"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -173,9 +172,9 @@ const Leaderboard = () => {
         >
           TOP 100
         </motion.p>
-        
+
         {/* Rest of the leaderboard starting from #4 */}
-                <motion.div
+        <motion.div
           className="space-y-4 mx-auto"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}

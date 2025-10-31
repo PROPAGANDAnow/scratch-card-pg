@@ -5,20 +5,7 @@ import { useMiniApp } from "@neynar/react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { createRef, FC, useContext, useEffect, useRef, useState } from "react";
-import {
-  SET_ACTIVITY,
-  SET_APP_STATS,
-  SET_BEST_FRIENDS,
-  SET_CARDS,
-  SET_GET_WINNER_GIF,
-  SET_LEADERBOARD,
-  SET_PLAY_WIN_SOUND,
-  SET_REFETCH_USER_CARDS,
-  SET_SELECTED_CARD,
-  SET_UNSCRATCHED_CARDS,
-  SET_USER,
-} from "~/app/context/actions";
+import { createRef, FC, useEffect, useRef, useState } from "react";
 import { Card } from "~/app/interface/card";
 
 import {
@@ -29,7 +16,10 @@ import {
   fetchUserCards,
   fetchUserInfo,
 } from "~/lib/userapis";
-import { AppContext } from "../app/context";
+import { useUserStore } from "~/stores/user-store";
+import { useCardStore } from "~/stores/card-store";
+import { useAppStore } from "~/stores/app-store";
+import { useUIStore } from "~/stores/ui-store";
 import Bottom from "./bottom";
 import { getFromLocalStorage } from "~/lib/utils";
 import InitialScreen from "./initial-screen";
@@ -38,15 +28,37 @@ import WinRatePopup from "./win-rate-popup";
 import { useDetectClickOutside } from "~/hooks/useDetectClickOutside";
 
 const Wrapper: FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [state, dispatch] = useContext(AppContext);
+  const publicKey = useUserStore((s) => s.publicKey);
+  const user = useUserStore((s) => s.user);
+  const setUser = useUserStore((s) => s.setUser);
+
+  const appBackground = useAppStore((s) => s.appBackground);
+  const appStats = useAppStore((s) => s.appStats);
+  const leaderboard = useAppStore((s) => s.leaderboard);
+  const activity = useAppStore((s) => s.activity);
+  const swipableMode = useAppStore((s) => s.swipableMode);
+  const setAppStats = useAppStore((s) => s.setAppStats);
+  const setLeaderboard = useAppStore((s) => s.setLeaderboard);
+  const setActivity = useAppStore((s) => s.setActivity);
+
+  const selectedCard = useCardStore((s) => s.selectedCard);
+  const cards = useCardStore((s) => s.cards);
+  const unscratchedCards = useCardStore((s) => s.unscratchedCards);
+  const setSelectedCard = useCardStore((s) => s.setSelectedCard);
+  const setCards = useCardStore((s) => s.setCards);
+  const setUnscratchedCards = useCardStore((s) => s.setUnscratchedCards);
+
+  const setPlayWinSound = useUIStore((s) => s.setPlayWinSound);
+  const setGetWinnerGif = useUIStore((s) => s.setGetWinnerGif);
+  const setRefetchUserCards = useUIStore((s) => s.setRefetchUserCards);
   const [loading, setLoading] = useState(true);
   const [seenInitial, setSeenInitial] = useState(false);
   const [showWinRates, setShowWinRates] = useState(false);
   const readyCalled = useRef(false);
-  const currentCardsRef = useRef(state.cards);
-  const currentLeaderboardRef = useRef(state.leaderboard);
-  const currentActivityRef = useRef(state.activity);
-  const currentUnscratchedCardsRef = useRef(state.unscratchedCards);
+  const currentCardsRef = useRef(cards);
+  const currentLeaderboardRef = useRef(leaderboard);
+  const currentActivityRef = useRef(activity);
+  const currentUnscratchedCardsRef = useRef(unscratchedCards);
   const prizePoolRef = createRef<HTMLDivElement>();
   const { push } = useRouter();
   const { context } = useMiniApp();
@@ -100,25 +112,22 @@ const Wrapper: FC<{ children: React.ReactNode }> = ({ children }) => {
 
   // Refetch function for user cards
   const refetchUserCards = async () => {
-    if (!state.publicKey) return;
+    if (!publicKey) return;
 
     try {
       const { fetchUserCards } = await import("~/lib/userapis");
-      const userCards = await fetchUserCards(state.publicKey);
+      const userCards = await fetchUserCards(publicKey);
       if (userCards) {
-        dispatch({ type: SET_CARDS, payload: userCards as unknown as Card[] });
-        dispatch({
-          type: SET_UNSCRATCHED_CARDS,
-          payload: getUnscratchedCards(userCards as unknown as Card[]),
-        });
+        setCards(userCards as unknown as Card[]);
+        setUnscratchedCards(getUnscratchedCards(userCards as unknown as Card[]));
 
         // If there's a selected card, update it with the latest data to preserve its state
-        if (state.selectedCard) {
+        if (selectedCard) {
           const updatedSelectedCard = userCards.find(
-            (card) => card.id === state.selectedCard!.id
+            (card) => card.id === selectedCard!.id
           );
           if (updatedSelectedCard) {
-            dispatch({ type: SET_SELECTED_CARD, payload: updatedSelectedCard });
+            setSelectedCard(updatedSelectedCard);
           }
         }
       }
@@ -127,43 +136,40 @@ const Wrapper: FC<{ children: React.ReactNode }> = ({ children }) => {
     }
   };
 
-  // Set functions in context
+  // Set UI functions into store
   useEffect(() => {
-    dispatch({ type: SET_PLAY_WIN_SOUND, payload: playWinSound });
-    dispatch({ type: SET_GET_WINNER_GIF, payload: getWinnerGif });
-    dispatch({ type: SET_REFETCH_USER_CARDS, payload: refetchUserCards });
+    setPlayWinSound(playWinSound);
+    setGetWinnerGif(getWinnerGif);
+    setRefetchUserCards(refetchUserCards);
   }, []);
 
   // Keep ref updated with current cards
   useEffect(() => {
-    currentCardsRef.current = state.cards;
-    dispatch({
-      type: SET_UNSCRATCHED_CARDS,
-      payload: getUnscratchedCards(state.cards),
-    });
-  }, [state.cards]);
+    currentCardsRef.current = cards;
+    setUnscratchedCards(getUnscratchedCards(cards));
+  }, [cards, setUnscratchedCards]);
 
   // Keep ref updated with current leaderboard
   useEffect(() => {
-    currentLeaderboardRef.current = state.leaderboard;
-  }, [state.leaderboard]);
+    currentLeaderboardRef.current = leaderboard;
+  }, [leaderboard]);
 
   // Keep ref updated with current activity
   useEffect(() => {
-    currentActivityRef.current = state.activity;
-  }, [state.activity]);
+    currentActivityRef.current = activity;
+  }, [activity]);
 
   // Keep ref updated with current unscratched cards
   useEffect(() => {
-    currentUnscratchedCardsRef.current = state.unscratchedCards;
-  }, [state.unscratchedCards]);
+    currentUnscratchedCardsRef.current = unscratchedCards;
+  }, [unscratchedCards]);
 
   // Fetch all data when wallet connects
   useEffect(() => {
-    if (state.publicKey && userFid) {
-      fetchAllData(state.publicKey, userFid);
+    if (publicKey && userFid) {
+      fetchAllData(publicKey, userFid);
     }
-  }, [state.publicKey, userFid]);
+  }, [publicKey, userFid]);
 
   // Fetch all data when wallet connects using Promise.allSettled
   const fetchAllData = async (userWallet: string, userFid: number) => {
@@ -185,22 +191,17 @@ const Wrapper: FC<{ children: React.ReactNode }> = ({ children }) => {
         await Promise.allSettled(promises);
 
       if (userCards.status === "fulfilled") {
-        dispatch({ type: SET_CARDS, payload: userCards.value });
+        setCards(userCards.value as unknown as Card[]);
       }
       if (userInfo.status === "fulfilled") {
-        dispatch({ type: SET_USER, payload: userInfo.value });
+        setUser(userInfo.value as any);
         const bestFriends = await fetchBestFriends(userFid);
-        dispatch({
-          type: SET_BEST_FRIENDS,
-          payload: bestFriends,
-        });
+        // store bestFriends into user store
+        useUserStore.getState().setBestFriends(bestFriends);
       }
-      if (appStats.status === "fulfilled")
-        dispatch({ type: SET_APP_STATS, payload: appStats.value });
-      if (leaderboard.status === "fulfilled")
-        dispatch({ type: SET_LEADERBOARD, payload: leaderboard.value });
-      if (activity.status === "fulfilled")
-        dispatch({ type: SET_ACTIVITY, payload: activity.value });
+      if (appStats.status === "fulfilled") setAppStats(appStats.value as any);
+      if (leaderboard.status === "fulfilled") setLeaderboard(leaderboard.value as any);
+      if (activity.status === "fulfilled") setActivity(activity.value as any);
       callReady();
     } catch (error) {
       console.error("Error in fetching user info", error);
@@ -210,7 +211,7 @@ const Wrapper: FC<{ children: React.ReactNode }> = ({ children }) => {
   };
 
   const callReady = async () => {
-    if (state.publicKey) {
+    if (publicKey) {
       try {
         await sdk.actions.ready();
         readyCalled.current = true;
@@ -231,25 +232,25 @@ const Wrapper: FC<{ children: React.ReactNode }> = ({ children }) => {
   // TODO: Implement real-time updates with database triggers/webhooks if needed
 
   const handleCloseModal = () => {
-    dispatch({ type: "SET_SELECTED_CARD", payload: null });
+    setSelectedCard(null);
   };
 
   useEffect(() => {
-    if (state.publicKey && state.user) {
+    if (publicKey && user) {
       const testAddMiniApp = async () => {
         try {
           const result = await sdk.actions.addMiniApp();
           if (
             result.notificationDetails &&
             result.notificationDetails.token &&
-            !state.user?.notification_enabled
+            !user?.notification_enabled
           ) {
             try {
               await fetch(`/api/neynar/welcome-notification`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                  fid: state.user?.fid,
+                  fid: user?.fid,
                   notification_token: result.notificationDetails.token,
                 }),
               });
@@ -264,7 +265,7 @@ const Wrapper: FC<{ children: React.ReactNode }> = ({ children }) => {
 
       testAddMiniApp();
     }
-  }, [state.publicKey, state.user]);
+  }, [publicKey, user]);
 
   if (!seenInitial) {
     return <InitialScreen onScratchNow={() => setSeenInitial(true)} />;
@@ -273,7 +274,7 @@ const Wrapper: FC<{ children: React.ReactNode }> = ({ children }) => {
   return (
     <div
       className="h-[100dvh] transition-all ease-in-out duration-300"
-      style={{ background: state.appBackground }}
+      style={{ background: appBackground }}
     >
       <div className="h-full max-w-[400px] flex flex-col mx-auto items-center justify-between">
         {/* Top Section - Header */}
@@ -290,7 +291,7 @@ const Wrapper: FC<{ children: React.ReactNode }> = ({ children }) => {
             delay: 0.2,
           }}
         >
-          {!state.selectedCard ? (
+          {!selectedCard ? (
             <motion.button
               className="p-2 rounded-full bg-white/10 cursor-pointer hover:bg-white/20 transition-colors"
               onClick={() => push("/profile")}
@@ -363,7 +364,7 @@ const Wrapper: FC<{ children: React.ReactNode }> = ({ children }) => {
                 Prize Pool
               </span>
               <span className="text-[16px] leading-[90%] font-medium text-white">
-                ${state?.appStats?.winnings || state?.user?.amount_won || 0}
+                ${appStats?.winnings || user?.amount_won || 0}
               </span>
             </motion.button>
             <AnimatePresence>
@@ -400,7 +401,7 @@ const Wrapper: FC<{ children: React.ReactNode }> = ({ children }) => {
         </div>
         {/* Bottom Section - Bottom */}
         <Bottom
-          mode={state.swipableMode ? "swipeable" : "normal"}
+          mode={swipableMode ? "swipeable" : "normal"}
           loading={loading}
         />
       </div>

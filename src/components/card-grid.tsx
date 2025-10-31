@@ -58,10 +58,10 @@ export default function CardGrid({
               {card.scratched && card.numbers_json ? (
                 <div className="absolute inset-0 z-20 flex flex-col items-center justify-center text-center rotate-[-4deg]">
                   {(() => {
-                     const numbersJson = card.numbers_json as CardCell[];
-                     const rows = chunk3(numbersJson);
-                     const winningRowIdx = findWinningRow(
-                       numbersJson,
+                    const numbersJson = card.numbers_json as unknown as CardCell[];
+                    const rows = chunk3(numbersJson);
+                    const winningRowIdx = findWinningRow(
+                      numbersJson,
                       card.prize_amount,
                       card.prize_asset_contract || ""
                     );
@@ -78,11 +78,10 @@ export default function CardGrid({
                               {row.map((cell, cellIndex) => (
                                 <div
                                   key={`${cell.amount}-${cellIndex}`}
-                                  className={`w-[17.5px] h-[17.5px] rounded-[3px] font-[ABCGaisyr] font-bold text-[8px] leading-[90%] italic flex items-center justify-center ${
-                                    isWinning
+                                  className={`w-[17.5px] h-[17.5px] rounded-[3px] font-[ABCGaisyr] font-bold text-[8px] leading-[90%] italic flex items-center justify-center ${isWinning
                                       ? "!text-[#00A151]/20 !bg-[#00A151]/10"
                                       : "!text-[#000]/10 !bg-[#000]/5"
-                                  }`}
+                                    }`}
                                   style={{
                                     filter:
                                       "drop-shadow(0px 0.5px 0.5px rgba(0, 0, 0, 0.15))",

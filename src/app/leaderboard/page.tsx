@@ -1,11 +1,10 @@
 "use client";
-import { useContext, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, PanInfo, useAnimation } from "framer-motion";
-import { AppContext } from "../context";
 import { APP_COLORS } from "../../lib/constants";
-import { SET_APP_BACKGROUND, SET_APP_COLOR } from "../context/actions";
 import Leaderboard from "../../components/leaderboard";
 import SubgraphActivity from "../../components/subgraph-activity";
+import { useAppStore } from "~/stores/app-store";
 
 const Tabs = ({
   tabs,
@@ -21,9 +20,8 @@ const Tabs = ({
       {tabs.map((tab, idx) => (
         <motion.li
           key={tab.id}
-          className={`flex-1 ${
-            idx === 0 ? "pr-0" : idx === tabs.length - 1 ? "pl-0" : "px-0"
-          }`}
+          className={`flex-1 ${idx === 0 ? "pr-0" : idx === tabs.length - 1 ? "pl-0" : "px-0"
+            }`}
         >
           <motion.button
             className="relative w-full py-3 px-4 rounded-[1000px] transition-colors duration-200"
@@ -56,7 +54,8 @@ const Tabs = ({
 };
 
 const LeaderboardPage = () => {
-  const [, dispatch] = useContext(AppContext);
+  const setAppBackground = useAppStore((s) => s.setAppBackground);
+  const setAppColor = useAppStore((s) => s.setAppColor);
   const [activeTab, setActiveTab] = useState<string>("leaderboard");
   const controls = useAnimation();
 
@@ -66,26 +65,14 @@ const LeaderboardPage = () => {
   ];
 
   useEffect(() => {
-    dispatch({
-      type: SET_APP_BACKGROUND,
-      payload: `linear-gradient(to bottom, #090210, ${APP_COLORS.LEADERBOARD})`,
-    });
-    dispatch({
-      type: SET_APP_COLOR,
-      payload: APP_COLORS.LEADERBOARD,
-    });
+    setAppBackground(`linear-gradient(to bottom, #090210, ${APP_COLORS.LEADERBOARD})`);
+    setAppColor(APP_COLORS.LEADERBOARD);
 
     return () => {
-      dispatch({
-        type: SET_APP_BACKGROUND,
-        payload: `linear-gradient(to bottom, #090210, ${APP_COLORS.DEFAULT})`,
-      });
-      dispatch({
-        type: SET_APP_COLOR,
-        payload: APP_COLORS.DEFAULT,
-      });
+      setAppBackground(`linear-gradient(to bottom, #090210, ${APP_COLORS.DEFAULT})`);
+      setAppColor(APP_COLORS.DEFAULT);
     };
-  }, []);
+  }, [setAppBackground, setAppColor]);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleDragEnd = async (_event: any, info: PanInfo) => {

@@ -1,8 +1,9 @@
 "use client";
 import { motion, AnimatePresence } from "framer-motion";
-import { AppContext } from "~/app/context";
-import { FC, useContext, useEffect, useRef, useState } from "react";
-import { SET_BUY_CARDS } from "~/app/context/actions";
+import { FC, useEffect, useRef, useState } from "react";
+import { useUIStore } from "~/stores/ui-store";
+import { useCardStore } from "~/stores/card-store";
+import { useAppStore } from "~/stores/app-store";
 import { usePathname, useRouter } from "next/navigation";
 import { MintCardForm } from "./mint-card-form";
 import { useDetectClickOutside } from "~/hooks/useDetectClickOutside";
@@ -11,7 +12,14 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
   mode = "normal",
   loading = false,
 }) => {
-  const [state, dispatch] = useContext(AppContext);
+  const setBuyCards = useUIStore((s) => s.setBuyCards);
+  const unscratchedCards = useCardStore((s) => s.unscratchedCards);
+  const selectedCard = useCardStore((s) => s.selectedCard);
+  const cards = useCardStore((s) => s.cards);
+  const appColor = useAppStore((s) => s.appColor);
+  const currentCardIndex = useCardStore((s) => s.currentCardIndex);
+  const localCards = useCardStore((s) => s.localCards);
+  const nextCard = useUIStore((s) => s.nextCard);
   const [showBigBuy, setShowBigBuy] = useState(false);
   const [unscratchedCardsCount, setUnscratchedCardsCount] = useState(0);
   const [showBuyModal, setShowBuyModal] = useState(false);
@@ -26,9 +34,9 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
   // Calculate unscratched cards count
   useEffect(() => {
     if (mode === "swipeable") {
-      setUnscratchedCardsCount(state.unscratchedCards.length);
+      setUnscratchedCardsCount(unscratchedCards.length);
     }
-  }, [state.unscratchedCards, mode]);
+  }, [unscratchedCards, mode]);
 
   // Function to trigger buy modal - can be called from other components
   const triggerBuyModal = () => {
@@ -37,8 +45,8 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
 
   // Set the buy function in the app context so other components can access it
   useEffect(() => {
-    dispatch({ type: SET_BUY_CARDS, payload: triggerBuyModal });
-  }, [dispatch]);
+    setBuyCards(triggerBuyModal);
+  }, [setBuyCards]);
 
   useEffect(() => {
     if (mode === "swipeable") {
@@ -96,15 +104,15 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
               ) : (
                 <>
                   Cards{" "}
-                  {state.selectedCard ? (
+                  {selectedCard ? (
                     <>
-                      {state.selectedCard.token_id}
+                      {selectedCard.token_id}
                       <span className="text-[#fff]/40">
-                        /{state.cards.length}
+                        /{cards.length}
                       </span>
                     </>
                   ) : (
-                    state.cards.length
+                    cards.length
                   )}
                 </>
               )}
@@ -139,7 +147,7 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
           {pathname === "/" &&
             !showBigBuy &&
             mode === "swipeable" &&
-            state.currentCardIndex < state.localCards.length - 1 && (
+            currentCardIndex < localCards.length - 1 && (
               <motion.div
                 className="w-full p-1 rounded-[40px] border border-white"
                 initial={{ opacity: 0, y: 20, scale: 0.9 }}
@@ -153,10 +161,10 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
                 }}
               >
                 <motion.button
-                  onClick={() => state.nextCard?.()}
+                  onClick={() => nextCard?.()}
                   className="w-full py-2 bg-white/80 rounded-[40px] font-semibold text-[14px] hover:bg-white h-11 transition-colors"
                   style={{
-                    color: state.appColor,
+                    color: appColor,
                   }}
                   whileTap={{ scale: 0.98 }}
                   transition={{ duration: 0.1 }}
@@ -185,7 +193,7 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
                 onClick={() => setShowBuyModal(true)}
                 className="w-full py-2 bg-white/80 rounded-[40px] font-semibold text-[14px] hover:bg-white h-11 transition-colors"
                 style={{
-                  color: state.appColor,
+                  color: appColor,
                 }}
                 whileTap={{ scale: 0.98 }}
                 transition={{ duration: 0.1 }}
@@ -214,7 +222,7 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
                 onClick={() => push("/")}
                 className="w-full py-2 bg-white/80 rounded-[40px] font-semibold text-[14px] hover:bg-white h-11 transition-colors"
                 style={{
-                  color: state.appColor,
+                  color: appColor,
                 }}
                 whileTap={{ scale: 0.98 }}
                 transition={{ duration: 0.1 }}

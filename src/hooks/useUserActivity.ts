@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useCallback, useContext } from 'react'
+import { useState, useCallback } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { GET_USER_MINTS, GET_USER_CLAIMS } from '../queries'
 import { makeGraphQLRequest } from '~/lib/graphql-client'
-import { AppContext } from '~/app/context'
+import { useUserStore } from '~/stores/user-store'
 
 export interface MintOperation {
   id: string
@@ -41,8 +41,7 @@ export interface UserActivity {
 }
 
 export function useUserActivity(limit = 20): UserActivity {
-  const [state] = useContext(AppContext)
-  const userAddress = state.user?.wallet
+  const userAddress = useUserStore((s) => s.user?.wallet)
   const [page, setPage] = useState(0)
 
   const { data: mintsData, isLoading: mintsLoading, error: mintsError, refetch: refetchMints } = useQuery({

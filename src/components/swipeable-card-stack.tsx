@@ -1,12 +1,12 @@
 "use client";
-import { useState, useEffect, useRef, useContext, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card } from "~/app/interface/card";
 import ScratchOff from "./scratch-off";
 import Image from "next/image";
 import { CANVAS_HEIGHT, CANVAS_WIDTH } from "~/lib/constants";
-import { AppContext } from "~/app/context";
-import { SET_CURRENT_CARD_INDEX, SET_NEXT_CARD } from "~/app/context/actions";
+import { useUIStore } from "~/stores/ui-store";
+import { useCardStore } from "~/stores/card-store";
 
 interface SwipeableCardStackProps {
   userWallet: string;
@@ -19,7 +19,8 @@ export default function SwipeableCardStack({
   tokenIds,
   initialIndex = 0,
 }: SwipeableCardStackProps) {
-  const [, dispatch] = useContext(AppContext);
+  const setNextCardFn = useUIStore((s) => s.setNextCard);
+  const setCurrentCardIndex = useCardStore((s) => s.setCurrentCardIndex);
   const [cards, setCards] = useState<Card[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentCardNo, setCurrentCardNo] = useState<number | null>(null);
@@ -106,9 +107,9 @@ export default function SwipeableCardStack({
       }
     };
 
-    dispatch({ type: SET_NEXT_CARD, payload: nextCardFunction });
-    dispatch({ type: SET_CURRENT_CARD_INDEX, payload: currentIndex });
-  }, [canGoNext, currentIndex, cards, dispatch]);
+    setNextCardFn(nextCardFunction);
+    setCurrentCardIndex(currentIndex);
+  }, [canGoNext, currentIndex, cards, setNextCardFn, setCurrentCardIndex]);
 
   // Mouse handlers for card tilt - memoized for performance
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
@@ -173,7 +174,7 @@ export default function SwipeableCardStack({
               animate={{ opacity: 0.18, scale: 0.7, x: -72, y: 0 }}
               exit={{ opacity: 0, scale: 0.7, x: -72, y: 0 }}
               transition={{ duration: 0.1 }}
-              style={{ 
+              style={{
                 zIndex: 1,
                 willChange: 'transform, opacity',
                 transform: 'translateZ(0)' // Force GPU acceleration
@@ -190,7 +191,7 @@ export default function SwipeableCardStack({
               animate={{ opacity: 0.18, scale: 0.7, x: 72, y: 0 }}
               exit={{ opacity: 0, scale: 0.7, x: 72, y: 0 }}
               transition={{ duration: 0.1 }}
-              style={{ 
+              style={{
                 zIndex: 1,
                 willChange: 'transform, opacity',
                 transform: 'translateZ(0)' // Force GPU acceleration

@@ -1,15 +1,14 @@
 "use client";
 import { motion } from "framer-motion";
 import { useUserActivity, useUserTokens } from "~/hooks";
-import { useContext } from "react";
-import { AppContext } from "~/app/context";
+import { useCardStore } from "~/stores/card-store";
 import { formatEther } from "viem";
 import { formatDistanceToNow } from "date-fns";
 
 const UserCards = () => {
   const { mints, loading: mintsLoading, error: mintsError } = useUserActivity(20);
   const { availableCards, loading: tokensLoading, error: tokensError } = useUserTokens();
-  const [state] = useContext(AppContext);
+  const cards = useCardStore((s) => s.cards);
 
   const loading = mintsLoading || tokensLoading;
   const error = mintsError || tokensError;
@@ -113,9 +112,9 @@ const UserCards = () => {
         ) : (
           <div className="space-y-2">
             <p className="text-white/60 text-sm">No cards available on blockchain.</p>
-            {state.cards && state.cards.length > 0 && (
+            {cards && cards.length > 0 && (
               <p className="text-white/40 text-xs">
-                You have {state.cards.length} card{state.cards.length !== 1 ? 's' : ''} in database waiting to be minted.
+                You have {cards.length} card{cards.length !== 1 ? 's' : ''} in database waiting to be minted.
               </p>
             )}
           </div>

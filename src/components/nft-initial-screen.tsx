@@ -12,8 +12,8 @@ import {
   CANVAS_HEIGHT,
   CANVAS_WIDTH,
 } from "~/lib/constants";
-import { AppContext } from "~/app/context";
-import { FC, useContext, useState, useCallback } from "react";
+import { FC, useState, useCallback } from "react";
+import { useAppStore } from "~/stores/app-store";
 import { motion, AnimatePresence } from "framer-motion";
 import { WalletButton } from "./wallet-button";
 import { MintCardForm } from "./mint-card-form";
@@ -25,7 +25,7 @@ interface NftInitialScreenProps {
 }
 
 const NftInitialScreen: FC<NftInitialScreenProps> = ({ onScratchNow }) => {
-  const [state] = useContext(AppContext);
+  const appBackground = useAppStore((s) => s.appBackground);
   const [showMinting, setShowMinting] = useState(false);
 
   // Web3 hooks
@@ -79,7 +79,7 @@ const NftInitialScreen: FC<NftInitialScreenProps> = ({ onScratchNow }) => {
   return (
     <div
       className="h-[100dvh] relative w-full max-w-[400px] mx-auto"
-      style={{ background: state.appBackground }}
+      style={{ background: appBackground }}
     >
       <AnimatePresence mode="wait">
         {!showMinting ? (

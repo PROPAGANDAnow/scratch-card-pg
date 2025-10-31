@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 
 import "~/app/globals.css";
 import { Providers } from "~/app/providers";
-import { AppContextProvider } from "./context";
+import AppBootstrap from "./AppBootstrap";
 import Wrapper from "~/components/wrapper";
 import { Geist, Geist_Mono } from "next/font/google";
 
@@ -58,9 +58,9 @@ export default async function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <Providers>
-          <AppContextProvider>
+          <AppBootstrap>
             <Wrapper>{children}</Wrapper>
-          </AppContextProvider>
+          </AppBootstrap>
         </Providers>
       </body>
     </html>
