@@ -1,28 +1,52 @@
 "use client";
-import { useContext, useEffect } from "react";
-import { AppContext } from "./context";
+import { useEffect, useMemo } from "react";
+import { useAppStore } from "~/stores/app-store";
+import { useCardStore } from "~/stores/card-store";
+import { useUserStore } from "~/stores/user-store";
 import SwipeableCardStack from "~/components/swipeable-card-stack";
-import { SET_LOCAL_CARDS, SET_SWIPABLE_MODE } from "./context/actions";
+import { useContractStats } from "~/hooks";
+import { useUserTokens } from "~/hooks";
+import type { Token } from "~/hooks/useUserTokens";
+
+// Derive unclaimed token IDs (number[]) from subgraph tokens
+// Reference: docs/guides/FRONTEND_SUBGRAPH_INTEGRATION.md
+function extractUnclaimedTokenIds(cards: Token[] = []): number[] {
+  return cards
+    .map((token) => {
+      const idAsNumber = Number(token.id);
+      return Number.isFinite(idAsNumber) ? idAsNumber : null;
+    })
+    .filter((n): n is number => n !== null);
+}
 
 export default function Home() {
-  const [state, dispatch] = useContext(AppContext);
+  const setSwipableMode = useAppStore((s) => s.setSwipableMode);
+  const localCards = useCardStore((s) => s.localCards);
+  const setLocalCards = useCardStore((s) => s.setLocalCards);
+  const unscratchedCards = useCardStore((s) => s.unscratchedCards);
+  const userWallet = useUserStore((s) => s.user?.wallet || "");
+  const { isPaused, formattedStats } = useContractStats();
+  const { availableCards } = useUserTokens();
+
+  // Stable list of unclaimed token IDs from subgraph to prevent refetch loops
+  const tokenIds = useMemo(() => extractUnclaimedTokenIds(availableCards), [availableCards]);
 
   useEffect(() => {
-    dispatch({ type: SET_SWIPABLE_MODE, payload: true });
+    setSwipableMode(true);
     return () => {
-      dispatch({ type: SET_SWIPABLE_MODE, payload: false });
-      dispatch({ type: SET_LOCAL_CARDS, payload: [] });
+      setSwipableMode(false);
+      setLocalCards([]);
     };
-  }, [dispatch]);
+  }, [setSwipableMode, setLocalCards]);
 
   // Sync localCards with unscratched cards and update scratched status
   useEffect(() => {
-    if (state.unscratchedCards.length > 0 || state.localCards.length > 0) {
+    if (unscratchedCards.length > 0 || localCards.length > 0) {
       // Create a set of unscratched card IDs for quick lookup
-      const unscratchedIds = new Set(state.unscratchedCards.map(card => card.id));
-      
+      const unscratchedIds = new Set(unscratchedCards.map(card => card.id));
+
       // Update existing cards: only mark as scratched if explicitly scratched in the cards array
-      const updatedCards = state.localCards.map(card => {
+      const updatedCards = localCards.map(card => {
         if (unscratchedIds.has(card.id)) {
           // Card is in unscratchedCards, ensure it's not marked as scratched
           return { ...card, scratched: false };
@@ -32,24 +56,49 @@ export default function Home() {
           return card.scratched ? card : { ...card, scratched: true };
         }
       });
-      
+
       // Add new unscratched cards that don't exist locally
-      const existingIds = new Set(state.localCards.map(card => card.id));
-      const newCards = state.unscratchedCards.filter(card => !existingIds.has(card.id));
-      
+      const existingIds = new Set(localCards.map(card => card.id));
+      const newCards = unscratchedCards.filter(card => !existingIds.has(card.id));
+
       const newLocalCards = [...updatedCards, ...newCards];
-      
+
       // Only update if there are actual changes to prevent infinite loop
-      const hasChanges = JSON.stringify(newLocalCards) !== JSON.stringify(state.localCards);
+      const hasChanges = JSON.stringify(newLocalCards) !== JSON.stringify(localCards);
       if (hasChanges) {
-        dispatch({ type: SET_LOCAL_CARDS, payload: newLocalCards });
+        setLocalCards(newLocalCards);
       }
     }
-  }, [state.unscratchedCards, dispatch]);
+  }, [unscratchedCards, localCards, setLocalCards]);
+
+  // Show contract pause overlay if contract is paused
+  if (isPaused && formattedStats) {
+    return (
+      <div className="h-screen w-full flex items-center justify-center bg-gradient-to-br from-purple-900 via-purple-800 to-indigo-900">
+        <div className="text-center p-8 bg-white/10 backdrop-blur-sm rounded-2xl border border-white/20 max-w-md">
+          <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+            <span className="text-2xl">⏸️</span>
+          </div>
+          <h1 className="text-2xl font-bold text-white mb-2">Contract Paused</h1>
+          <p className="text-white/60 mb-4">
+            The scratch card contract is currently paused. No new cards can be minted or scratched at this time.
+          </p>
+          <div className="bg-white/5 rounded-lg p-4 text-left">
+            <p className="text-sm text-white/60 mb-2">Contract Stats:</p>
+            <div className="space-y-1">
+              <p className="text-sm text-white/80">Total Minted: {formattedStats.totalMinted.toLocaleString()}</p>
+              <p className="text-sm text-white/80">Prizes Claimed: {formattedStats.totalClaimed.toLocaleString()}</p>
+              <p className="text-sm text-white/80">Card Price: {formattedStats.currentPrice} ETH</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
-      <SwipeableCardStack cards={state.localCards} />
+      <SwipeableCardStack userWallet={userWallet} tokenIds={[17, 18, 19]} />
     </>
   );
 }

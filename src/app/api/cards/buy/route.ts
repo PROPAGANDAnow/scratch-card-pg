@@ -1,166 +1,68 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createPublicClient, http } from "viem";
-import { base } from "wagmi/chains";
-import { supabaseAdmin } from "~/lib/supabaseAdmin";
+import { prisma } from "~/lib/prisma";
 import { drawPrize } from "~/lib/drawPrize";
 import { generateNumbers } from "~/lib/generateNumbers";
 import { PRIZE_ASSETS, USDC_ADDRESS } from "~/lib/constants";
 import { findWinningRow } from "~/lib/winningRow";
-
-// Payment verification function for Base chain with retry logic
-async function verifyPayment(
-  paymentTx: string, 
-  expectedAmount: number, // Amount in USDC (e.g., 5 for 5 USDC)
-  expectedRecipient?: string
-): Promise<boolean> {
-  const tolerance = 0.001; // 0.001 USDC tolerance
-  const maxRetries = 5;
-  const baseDelay = 1000; // 1 second
-
-  // Create public client for Base
-  const client = createPublicClient({
-    chain: base,
-    transport: http(process.env.BASE_RPC_URL),
-  });
-
-  for (let attempt = 0; attempt < maxRetries; attempt++) {
-    try {
-      console.log(`Attempt ${attempt + 1}/${maxRetries} to verify transaction:`, paymentTx);
-
-      // Get transaction details
-      const transaction = await client.getTransactionReceipt({
-        hash: paymentTx as `0x${string}`,
-      });
-
-      if (!transaction) {
-        console.log(`Transaction not found on attempt ${attempt + 1}, retrying...`);
-        if (attempt < maxRetries - 1) {
-          await new Promise(resolve => setTimeout(resolve, baseDelay * Math.pow(2, attempt)));
-          continue;
-        }
-        return false;
-      }
-
-      // Check if transaction was successful
-      if (transaction.status === 'reverted') {
-        console.log("Transaction failed (reverted)");
-        return false;
-      }
-
-      // Get the expected recipient (admin wallet)
-      const recipientAddress = expectedRecipient || process.env.NEXT_PUBLIC_ADMIN_WALLET_ADDRESS;
-      if (!recipientAddress) {
-        console.log("No recipient address configured");
-        return false;
-      }
-
-      // Check if this is a USDC transfer to our admin wallet
-      // Look for Transfer event from USDC contract to admin wallet
-      const transferEvent = transaction.logs.find(log => {
-        // Check if log is from USDC contract
-        if (log.address.toLowerCase() !== USDC_ADDRESS.toLowerCase()) {
-          return false;
-        }
-        
-        // Check if it's a Transfer event to admin wallet
-        // Transfer event signature: 0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef
-        const transferEventSignature = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
-        
-        if (!log.topics[0] || log.topics[0] !== transferEventSignature) {
-          return false;
-        }
-        
-        // Check if recipient is admin wallet (topic[2] contains recipient address)
-        if (log.topics[2]) {
-          const recipient = '0x' + log.topics[2].slice(26); // Remove padding
-          return recipient.toLowerCase() === recipientAddress.toLowerCase();
-        }
-        
-        return false;
-      });
-
-      if (!transferEvent) {
-        console.log("USDC transfer to admin wallet not found in transaction");
-        return false;
-      }
-
-      // Extract amount from transfer event
-      // Amount is in the data field (32 bytes)
-      const amountHex = transferEvent.data;
-      const amount = parseInt(amountHex, 16) / 1e6; // Convert from smallest units to USDC
-      
-      // Verify the amount (allow for small rounding differences)
-      return Math.abs(amount - expectedAmount) <= tolerance;
-
-         } catch (error) {
-       console.error(`Error verifying payment on attempt ${attempt + 1}:`, error);
-       
-       // If it's a TransactionReceiptNotFoundError, retry
-       if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string' && error.message.includes('TransactionReceiptNotFoundError')) {
-         if (attempt < maxRetries - 1) {
-           console.log(`Transaction not mined yet, retrying in ${baseDelay * Math.pow(2, attempt)}ms...`);
-           await new Promise(resolve => setTimeout(resolve, baseDelay * Math.pow(2, attempt)));
-           continue;
-         }
-       }
-       
-       // For other errors, don't retry
-       return false;
-     }
-  }
-
-  return false;
-}
+import { SharedUser } from "~/app/interface/card";
+import { Prisma } from "@prisma/client";
+import { BuyCardSchema, validateRequest } from "~/lib/validations";
 
 export async function POST(request: NextRequest) {
   try {
-    const { userWallet, paymentTx, numberOfCards, friends } = await request.json();
-    
-    if (!userWallet || !paymentTx || !numberOfCards) {
+    // Validate request body
+    const validation = await validateRequest(request, BuyCardSchema, { method: 'POST' });
+    if (!validation.success) {
       return NextResponse.json(
-        { error: "Missing required fields: userWallet, paymentTx, or numberOfCards" },
-        { status: 400 }
+        { error: validation.error },
+        { status: validation.status }
       );
     }
 
-    // Verify payment transaction (1 USDC per card)
-    const expectedAmount = numberOfCards; // 1 USDC per card
-    const paymentVerified = await verifyPayment(paymentTx, expectedAmount);
-    
-    if (!paymentVerified) {
-      console.log("Payment verification failed for transaction:", paymentTx);
-      return NextResponse.json(
-        { error: `Payment verification failed. Please ensure you sent ${expectedAmount} USDC to the correct address.` },
-        { status: 400 }
-      );
-    }
+    const { tokenIds, userWallet, friends = [] } = validation.data;
 
-    // Get the next card number for this user
-    const { data: existingCards, error: countError } = await supabaseAdmin
-      .from('cards')
-      .select('card_no')
-      .eq('user_wallet', userWallet)
-      .order('card_no', { ascending: false })
-      .limit(1);
-
-    if (countError) {
-      console.error('Error getting card count:', countError);
+    // Ensure user exists (avoid FK constraint on card.user_wallet)
+    try {
+      await prisma.user.upsert({
+        where: { wallet: userWallet },
+        update: { last_active: new Date() },
+        create: { wallet: userWallet },
+      });
+    } catch (userEnsureError) {
+      console.error('Error ensuring user exists:', userEnsureError);
       return NextResponse.json(
-        { error: "Failed to get card count" },
+        { error: 'Unable to prepare user for card purchase' },
         { status: 500 }
       );
     }
 
-    // Calculate starting card number
-    const startCardNo = existingCards && existingCards.length > 0 
-      ? existingCards[0].card_no + 1 
-      : 1;
+    // Check if any cards already exist for these tokenIds
+    const existingCards = await prisma.card.findMany({
+      where: { 
+        token_id: { in: tokenIds }
+      }
+    });
 
-    // Create multiple cards
-    const cardsToCreate = [];
-    for (let i = 0; i < numberOfCards; i++) {
+    if (existingCards.length > 0) {
+      const existingTokenIds = existingCards.map(card => card.token_id);
+      return NextResponse.json(
+        { 
+          error: "Cards already exist for these tokenIds", 
+          existingTokenIds 
+        },
+        { status: 400 }
+      );
+    }
+
+    // Generate cards data for each tokenId
+    const cardsData: Prisma.CardUncheckedCreateInput[] = [];
+    
+    for (const tokenId of tokenIds) {
+      // Generate prize and card data for each token
       const prize = drawPrize(friends.length > 0); // e.g., 0 | 0.5 | 1 | 2 (check if friends available for free cards)
       // pick prize asset randomly (today pool contains USDC; add more later)
+      // const prizeAsset =
+      //   PRIZE_ASSETS[Math.floor(Math.random() * PRIZE_ASSETS.length)] || USDC_ADDRESS;
       const prizeAsset =
         PRIZE_ASSETS[Math.floor(Math.random() * PRIZE_ASSETS.length)] || USDC_ADDRESS;
       // build 12 cells (3x4) with one winning row if prize > 0
@@ -169,9 +71,10 @@ export async function POST(request: NextRequest) {
         prizeAsset,
         decoyAmounts: [0.5, 0.75, 1, 1.5, 2, 5, 10],
         decoyAssets: PRIZE_ASSETS as unknown as string[],
-        friends,
+        friends: friends || [],
       });
-      let shared_to = null;
+
+      let shared_to: SharedUser | null = null;
       if (prize === -1) {
         const winningRow = findWinningRow(numbers, prize, prizeAsset);
         if (winningRow !== null && winningRow !== -1) {
@@ -184,78 +87,79 @@ export async function POST(request: NextRequest) {
           };
         }
       }
-      cardsToCreate.push({
+
+      // Create card data for this token
+      const cardData: Prisma.CardUncheckedCreateInput = {
         user_wallet: userWallet,
-        payment_tx: paymentTx,
+        payment_tx: "MINTED_NFT", // Indicate it's from NFT minting
         prize_amount: prize,
         prize_asset_contract: prizeAsset,
-        numbers_json: numbers,
-        scratched: false,
-        claimed: false,
-        created_at: new Date().toISOString(),
-        card_no: startCardNo + i,
-        shared_to,
-        shared_from: null
-      });
+        numbers_json: numbers as Prisma.InputJsonValue,
+        token_id: tokenId, // Use tokenId as token_id
+        contract_address: "0x0000000000000000000000000000000000000000", // Placeholder for NFT contract
+        prize_won: prize > 0, // Set prize_won based on prize amount
+        shared_to: shared_to as unknown as Prisma.InputJsonValue,
+      };
+
+      cardsData.push(cardData);
     }
 
-    const { data: newCards, error: createError } = await supabaseAdmin
-      .from('cards')
-      .insert(cardsToCreate)
-      .select();
+    // Create all cards in a batch
+    await prisma.card.createMany({
+      data: cardsData
+    });
 
-    if (createError) {
-      console.error('Error creating cards:', createError);
-      return NextResponse.json(
-        { error: "Failed to create cards" },
-        { status: 500 }
-      );
-    }
+    // Fetch the created cards to return them
+    const createdCards = await prisma.card.findMany({
+      where: {
+        token_id: { in: tokenIds },
+        user_wallet: userWallet
+      },
+      orderBy: {
+        token_id: 'asc'
+      }
+    });
 
     // Update user's cards_count
-    const { error: updateError } = await supabaseAdmin
-      .from('users')
-      .update({ 
-        cards_count: startCardNo + numberOfCards - 1,
-        last_active: new Date().toISOString()
-      })
-      .eq('wallet', userWallet);
-
-    if (updateError) {
-      console.error('Error updating user card count:', updateError);
+    try {
+      await prisma.user.update({
+        where: { wallet: userWallet },
+        data: {
+          cards_count: { increment: tokenIds.length },
+          last_active: new Date()
+        }
+      });
+    } catch (userUpdateError) {
+      console.error('Error updating user card count:', userUpdateError);
       // Don't fail the request if user update fails
     }
 
     // Update app stats - increment cards count
-    const { data: currentStats, error: fetchStatsError } = await supabaseAdmin
-      .from('stats')
-      .select('cards')
-      .eq('id', 1)
-      .single();
-
-    if (!fetchStatsError && currentStats) {
-      const { error: statsError } = await supabaseAdmin
-        .from('stats')
-        .update({ 
-          cards: currentStats.cards + numberOfCards,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', 1);
-
-      if (statsError) {
-        console.error('Error updating app stats:', statsError);
-        // Don't fail the request if stats update fails
-      }
+    try {
+      await prisma.stats.upsert({
+        where: { id: 1 },
+        update: {
+          cards: { increment: tokenIds.length },
+          updated_at: new Date()
+        },
+        create: {
+          id: 1,
+          cards: tokenIds.length,
+          reveals: 0,
+          winnings: 0
+        }
+      });
+    } catch (statsError) {
+      console.error('Error updating app stats:', statsError);
+      // Don't fail the request if stats update fails
     }
 
-    return NextResponse.json({ 
-      success: true, 
-      cards: newCards,
-      totalCardsCreated: numberOfCards,
-      startCardNo,
-      endCardNo: startCardNo + numberOfCards - 1
+    return NextResponse.json({
+      success: true,
+      cards: createdCards,
+      count: createdCards.length
     });
-    
+
   } catch (error) {
     console.error('Error in buy cards:', error);
     return NextResponse.json(

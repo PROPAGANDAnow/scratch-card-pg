@@ -1,11 +1,10 @@
 "use client";
-import { useContext } from "react";
+import { useAppStore } from "~/stores/app-store";
 import Image from "next/image";
 import { motion } from "framer-motion";
-import { AppContext } from "~/app/context";
 
 const Activity = () => {
-  const [state] = useContext(AppContext);
+  const activity = useAppStore((s) => s.activity);
 
   // Helper function to format date properly (from wrapper.tsx)
   const formatDate = (dateString: string) => {
@@ -67,7 +66,7 @@ const Activity = () => {
     return username.length > 15 ? username.substring(0, 15) + "..." : username;
   };
 
-  if (state.activity.length === 0) {
+  if (activity.length === 0) {
     return (
       <div className="w-full pt-8 h-full overflow-y-auto">
         <div className="flex items-center justify-center h-64">
@@ -87,7 +86,7 @@ const Activity = () => {
         animate={{ opacity: 1 }}
         transition={{ duration: 0.5 }}
       >
-        {state.activity.map((reveal, index) => (
+        {activity.map((reveal, index) => (
           <motion.div
             key={reveal.id}
             className="flex items-center justify-between w-full"
@@ -98,7 +97,7 @@ const Activity = () => {
             <div className="flex items-center gap-3">
               <Image
                 src={reveal.pfp || "/assets/splash-image.png"}
-                alt={reveal.username}
+                alt={reveal.username || "Unknown"}
                 width={48}
                 height={48}
                 loading="lazy"
@@ -124,12 +123,12 @@ const Activity = () => {
               </div>
             </div>
             <p className="text-[12px] font-medium leading-[90%] text-white/60">
-              {formatTimeAgo(reveal.updated_at)}
+              {reveal.updated_at ? formatTimeAgo(reveal.updated_at.toISOString()) : 'Unknown'}
             </p>
           </motion.div>
         ))}
 
-        {state.activity.length === 0 && (
+        {activity.length === 0 && (
           <motion.div
             className="flex items-center justify-center h-64"
             initial={{ opacity: 0, scale: 0.9 }}

@@ -1,18 +1,16 @@
-import { supabase } from "./supabase";
+import { prisma } from "./prisma";
 
 // Fetch user info when wallet connects
 export const fetchUserInfo = async (userWallet: string) => {
   if (!userWallet) return;
 
   try {
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('wallet', userWallet)
-      .single();
+    const data = await prisma.user.findUnique({
+      where: { wallet: userWallet }
+    });
 
-    if (error) {
-      console.error("Failed to fetch user info:", error);
+    if (!data) {
+      console.error("User not found");
       return {};
     }
 
@@ -28,17 +26,10 @@ export const fetchUserCards = async (userWallet: string) => {
   if (!userWallet) return;
 
   try {
-    const { data, error } = await supabase
-      .from('cards')
-      .select('*')
-      .eq('user_wallet', userWallet)
-      .order('card_no', { ascending: false })
-      .limit(1000);
-
-    if (error) {
-      console.error("Failed to fetch user cards:", error);
-      return [];
-    }
+    const data = await prisma.card.findMany({
+      where: { user_wallet: userWallet },
+      take: 1000
+    });
 
     return data;
   } catch (error) {
@@ -50,13 +41,12 @@ export const fetchUserCards = async (userWallet: string) => {
 // Fetch app stats
 export const fetchAppStats = async () => {
   try {
-    const { data, error } = await supabase
-      .from('stats')
-      .select('*')
-      .single();
+    const data = await prisma.stats.findUnique({
+      where: { id: 1 }
+    });
 
-    if (error) {
-      console.error("Failed to fetch app stats:", error);
+    if (!data) {
+      console.error("Stats not found");
       return {};
     }
 
@@ -69,16 +59,10 @@ export const fetchAppStats = async () => {
 
 export const fetchLeaderboard = async () => {
   try {
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .order('amount_won', { ascending: false })
-      .limit(100);
-
-    if (error) {
-      console.error("Failed to fetch leaderboard:", error);
-      return [];
-    }
+    const data = await prisma.user.findMany({
+      orderBy: { amount_won: 'desc' },
+      take: 100
+    });
 
     return data;
   } catch (error) {
@@ -89,16 +73,12 @@ export const fetchLeaderboard = async () => {
 
 export const fetchActivity = async () => {
   try {
-    const { data, error } = await supabase
-      .from('reveals')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(500);
-
-    if (error) {
-      console.error("Failed to fetch activity:", error);
-      return [];
-    }
+    const data = await prisma.card.findMany({
+      where: { scratched: true },
+      include: { user: true },
+      orderBy: { scratched_at: 'desc' },
+      take: 500
+    });
 
     return data;
   } catch (error) {

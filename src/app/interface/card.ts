@@ -1,28 +1,27 @@
-import { CardCell } from "./cardCell";
+import { Card as PrismaCard, Prisma } from "@prisma/client";
 
-export interface Card {
-  id: string;
-  user_wallet: string;
-  payment_tx: string;
-  prize_amount: number;
-  scratched_at?: string;
-  prize_asset_contract: string;
-  numbers_json: CardCell[];
-  claimed: boolean;
-  payout_tx?: string;
-  created_at: string;
-  scratched: boolean;
-  card_no: number;
-  shared_to: {
-    fid: string;
-    username: string;
-    pfp: string;
-    wallet: string;
-  } | null;
-  shared_from: {
-    fid: string;
-    username: string;
-    pfp: string;
-    wallet: string;
-  } | null;
+export interface SharedUser {
+  fid: string;
+  username: string;
+  pfp: string;
+  wallet: string;
 }
+
+export interface CardCell {
+  amount: number;
+  asset_contract: string;
+  friend_fid?: number;
+  friend_username?: string;
+  friend_pfp?: string;
+  friend_wallet?: string;
+}
+
+// Type for Card with properly typed JSON fields
+export type Card = Omit<PrismaCard, 'numbers_json' | 'shared_to' | 'shared_from'> & {
+  numbers_json: Prisma.JsonValue;
+  shared_to?: SharedUser | null | Prisma.JsonValue;
+  shared_from?: SharedUser | null | Prisma.JsonValue;
+};
+
+// Re-export Prisma type for internal use
+export type PrismaCardType = PrismaCard;

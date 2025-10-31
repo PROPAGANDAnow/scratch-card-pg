@@ -3,23 +3,16 @@ import {
   useRef,
   useEffect,
   useState,
-  useContext,
   useCallback,
   useMemo,
   memo,
 } from "react";
 import { motion } from "framer-motion";
 import Image from "next/image";
-import { AppContext } from "~/app/context";
-import {
-  SET_ACTIVITY,
-  SET_APP_BACKGROUND,
-  SET_APP_COLOR,
-  SET_APP_STATS,
-  SET_CARDS,
-  SET_LEADERBOARD,
-  SET_USER,
-} from "~/app/context/actions";
+import { useAppStore } from "~/stores/app-store";
+import { useUserStore } from "~/stores/user-store";
+import { useCardStore } from "~/stores/card-store";
+import { useUIStore } from "~/stores/ui-store";
 import {
   APP_COLORS,
   CANVAS_HEIGHT,
@@ -28,13 +21,13 @@ import {
   USDC_ADDRESS,
 } from "~/lib/constants";
 import { useMiniApp } from "@neynar/react";
-import { Card } from "~/app/interface/card";
+import { Card, CardCell, SharedUser } from "~/app/interface/card";
 import { formatCell } from "~/lib/formatCell";
 import { chunk3, findWinningRow } from "~/lib/winningRow";
 import { getLevelRequirement, getRevealsToNextLevel } from "~/lib/level";
 import { BestFriend } from "~/app/interface/bestFriends";
 import { useDebouncedScratchDetection } from "~/hooks/useDebouncedScratchDetection";
-import { useBatchedUpdates } from "~/hooks/useBatchedUpdates";
+// removed reducer batching; using direct zustand setters
 import ModalPortal from "~/components/ModalPortal";
 import { CircularProgress } from "./circular-progress";
 
@@ -52,7 +45,27 @@ const ScratchOff = ({
   hasNext,
   onNext,
 }: ScratchOffProps) => {
-  const [state, dispatch] = useContext(AppContext);
+  const user = useUserStore((s) => s.user);
+  const bestFriends = useUserStore((s) => s.bestFriends);
+  const setUser = useUserStore((s) => s.setUser);
+
+  const appStats = useAppStore((s) => s.appStats);
+  const setAppStats = useAppStore((s) => s.setAppStats);
+  const setAppColor = useAppStore((s) => s.setAppColor);
+  const setAppBackground = useAppStore((s) => s.setAppBackground);
+  const leaderboard = useAppStore((s) => s.leaderboard);
+  const setLeaderboard = useAppStore((s) => s.setLeaderboard);
+  const activity = useAppStore((s) => s.activity);
+  const setActivity = useAppStore((s) => s.setActivity);
+
+  const cards = useCardStore((s) => s.cards);
+  const setCards = useCardStore((s) => s.setCards);
+  const updateCard = useCardStore((s) => s.updateCard);
+
+  const playWinSound = useUIStore((s) => s.playWinSound);
+  const getWinnerGif = useUIStore((s) => s.getWinnerGif);
+  const refetchUserCards = useUIStore((s) => s.refetchUserCards);
+  const buyCards = useUIStore((s) => s.buyCards);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
   const [scratched, setScratched] = useState(false);
@@ -66,7 +79,6 @@ const ScratchOff = ({
   const linkCopyTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const { actions, haptics } = useMiniApp();
-  const { batchUpdate } = useBatchedUpdates(dispatch);
 
   // Lock body scroll when modal is open
   useEffect(() => {
@@ -97,14 +109,14 @@ const ScratchOff = ({
   }, []);
 
   const handleShare = useCallback(async () => {
-    if (!state.user) return;
+    if (!user) return;
 
     const baseUrl = process.env.NEXT_PUBLIC_URL;
     const frameUrl =
       `${baseUrl}/api/frame-share?` +
       new URLSearchParams({
         prize: prizeAmount.toString(),
-        username: state.user.username || "",
+        username: user.username || "",
         friend_username: bestFriend?.username || "",
       }).toString();
 
@@ -121,7 +133,7 @@ const ScratchOff = ({
       // Fallback: open in new tab
       window.open(frameUrl, "_blank");
     }
-  }, [state.user, prizeAmount, bestFriend?.username, actions]);
+  }, [user, prizeAmount, bestFriend?.username, actions]);
 
   const getShareUrl = useCallback(() => {
     const baseUrl = process.env.NEXT_PUBLIC_URL;
@@ -129,11 +141,11 @@ const ScratchOff = ({
       `${baseUrl}/api/frame-share?` +
       new URLSearchParams({
         prize: prizeAmount.toString(),
-        username: state.user?.username || "",
+        username: user?.username || "",
         friend_username: bestFriend?.username || "",
       }).toString()
     );
-  }, [prizeAmount, state.user?.username, bestFriend?.username]);
+  }, [prizeAmount, user?.username, bestFriend?.username]);
 
   const handleWhatsAppShare = useCallback(() => {
     const shareUrl = getShareUrl();
@@ -196,140 +208,120 @@ const ScratchOff = ({
     setShowBlurOrverlay(prizeAmount > 0 || prizeAmount === -1);
     setIsProcessing(true);
 
-    // Batch all state updates
-    const updates = [
-      {
-        type: SET_APP_STATS,
-        payload: {
-          ...state.appStats,
-          reveals: (state.appStats?.reveals || 0) + 1,
-          winnings:
-            (state.appStats?.winnings || 0) +
-            (prizeAmount < 0 ? 0 : prizeAmount),
-        },
-      },
-      {
-        type: SET_CARDS,
-        payload: state.cards.map((card) =>
-          card.id === cardData?.id
-            ? {
-                ...card,
-                scratched: true,
-                scratched_at: new Date().toISOString(),
-                claimed: true,
-              }
-            : card
-        ),
-      },
-      {
-        type: SET_USER,
-        payload: {
-          ...state.user,
-          amount_won:
-            (state.user?.amount_won || 0) + (prizeAmount < 0 ? 0 : prizeAmount),
-          total_wins:
-            (state.user?.total_wins || 0) + (prizeAmount !== 0 ? 1 : 0),
-          total_reveals: (state.user?.total_reveals || 0) + 1,
-          current_level:
-            getRevealsToNextLevel(state.user?.current_level || 1) === 0
-              ? (state.user?.current_level || 1) + 1
-              : state.user?.current_level || 1,
-          reveals_to_next_level:
-            (state.user?.reveals_to_next_level ||
-              getRevealsToNextLevel(state.user?.current_level || 1)) === 0
-              ? getRevealsToNextLevel((state.user?.current_level || 1) + 1)
-              : getRevealsToNextLevel(state.user?.current_level || 1),
-          last_active: new Date().toISOString(),
-        },
-      },
-      {
-        type: SET_ACTIVITY,
-        payload: [
-          ...state.activity,
-          {
-            id: cardData?.id + new Date().toISOString(),
-            card_id: cardData?.id,
-            user_wallet: cardData?.user_wallet,
-            prize_amount: prizeAmount < 0 ? 0 : prizeAmount,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-            username: state.user?.username,
-            pfp: state.user?.pfp,
-            payment_tx: cardData?.payment_tx,
-            payout_tx: null,
-            won: prizeAmount > 0,
-          },
-        ],
-      },
-      {
-        type: SET_LEADERBOARD,
-        payload: state.leaderboard.map((user) =>
-          user.wallet === cardData?.user_wallet
-            ? {
-                ...user,
-                amount_won:
-                  (user.amount_won || 0) + (prizeAmount < 0 ? 0 : prizeAmount),
-                total_wins:
-                  (user.total_wins || 0) + (prizeAmount !== 0 ? 1 : 0),
-                total_reveals: (user.total_reveals || 0) + 1,
-                current_level:
-                  getRevealsToNextLevel(state.user?.current_level || 1) === 0
-                    ? (state.user?.current_level || 1) + 1
-                    : state.user?.current_level || 1,
-                reveals_to_next_level:
-                  (state.user?.reveals_to_next_level ||
-                    getRevealsToNextLevel(state.user?.current_level || 1)) === 0
-                    ? getRevealsToNextLevel(
-                        (state.user?.current_level || 1) + 1
-                      )
-                    : getRevealsToNextLevel(state.user?.current_level || 1),
-                last_active: new Date().toISOString(),
-              }
-            : user
-        ),
-      },
-    ];
+    // Update app stats
+    setAppStats({
+      ...appStats,
+      reveals: (appStats?.reveals || 0) + 1,
+      winnings: (appStats?.winnings || 0) + (prizeAmount < 0 ? 0 : prizeAmount),
+    } as any);
 
-    batchUpdate(updates);
+    // Update card locally
+    if (cardData?.id) {
+      updateCard(cardData.id, {
+        scratched: true,
+        scratched_at: new Date() as any,
+        claimed: true,
+      } as any);
+    } else {
+      // fallback: map set
+      setCards(
+        cards.map((card) =>
+          card.id === cardData?.id
+            ? { ...card, scratched: true, scratched_at: new Date(), claimed: true }
+            : card
+        )
+      );
+    }
+
+    // Update user snapshot
+    if (user) {
+      const newUser = {
+        ...user,
+        amount_won: (user.amount_won || 0) + (prizeAmount < 0 ? 0 : prizeAmount),
+        total_wins: (user.total_wins || 0) + (prizeAmount !== 0 ? 1 : 0),
+        total_reveals: (user.total_reveals || 0) + 1,
+        current_level:
+          getRevealsToNextLevel(user.current_level || 1) === 0
+            ? (user.current_level || 1) + 1
+            : user.current_level || 1,
+        reveals_to_next_level:
+          (user.reveals_to_next_level || getRevealsToNextLevel(user.current_level || 1)) === 0
+            ? getRevealsToNextLevel((user.current_level || 1) + 1)
+            : getRevealsToNextLevel(user.current_level || 1),
+        last_active: new Date().toISOString(),
+      } as any;
+      setUser(newUser);
+    }
+
+    // Update activity list
+    setActivity([
+      ...activity,
+      {
+        id: (cardData?.id || "") + new Date().toISOString(),
+        card_id: cardData?.id,
+        user_wallet: cardData?.user_wallet,
+        prize_amount: prizeAmount < 0 ? 0 : prizeAmount,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        username: user?.username,
+        pfp: user?.pfp,
+        payment_tx: cardData?.payment_tx,
+        payout_tx: null,
+        won: prizeAmount > 0,
+      } as any,
+    ]);
+
+    // Update leaderboard snapshot
+    setLeaderboard(
+      leaderboard.map((lbUser) =>
+        lbUser.wallet === cardData?.user_wallet
+          ? {
+            ...lbUser,
+            amount_won: (lbUser.amount_won || 0) + (prizeAmount < 0 ? 0 : prizeAmount),
+            total_wins: (lbUser.total_wins || 0) + (prizeAmount !== 0 ? 1 : 0),
+            total_reveals: (lbUser.total_reveals || 0) + 1,
+            current_level:
+              getRevealsToNextLevel(user?.current_level || 1) === 0
+                ? (user?.current_level || 1) + 1
+                : user?.current_level || 1,
+            reveals_to_next_level:
+              (user?.reveals_to_next_level ||
+                getRevealsToNextLevel(user?.current_level || 1)) === 0
+                ? getRevealsToNextLevel((user?.current_level || 1) + 1)
+                : getRevealsToNextLevel(user?.current_level || 1),
+            last_active: new Date().toISOString(),
+          }
+          : lbUser
+      )
+    );
+
     setScratched(true);
     onPrizeRevealed?.(prizeAmount);
 
     // Handle background color changes and haptics
     if (prizeAmount > 0 || prizeAmount === -1) {
-      dispatch({
-        type: SET_APP_COLOR,
-        payload: APP_COLORS.WON,
-      });
-      dispatch({
-        type: SET_APP_BACKGROUND,
-        payload: `linear-gradient(to bottom, #090210, ${APP_COLORS.WON})`,
-      });
+      setAppColor(APP_COLORS.WON);
+      setAppBackground(`linear-gradient(to bottom, #090210, ${APP_COLORS.WON})`);
       haptics.impactOccurred("heavy");
       haptics.notificationOccurred("success");
       // Play win sound
-      state.playWinSound?.();
+      playWinSound?.();
       fetch("/api/neynar/send-notification", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          fid: state.user?.fid,
-          username: state.user?.username,
+          fid: user?.fid,
+          username: user?.username,
           amount: prizeAmount,
           friend_fid: bestFriend?.fid,
-          bestFriends: state.bestFriends,
+          bestFriends,
         }),
       }).catch((error) => {
         console.error("Failed to send notification:", error);
       });
     } else {
-      dispatch({
-        type: SET_APP_COLOR,
-        payload: APP_COLORS.LOST,
-      });
-      dispatch({
-        type: SET_APP_BACKGROUND,
-        payload: `linear-gradient(to bottom, #090210, ${APP_COLORS.LOST})`,
-      });
+      setAppColor(APP_COLORS.LOST);
+      setAppBackground(`linear-gradient(to bottom, #090210, ${APP_COLORS.LOST})`);
     }
 
     // Process prize immediately
@@ -340,10 +332,10 @@ const ScratchOff = ({
         body: JSON.stringify({
           cardId: cardData.id,
           userWallet: cardData.user_wallet,
-          username: state.user?.username,
-          pfp: state.user?.pfp,
-          userFid: state.user?.fid,
-          friends: state.bestFriends,
+          username: user?.username,
+          pfp: user?.pfp,
+          userFid: user?.fid,
+          friends: bestFriends,
         }),
       })
         .then((response) => response.json())
@@ -356,7 +348,7 @@ const ScratchOff = ({
             // If user leveled up and got free cards, refetch user cards
             if (processData.leveledUp && processData.freeCardsAwarded > 0) {
               setTimeout(() => {
-                state.refetchUserCards?.();
+                refetchUserCards?.();
               }, 1000); // Wait 1 second for database to be fully updated
             }
           }
@@ -578,36 +570,27 @@ const ScratchOff = ({
   useEffect(() => {
     if (cardData && cardData.scratched) {
       if (cardData.prize_amount > 0 || cardData.prize_amount === -1) {
-        dispatch({
-          type: SET_APP_COLOR,
-          payload: APP_COLORS.WON,
-        });
-        dispatch({
-          type: SET_APP_BACKGROUND,
-          payload: `linear-gradient(to bottom, #090210, ${APP_COLORS.WON})`,
-        });
+        setAppColor(APP_COLORS.WON);
+        setAppBackground(`linear-gradient(to bottom, #090210, ${APP_COLORS.WON})`);
       } else {
-        dispatch({
-          type: SET_APP_COLOR,
-          payload: APP_COLORS.LOST,
-        });
-        dispatch({
-          type: SET_APP_BACKGROUND,
-          payload: `linear-gradient(to bottom, #090210, ${APP_COLORS.LOST})`,
-        });
+        setAppColor(APP_COLORS.LOST);
+        setAppBackground(`linear-gradient(to bottom, #090210, ${APP_COLORS.LOST})`);
       }
     }
-  }, [cardData]);
+  }, [cardData, setAppBackground, setAppColor]);
 
   // Populate best friend state when cardData changes
   useEffect(() => {
-    if (
-      cardData?.numbers_json &&
-      cardData?.shared_to &&
-      cardData?.shared_to?.wallet
-    ) {
-      const friendCell = cardData.numbers_json.find(
-        (cell) => cell.friend_wallet === cardData?.shared_to?.wallet
+    // Safely parse shared_to which may be a JsonValue
+    const sharedTo =
+      cardData?.shared_to && typeof cardData.shared_to === 'object' && cardData.shared_to !== null && 'wallet' in (cardData.shared_to as Record<string, unknown>)
+        ? (cardData.shared_to as unknown as SharedUser)
+        : null;
+
+    if (cardData?.numbers_json && sharedTo?.wallet) {
+      const numbersJson = cardData.numbers_json as unknown as CardCell[];
+      const friendCell = numbersJson.find(
+        (cell) => cell.friend_wallet === sharedTo.wallet
       );
 
       if (
@@ -645,14 +628,8 @@ const ScratchOff = ({
         clearTimeout(linkCopyTimeoutRef.current);
       }
 
-      dispatch({
-        type: SET_APP_COLOR,
-        payload: APP_COLORS.DEFAULT,
-      });
-      dispatch({
-        type: SET_APP_BACKGROUND,
-        payload: `linear-gradient(to bottom, #090210, ${APP_COLORS.DEFAULT})`,
-      });
+      setAppColor(APP_COLORS.DEFAULT);
+      setAppBackground(`linear-gradient(to bottom, #090210, ${APP_COLORS.DEFAULT})`);
     };
   }, []);
 
@@ -677,9 +654,8 @@ const ScratchOff = ({
         }}
       >
         <p
-          className={`font-[ABCGaisyr] text-center mb-1 font-bold italic rotate-[-4deg] ${
-            isPreScratchShared ? "text-[14px]" : "text-[30px]"
-          }`}
+          className={`font-[ABCGaisyr] text-center mb-1 font-bold italic rotate-[-4deg] ${isPreScratchShared ? "text-[14px]" : "text-[30px]"
+            }`}
           style={{
             visibility:
               cardData?.scratched || scratched || isPreScratchShared
@@ -688,13 +664,13 @@ const ScratchOff = ({
             color: isPreScratchShared
               ? "#fff"
               : cardData?.prize_amount || prizeAmount
-              ? "#fff"
-              : "rgba(255, 255, 255, 0.4)",
+                ? "#fff"
+                : "rgba(255, 255, 255, 0.4)",
             textShadow: isPreScratchShared
               ? "none"
               : cardData?.prize_amount || prizeAmount
-              ? "0px 0px 1px #00A34F, 0px 0px 2px #00A34F, 0px 0px 6px #00A34F, 0px 0px 12px #00A34F"
-              : "none",
+                ? "0px 0px 1px #00A34F, 0px 0px 2px #00A34F, 0px 0px 6px #00A34F, 0px 0px 12px #00A34F"
+                : "none",
           }}
         >
           {isPreScratchShared ? (
@@ -702,7 +678,13 @@ const ScratchOff = ({
               shared by
               <br />
               <span className="text-[16px]">
-                @{cardData?.shared_from?.username}
+                @{(() => {
+                  const sf =
+                    cardData?.shared_from && typeof cardData.shared_from === 'object' && cardData.shared_from !== null && 'username' in (cardData.shared_from as Record<string, unknown>)
+                      ? (cardData.shared_from as unknown as SharedUser)
+                      : null;
+                  return sf?.username || '';
+                })()}
               </span>
             </>
           ) : cardData?.prize_amount || prizeAmount ? (
@@ -784,12 +766,13 @@ const ScratchOff = ({
                 }}
               />
               {cardData?.numbers_json &&
-              (cardData?.scratched || scratched || coverImageLoaded) ? (
+                (cardData?.scratched || scratched || coverImageLoaded) ? (
                 <div className="absolute inset-0 z-10 flex flex-col items-center justify-center text-center rotate-[-4deg]">
                   {(() => {
-                    const rows = chunk3(cardData.numbers_json);
+                    const numbersJson = cardData.numbers_json as unknown as CardCell[];
+                    const rows = chunk3(numbersJson);
                     const winningRowIdx = findWinningRow(
-                      cardData.numbers_json,
+                      numbersJson,
                       cardData.prize_amount,
                       cardData.prize_asset_contract
                     );
@@ -806,11 +789,10 @@ const ScratchOff = ({
                               {row.map((cell, cellIndex) => (
                                 <div
                                   key={`${cell.amount}-${cellIndex}`}
-                                  className={`w-[77px] h-[77px] rounded-[14px] font-[ABCGaisyr] font-bold text-[24px] leading-[90%] italic flex items-center justify-center ${
-                                    isWinning
-                                      ? "!text-[#00A151]/40 !bg-[#00A151]/15"
-                                      : "!text-[#000]/15 !bg-[#000]/10"
-                                  }`}
+                                  className={`w-[77px] h-[77px] rounded-[14px] font-[ABCGaisyr] font-bold text-[24px] leading-[90%] italic flex items-center justify-center ${isWinning
+                                    ? "!text-[#00A151]/40 !bg-[#00A151]/15"
+                                    : "!text-[#000]/15 !bg-[#000]/10"
+                                    }`}
                                   style={{
                                     filter:
                                       "drop-shadow(0px 0.5px 0.5px rgba(0, 0, 0, 0.15))",
@@ -823,9 +805,8 @@ const ScratchOff = ({
                                     <div className="relative">
                                       <Image
                                         src={cell.friend_pfp}
-                                        alt={`${
-                                          cell.friend_username || "Friend"
-                                        }`}
+                                        alt={`${cell.friend_username || "Friend"
+                                          }`}
                                         width={48}
                                         height={48}
                                         className="rounded-full object-cover"
@@ -920,9 +901,9 @@ const ScratchOff = ({
                 className="filter brightness-0 invert"
               />
             </button>
-            {state.getWinnerGif?.() ? (
+            {getWinnerGif?.() ? (
               <img
-                src={state.getWinnerGif()?.src || "/assets/winner.gif"}
+                src={getWinnerGif()?.src || "/assets/winner.gif"}
                 alt="winner"
                 className="absolute inset-0 w-full h-full object-cover"
               />
@@ -955,7 +936,7 @@ const ScratchOff = ({
             </p>
             <motion.div className="flex items-center justify-center gap-2">
               <motion.p className="text-white text-[16px] font-medium leading-[90%]">
-                Level {state.user?.current_level || 1}
+                Level {user?.current_level || 1}
               </motion.p>
               <motion.div
                 className="bg-white/20 rounded-full"
@@ -969,17 +950,17 @@ const ScratchOff = ({
                 transition={{ delay: 0.8, duration: 0.6, ease: "easeOut" }}
               >
                 <CircularProgress
-                  revealsToNextLevel={state.user?.reveals_to_next_level || 25}
+                  revealsToNextLevel={user?.reveals_to_next_level || 25}
                   totalRevealsForLevel={getLevelRequirement(
-                    (state.user?.current_level || 1) + 1
+                    (user?.current_level || 1) + 1
                   )}
                 />
               </motion.div>
 
               <motion.p className="text-white text-[14px] font-medium leading-[90%] text-center">
-                {state.user?.reveals_to_next_level || 25} win
-                {state.user?.reveals_to_next_level !== 1 ? "s" : ""} away from
-                level {(state.user?.current_level || 1) + 1}
+                {user?.reveals_to_next_level || 25} win
+                {user?.reveals_to_next_level !== 1 ? "s" : ""} away from
+                level {(user?.current_level || 1) + 1}
               </motion.p>
             </motion.div>
             <div className="absolute w-[90%] bottom-[36px] flex flex-col items-center justify-center gap-4">
@@ -1047,11 +1028,10 @@ const ScratchOff = ({
                     </button>
                     <button
                       onClick={handleLinkCopy}
-                      className={`rounded-full border border-[#fff]/[0.02] w-[64px] h-[64px] flex items-center justify-center transition-all duration-200 ${
-                        linkCopied
-                          ? `bg-[${APP_COLORS.WON}]/[0.2] border-[${APP_COLORS.WON}]/[0.5]`
-                          : "bg-[#fff]/[0.08] hover:bg-[#fff]/[0.15]"
-                      }`}
+                      className={`rounded-full border border-[#fff]/[0.02] w-[64px] h-[64px] flex items-center justify-center transition-all duration-200 ${linkCopied
+                        ? `bg-[${APP_COLORS.WON}]/[0.2] border-[${APP_COLORS.WON}]/[0.5]`
+                        : "bg-[#fff]/[0.08] hover:bg-[#fff]/[0.15]"
+                        }`}
                     >
                       {linkCopied ? (
                         <svg
@@ -1092,11 +1072,11 @@ const ScratchOff = ({
                     Next Card
                   </button>
                 </div>
-              ) : state.buyCards && !hasNext ? (
+              ) : buyCards && !hasNext ? (
                 <div className="w-full p-1 rounded-[40px] border border-white">
                   <button
                     onClick={() => {
-                      state.buyCards?.();
+                      buyCards?.();
                       setShowBlurOrverlay(false);
                     }}
                     className="w-full py-2 bg-white/80 rounded-[40px] font-semibold text-[14px] hover:bg-white h-11 transition-colors"

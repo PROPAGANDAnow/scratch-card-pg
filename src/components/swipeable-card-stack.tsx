@@ -1,40 +1,141 @@
 "use client";
-import { useState, useEffect, useRef, useContext, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card } from "~/app/interface/card";
 import ScratchOff from "./scratch-off";
 import Image from "next/image";
 import { CANVAS_HEIGHT, CANVAS_WIDTH } from "~/lib/constants";
-import { AppContext } from "~/app/context";
-import { SET_CURRENT_CARD_INDEX, SET_NEXT_CARD } from "~/app/context/actions";
+import { useUIStore } from "~/stores/ui-store";
+import { useCardStore } from "~/stores/card-store";
 
 interface SwipeableCardStackProps {
-  cards: Card[];
+  userWallet: string;
+  tokenIds: number[];
   initialIndex?: number;
 }
 
 export default function SwipeableCardStack({
-  cards,
+  userWallet,
+  tokenIds,
   initialIndex = 0,
 }: SwipeableCardStackProps) {
-  const [, dispatch] = useContext(AppContext);
+  const setNextCardFn = useUIStore((s) => s.setNextCard);
+  const setCurrentCardIndex = useCardStore((s) => s.setCurrentCardIndex);
+  const [cards, setCards] = useState<Card[]>([]);
+  const [loading, setLoading] = useState(true);
   const [currentCardNo, setCurrentCardNo] = useState<number | null>(null);
   const [direction, setDirection] = useState<1 | -1>(1);
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
   const cardRef = useRef<HTMLDivElement>(null);
 
+  // Fetch or create cards for tokenIds
+  useEffect(() => {
+    const fetchCards = async () => {
+      if (!userWallet) {
+        console.error('No userWallet provided');
+        setLoading(false);
+        return;
+      }
+
+      setLoading(true);
+      const fetchedCards: Card[] = [];
+
+      try {
+        // First, check which cards already exist
+        const existingCardsResponse = await fetch(`/api/cards/batch-check?tokenIds=${tokenIds.join(',')}&userWallet=${userWallet}`);
+        
+        if (existingCardsResponse.ok) {
+          const existingData = await existingCardsResponse.json();
+          const existingTokenIds = new Set(existingData.existingCards.map((card: Card) => card.token_id));
+          
+          // Add existing cards to fetchedCards
+          fetchedCards.push(...existingData.existingCards);
+          
+          // Find tokenIds that need to be created
+          const tokenIdsToCreate = tokenIds.filter(tokenId => !existingTokenIds.has(tokenId));
+          
+          if (tokenIdsToCreate.length > 0) {
+            // Create missing cards in batch
+            const createResponse = await fetch('/api/cards/buy', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ 
+                tokenIds: tokenIdsToCreate, 
+                userWallet, 
+                friends: [] 
+              }),
+            });
+            
+            if (createResponse.ok) {
+              const createData = await createResponse.json();
+              fetchedCards.push(...createData.cards);
+            } else {
+              const errorData = await createResponse.json().catch(() => ({}));
+              console.error(`Failed to create cards:`, errorData.error || createResponse.statusText);
+            }
+          }
+        } else {
+          // Fallback to individual card creation if batch check fails
+          for (const tokenId of tokenIds) {
+            try {
+              const response = await fetch(`/api/cards/${tokenId}`);
+              if (response.ok) {
+                const data = await response.json();
+                fetchedCards.push(data.card);
+              } else if (response.status === 404) {
+                const createResponse = await fetch('/api/cards/buy', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ 
+                    tokenIds: [tokenId], 
+                    userWallet, 
+                    friends: [] 
+                  }),
+                });
+                if (createResponse.ok) {
+                  const createData = await createResponse.json();
+                  fetchedCards.push(...createData.cards);
+                } else {
+                  const errorData = await createResponse.json().catch(() => ({}));
+                  console.error(`Failed to create card for tokenId ${tokenId}:`, errorData.error || createResponse.statusText);
+                }
+              } else {
+                console.error(`Failed to fetch card for tokenId ${tokenId}: ${response.statusText}`);
+              }
+            } catch (error) {
+              console.error(`Error fetching/creating card for tokenId ${tokenId}:`, error);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error in batch card fetching:', error);
+      }
+
+      // Sort cards by token_id to maintain order
+      fetchedCards.sort((a, b) => a.token_id - b.token_id);
+      setCards(fetchedCards);
+      setLoading(false);
+    };
+
+    if (userWallet && tokenIds.length > 0) {
+      fetchCards();
+    } else {
+      setLoading(false);
+    }
+  }, [userWallet, tokenIds]);
+
   // Initialize current card number
   useEffect(() => {
     if (cards.length > 0 && !currentCardNo) {
       const initialCard = cards[initialIndex] || cards[0];
-      setCurrentCardNo(initialCard.card_no);
+      setCurrentCardNo(initialCard.token_id);
     }
   }, [cards, initialIndex, currentCardNo]);
 
   // Find current card and index
-  const current = cards.find((card) => card.card_no === currentCardNo);
+  const current = cards.find((card) => card.token_id === currentCardNo);
   const currentIndex = current
-    ? cards.findIndex((card) => card.card_no === currentCardNo)
+    ? cards.findIndex((card) => card.token_id === currentCardNo)
     : -1;
 
   const canGoPrev = currentIndex > 0;
@@ -46,13 +147,13 @@ export default function SwipeableCardStack({
       if (canGoNext) {
         setDirection(1);
         const nextCard = cards[currentIndex + 1];
-        if (nextCard) setCurrentCardNo(nextCard.card_no);
+        if (nextCard) setCurrentCardNo(nextCard.token_id);
       }
     };
 
-    dispatch({ type: SET_NEXT_CARD, payload: nextCardFunction });
-    dispatch({ type: SET_CURRENT_CARD_INDEX, payload: currentIndex });
-  }, [canGoNext, currentIndex, cards, dispatch]);
+    setNextCardFn(nextCardFunction);
+    setCurrentCardIndex(currentIndex);
+  }, [canGoNext, currentIndex, cards, setNextCardFn, setCurrentCardIndex]);
 
   // Mouse handlers for card tilt - memoized for performance
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
@@ -78,7 +179,7 @@ export default function SwipeableCardStack({
     if (canGoPrev) {
       setDirection(-1);
       const prevCard = cards[currentIndex - 1];
-      if (prevCard) setCurrentCardNo(prevCard.card_no);
+      if (prevCard) setCurrentCardNo(prevCard.token_id);
     }
   }, [canGoPrev, currentIndex, cards]);
 
@@ -87,7 +188,7 @@ export default function SwipeableCardStack({
     if (canGoNext) {
       setDirection(1);
       const nextCard = cards[currentIndex + 1];
-      if (nextCard) setCurrentCardNo(nextCard.card_no);
+      if (nextCard) setCurrentCardNo(nextCard.token_id);
     }
   }, [canGoNext, currentIndex, cards]);
 
@@ -95,7 +196,7 @@ export default function SwipeableCardStack({
     if (canGoNext) {
       setDirection(1);
       const nextCard = cards[currentIndex + 1];
-      if (nextCard) setCurrentCardNo(nextCard.card_no);
+      if (nextCard) setCurrentCardNo(nextCard.token_id);
     }
   }, [canGoNext, currentIndex, cards]);
 
@@ -117,7 +218,7 @@ export default function SwipeableCardStack({
               animate={{ opacity: 0.18, scale: 0.7, x: -72, y: 0 }}
               exit={{ opacity: 0, scale: 0.7, x: -72, y: 0 }}
               transition={{ duration: 0.1 }}
-              style={{ 
+              style={{
                 zIndex: 1,
                 willChange: 'transform, opacity',
                 transform: 'translateZ(0)' // Force GPU acceleration
@@ -134,7 +235,7 @@ export default function SwipeableCardStack({
               animate={{ opacity: 0.18, scale: 0.7, x: 72, y: 0 }}
               exit={{ opacity: 0, scale: 0.7, x: 72, y: 0 }}
               transition={{ duration: 0.1 }}
-              style={{ 
+              style={{
                 zIndex: 1,
                 willChange: 'transform, opacity',
                 transform: 'translateZ(0)' // Force GPU acceleration
@@ -184,7 +285,11 @@ export default function SwipeableCardStack({
 
             {/* Center 60% for scratching */}
             <div className="w-full h-[auto]">
-              {cards.length ? (
+              {loading ? (
+                <div className="flex items-center justify-center h-full">
+                  <div className="text-white">Loading cards...</div>
+                </div>
+              ) : cards.length ? (
                 <ScratchOff
                   cardData={current || null}
                   isDetailView

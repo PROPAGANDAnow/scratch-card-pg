@@ -1,13 +1,10 @@
-export interface Reveal {
-  id: string;
-  card_id: string;
-  user_wallet: string;
-  prize_amount: number;
-  created_at: string;
-  updated_at: string;
-  username: string;
-  pfp: string;
-  payment_tx: string;
-  payout_tx: string | null;
-  won: boolean;
+import { Card } from "./card";
+
+// Activity data is Card objects with user data flattened
+export interface Reveal extends Card {
+  // User properties flattened
+  fid?: number;
+  username?: string;
+  pfp?: string;
+  updated_at?: Date; // For time ago formatting
 }

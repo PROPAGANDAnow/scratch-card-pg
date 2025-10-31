@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabaseAdmin } from "~/lib/supabaseAdmin";
+import { prisma } from "~/lib/prisma";
 import { getRevealsToNextLevel } from "~/lib/level";
+import { withDatabaseRetry } from "~/lib/db-utils";
 import axios from "axios";
 
 export async function POST(request: NextRequest) {
@@ -22,14 +23,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if user exists
-    const { data: existingUser } = await supabaseAdmin
-      .from("users")
-      .select("wallet, fid, username")
-      .eq("wallet", userWallet)
-      .single();
+    const existingUser = await withDatabaseRetry(() => 
+      prisma.user.findUnique({
+        where: { wallet: userWallet },
+        select: { wallet: true, fid: true, username: true }
+      })
+    );
 
     if (!existingUser) {
-
       const data = await axios.get(`https://api.neynar.com/v2/farcaster/user/bulk/?fids=${fid}`,
         {
           headers: {
@@ -40,31 +41,21 @@ export async function POST(request: NextRequest) {
       const isPro = user?.pro?.status === "subscribed" || false;
 
       // Create new user
-      const { data: newUser, error } = await supabaseAdmin
-        .from("users")
-        .insert({
-          wallet: userWallet,
-          fid,
-          username,
-          pfp: pfp,
-          created_at: new Date().toISOString(),
-          amount_won: 0,
-          cards_count: 0,
-          last_active: new Date().toISOString(),
-          current_level: 1,
-          reveals_to_next_level: getRevealsToNextLevel(1),
-          is_pro: isPro
+      const newUser = await withDatabaseRetry(() => 
+        prisma.user.create({
+          data: {
+            wallet: userWallet,
+            fid,
+            username,
+            pfp: pfp,
+            amount_won: 0,
+            cards_count: 0,
+            current_level: 1,
+            reveals_to_next_level: getRevealsToNextLevel(1),
+            is_pro: isPro
+          }
         })
-        .select()
-        .single();
-
-      if (error) {
-        console.error("Error creating user:", error);
-        return NextResponse.json(
-          { error: "Failed to create user" },
-          { status: 500 }
-        );
-      }
+      );
 
       console.log("New user created:", newUser);
       return NextResponse.json({
@@ -74,8 +65,11 @@ export async function POST(request: NextRequest) {
       });
     } else {
       // Update last_active for existing user, and add fid/username if missing
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const updateData: any = { last_active: new Date().toISOString() };
+      const updateData: {
+        last_active: Date;
+        fid?: number;
+        username?: string;
+      } = { last_active: new Date() };
 
       // Add fid if provided and user doesn't have it
       if (fid && !existingUser.fid) {
@@ -87,12 +81,12 @@ export async function POST(request: NextRequest) {
         updateData.username = username;
       }
 
-      const { data: updatedUser } = await supabaseAdmin
-        .from("users")
-        .update(updateData)
-        .eq("wallet", userWallet)
-        .select()
-        .single();
+      const updatedUser = await withDatabaseRetry(() => 
+        prisma.user.update({
+          where: { wallet: userWallet },
+          data: updateData
+        })
+      );
 
       return NextResponse.json({
         success: true,
@@ -102,6 +96,15 @@ export async function POST(request: NextRequest) {
     }
   } catch (error) {
     console.error("Error in check-or-create user:", error);
+    
+    // Handle specific database connection errors
+    if (error instanceof Error && error.message.includes('Can\'t reach database server')) {
+      return NextResponse.json(
+        { error: "Database temporarily unavailable, please try again" },
+        { status: 503 }
+      );
+    }
+    
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

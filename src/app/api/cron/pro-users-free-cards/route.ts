@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabaseAdmin } from "~/lib/supabaseAdmin";
+import { prisma } from "~/lib/prisma";
 import { drawPrize } from "~/lib/drawPrize";
 import { generateNumbers } from "~/lib/generateNumbers";
 import { PRIZE_ASSETS, USDC_ADDRESS } from "~/lib/constants";
+import { Prisma } from "@prisma/client";
 
 const BATCH_SIZE = 50; // Process 50 users at a time to avoid timeouts
 
@@ -31,21 +32,19 @@ export async function GET(request: NextRequest) {
 
     while (hasMore) {
       // Fetch batch of pro users
-      const { data: proUsers, error: fetchError } = await supabaseAdmin
-        .from('users')
-        .select('wallet, username, pfp, fid, cards_count')
-        .eq('is_pro', true)
-        .not('wallet', 'is', null) // Ensure wallet is not null
-        .range(offset, offset + BATCH_SIZE - 1)
-        .order('created_at', { ascending: true });
-
-      if (fetchError) {
-        console.error('❌ Error fetching pro users:', fetchError);
-        return NextResponse.json(
-          { error: 'Failed to fetch pro users', details: fetchError.message },
-          { status: 500 }
-        );
-      }
+      const proUsers = await prisma.user.findMany({
+        where: { is_pro: true },
+        select: {
+          wallet: true,
+          username: true,
+          pfp: true,
+          fid: true,
+          cards_count: true
+        },
+        skip: offset,
+        take: BATCH_SIZE,
+        orderBy: { created_at: 'asc' }
+      });
 
       if (!proUsers || proUsers.length === 0) {
         hasMore = false;
@@ -84,48 +83,38 @@ export async function GET(request: NextRequest) {
             continue;
           }
 
-          // Create the free card
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          const { data: newCard, error: createError } = await supabaseAdmin
-            .from('cards')
-            .insert({
-              user_wallet: user.wallet,
-              payment_tx: "FREE_CARD_PRO_USER",
-              prize_amount: prize,
-              prize_asset_contract: prizeAsset,
-              numbers_json: numbers,
-              scratched: false,
-              claimed: false,
-              created_at: new Date().toISOString(),
-              card_no: (user.cards_count || 0) + 1,
-              shared_to: null,
-              shared_from: null,
-            })
-            .select()
-            .single();
+           // Create the free card
+           try {
+             const cardData: Prisma.CardUncheckedCreateInput = {
+               user_wallet: user.wallet,
+               payment_tx: "FREE_CARD_PRO_USER",
+               prize_amount: prize,
+               prize_asset_contract: prizeAsset,
+               numbers_json: numbers as Prisma.InputJsonValue,
+               token_id: (user.cards_count || 0) + 1,
+               contract_address: "0x0000000000000000000000000000000000000000", // Placeholder for free cards
+               prize_won: prize > 0,
+             };
 
-          if (createError) {
+             await prisma.card.create({
+               data: cardData
+             });
+
+            // Update user's cards_count
+            await prisma.user.update({
+              where: { wallet: user.wallet },
+              data: {
+                cards_count: { increment: 1 },
+                last_active: new Date()
+              }
+            });
+
+            console.log(`✅ Created free card for pro user: ${user.username || 'Unknown'} (${user.wallet})`);
+            totalProcessed++;
+          } catch (createError) {
             console.error(`❌ Error creating card for user ${user.wallet}:`, createError);
             totalErrors++;
             continue;
-          }
-
-          // Update user's cards_count
-          const { error: updateError } = await supabaseAdmin
-            .from('users')
-            .update({ 
-              cards_count: (user.cards_count || 0) + 1,
-              last_active: new Date().toISOString()
-            })
-            .eq('wallet', user.wallet);
-
-          if (updateError) {
-            console.error(`❌ Error updating cards_count for user ${user.wallet}:`, updateError);
-            totalErrors++;
-            // Don't increment totalProcessed if user update failed
-          } else {
-            console.log(`✅ Created free card for pro user: ${user.username || 'Unknown'} (${user.wallet})`);
-            totalProcessed++;
           }
 
         } catch (error) {
@@ -146,28 +135,23 @@ export async function GET(request: NextRequest) {
 
     // Update app stats - increment cards count (only if we processed any cards)
     if (totalProcessed > 0) {
-      const { data: currentStats, error: fetchStatsError } = await supabaseAdmin
-        .from('stats')
-        .select('cards')
-        .eq('id', 1)
-        .single();
-
-      if (!fetchStatsError && currentStats) {
-        const { error: statsError } = await supabaseAdmin
-          .from('stats')
-          .update({ 
-            cards: (currentStats.cards || 0) + totalProcessed,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', 1);
-
-        if (statsError) {
-          console.error('❌ Error updating app stats:', statsError);
-        } else {
-          console.log(`📊 Updated app stats: +${totalProcessed} cards`);
-        }
-      } else if (fetchStatsError) {
-        console.error('❌ Error fetching current stats:', fetchStatsError);
+      try {
+        await prisma.stats.upsert({
+          where: { id: 1 },
+          update: {
+            cards: { increment: totalProcessed },
+            updated_at: new Date()
+          },
+          create: {
+            id: 1,
+            cards: totalProcessed,
+            reveals: 0,
+            winnings: 0
+          }
+        });
+        console.log(`📊 Updated app stats: +${totalProcessed} cards`);
+      } catch (statsError) {
+        console.error('❌ Error updating app stats:', statsError);
       }
     }
 
