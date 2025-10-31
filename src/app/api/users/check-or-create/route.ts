@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "~/lib/prisma";
 import { getRevealsToNextLevel } from "~/lib/level";
+import { withDatabaseRetry } from "~/lib/db-utils";
 import axios from "axios";
 
 export async function POST(request: NextRequest) {
@@ -22,10 +23,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if user exists
-    const existingUser = await prisma.user.findUnique({
-      where: { wallet: userWallet },
-      select: { wallet: true, fid: true, username: true }
-    });
+    const existingUser = await withDatabaseRetry(() => 
+      prisma.user.findUnique({
+        where: { wallet: userWallet },
+        select: { wallet: true, fid: true, username: true }
+      })
+    );
 
     if (!existingUser) {
       const data = await axios.get(`https://api.neynar.com/v2/farcaster/user/bulk/?fids=${fid}`,
@@ -38,19 +41,21 @@ export async function POST(request: NextRequest) {
       const isPro = user?.pro?.status === "subscribed" || false;
 
       // Create new user
-      const newUser = await prisma.user.create({
-        data: {
-          wallet: userWallet,
-          fid,
-          username,
-          pfp: pfp,
-          amount_won: 0,
-          cards_count: 0,
-          current_level: 1,
-          reveals_to_next_level: getRevealsToNextLevel(1),
-          is_pro: isPro
-        }
-      });
+      const newUser = await withDatabaseRetry(() => 
+        prisma.user.create({
+          data: {
+            wallet: userWallet,
+            fid,
+            username,
+            pfp: pfp,
+            amount_won: 0,
+            cards_count: 0,
+            current_level: 1,
+            reveals_to_next_level: getRevealsToNextLevel(1),
+            is_pro: isPro
+          }
+        })
+      );
 
       console.log("New user created:", newUser);
       return NextResponse.json({
@@ -76,10 +81,12 @@ export async function POST(request: NextRequest) {
         updateData.username = username;
       }
 
-      const updatedUser = await prisma.user.update({
-        where: { wallet: userWallet },
-        data: updateData
-      });
+      const updatedUser = await withDatabaseRetry(() => 
+        prisma.user.update({
+          where: { wallet: userWallet },
+          data: updateData
+        })
+      );
 
       return NextResponse.json({
         success: true,
@@ -89,6 +96,15 @@ export async function POST(request: NextRequest) {
     }
   } catch (error) {
     console.error("Error in check-or-create user:", error);
+    
+    // Handle specific database connection errors
+    if (error instanceof Error && error.message.includes('Can\'t reach database server')) {
+      return NextResponse.json(
+        { error: "Database temporarily unavailable, please try again" },
+        { status: 503 }
+      );
+    }
+    
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

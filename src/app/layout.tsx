@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 
 import "~/app/globals.css";
 import { Providers } from "~/app/providers";
@@ -19,7 +19,6 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Scratch Off",
   description: "Scratch to win big!",
-  viewport: "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover",
   icons: {
     icon: [
       {
@@ -45,6 +44,14 @@ export const metadata: Metadata = {
       },
     }),
   },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: "cover",
 };
 
 export default async function RootLayout({
