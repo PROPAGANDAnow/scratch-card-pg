@@ -1,12 +1,12 @@
 "use client";
-import { useState, useEffect, useRef, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Card } from "~/app/interface/card";
-import ScratchOff from "./scratch-off";
+import { AnimatePresence, motion } from "framer-motion";
 import Image from "next/image";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Card } from "~/app/interface/card";
 import { CANVAS_HEIGHT, CANVAS_WIDTH } from "~/lib/constants";
-import { useUIStore } from "~/stores/ui-store";
 import { useCardStore } from "~/stores/card-store";
+import { useUIStore } from "~/stores/ui-store";
+import NftScratchOff from "./nft-scratch-off";
 
 interface SwipeableCardStackProps {
   userWallet: string;
@@ -43,29 +43,29 @@ export default function SwipeableCardStack({
       try {
         // First, check which cards already exist
         const existingCardsResponse = await fetch(`/api/cards/batch-check?tokenIds=${tokenIds.join(',')}&userWallet=${userWallet}`);
-        
+
         if (existingCardsResponse.ok) {
           const existingData = await existingCardsResponse.json();
           const existingTokenIds = new Set(existingData.existingCards.map((card: Card) => card.token_id));
-          
+
           // Add existing cards to fetchedCards
           fetchedCards.push(...existingData.existingCards);
-          
+
           // Find tokenIds that need to be created
           const tokenIdsToCreate = tokenIds.filter(tokenId => !existingTokenIds.has(tokenId));
-          
+
           if (tokenIdsToCreate.length > 0) {
             // Create missing cards in batch
             const createResponse = await fetch('/api/cards/buy', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ 
-                tokenIds: tokenIdsToCreate, 
-                userWallet, 
-                friends: [] 
+              body: JSON.stringify({
+                tokenIds: tokenIdsToCreate,
+                userWallet,
+                friends: []
               }),
             });
-            
+
             if (createResponse.ok) {
               const createData = await createResponse.json();
               fetchedCards.push(...createData.cards);
@@ -86,10 +86,10 @@ export default function SwipeableCardStack({
                 const createResponse = await fetch('/api/cards/buy', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ 
-                    tokenIds: [tokenId], 
-                    userWallet, 
-                    friends: [] 
+                  body: JSON.stringify({
+                    tokenIds: [tokenId],
+                    userWallet,
+                    friends: []
                   }),
                 });
                 if (createResponse.ok) {
@@ -200,6 +200,19 @@ export default function SwipeableCardStack({
     }
   }, [canGoNext, currentIndex, cards]);
 
+  // Handle prize revealed
+  const handlePrizeRevealed = useCallback((tokenId: number, prizeAmount: number) => {
+    console.log('Prize revealed:', prizeAmount);
+    // Update card state in context
+    const updatedCards = cards.map((card: Card) =>
+      card.token_id === tokenId
+        ? { ...card, scratched: true, prize_amount: prizeAmount }
+        : card
+    );
+
+    setCards(updatedCards);
+  }, []);
+
   // Ensure currentIndex is within bounds
   const safeIndex = Math.max(0, Math.min(currentIndex, cards.length - 1));
   const prev = canGoPrev ? cards[safeIndex - 1] : null;
@@ -224,7 +237,14 @@ export default function SwipeableCardStack({
                 transform: 'translateZ(0)' // Force GPU acceleration
               }}
             >
-              <ScratchOff cardData={prev} isDetailView />
+              <NftScratchOff
+                cardData={prev}
+                isDetailView
+                tokenId={parseInt(prev.id)}
+                onPrizeRevealed={handlePrizeRevealed}
+                hasNext={canGoNext}
+              // onNext={handleNextCard}
+              />
             </motion.div>
           ) : null}
           {next ? (
@@ -241,7 +261,14 @@ export default function SwipeableCardStack({
                 transform: 'translateZ(0)' // Force GPU acceleration
               }}
             >
-              <ScratchOff cardData={next} isDetailView />
+              <NftScratchOff
+                cardData={next}
+                isDetailView
+                tokenId={parseInt(next.id)}
+                onPrizeRevealed={handlePrizeRevealed}
+              // hasNext={canGoNext}
+              // onNext={handleNextCard}
+              />
             </motion.div>
           ) : null}
         </div>
@@ -290,7 +317,7 @@ export default function SwipeableCardStack({
                   <div className="text-white">Loading cards...</div>
                 </div>
               ) : cards.length ? (
-                <ScratchOff
+                <NftScratchOff
                   cardData={current || null}
                   isDetailView
                   hasNext={canGoNext}

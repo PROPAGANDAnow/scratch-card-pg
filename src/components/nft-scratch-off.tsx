@@ -49,7 +49,7 @@ interface NftScratchOffProps {
   cardData: Card | null;
   tokenId?: number;
   isDetailView?: boolean;
-  onPrizeRevealed?: (prizeAmount: number) => void;
+  onPrizeRevealed?: (tokenId: number, prizeAmount: number) => void;
   hasNext?: boolean;
   onNext?: () => void;
 }
@@ -248,7 +248,10 @@ const NftScratchOff = ({
     // no-op batching retained; state updates handled elsewhere
     batchUpdate([]);
     setScratched(true);
-    onPrizeRevealed?.(prizeAmount);
+
+    if (tokenId && onPrizeRevealed) {
+      onPrizeRevealed(tokenId, prizeAmount);
+    }
 
     // Handle UI updates
     if (prizeAmount > 0 || prizeAmount === -1) {
