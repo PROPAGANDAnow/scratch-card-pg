@@ -1,13 +1,30 @@
 "use client";
-import { useContext, useEffect } from "react";
+import { useContext, useEffect, useMemo } from "react";
 import { AppContext } from "./context";
 import SwipeableCardStack from "~/components/swipeable-card-stack";
 import { SET_LOCAL_CARDS, SET_SWIPABLE_MODE } from "./context/actions";
 import { useContractStats } from "~/hooks";
+import { useUserTokens } from "~/hooks";
+import type { Token } from "~/hooks/useUserTokens";
+
+// Derive unclaimed token IDs (number[]) from subgraph tokens
+// Reference: docs/guides/FRONTEND_SUBGRAPH_INTEGRATION.md
+function extractUnclaimedTokenIds(cards: Token[] = []): number[] {
+  return cards
+    .map((token) => {
+      const idAsNumber = Number(token.id);
+      return Number.isFinite(idAsNumber) ? idAsNumber : null;
+    })
+    .filter((n): n is number => n !== null);
+}
 
 export default function Home() {
   const [state, dispatch] = useContext(AppContext);
   const { isPaused, formattedStats } = useContractStats();
+  const { availableCards } = useUserTokens();
+
+  // Stable list of unclaimed token IDs from subgraph to prevent refetch loops
+  const tokenIds = useMemo(() => extractUnclaimedTokenIds(availableCards), [availableCards]);
 
   useEffect(() => {
     dispatch({ type: SET_SWIPABLE_MODE, payload: true });
@@ -76,7 +93,7 @@ export default function Home() {
 
   return (
     <>
-      <SwipeableCardStack userWallet={state.user?.wallet || ''} tokenIds={[1, 2, 3]} />
+      <SwipeableCardStack userWallet={state.user?.wallet || ''} tokenIds={tokenIds} />
     </>
   );
 }
