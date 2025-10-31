@@ -19,7 +19,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { tokenId, userWallet, friends } = validation.data;
+    const { tokenId, userWallet, friends = [] } = validation.data;
+
+    // Ensure user exists (avoid FK constraint on card.user_wallet)
+    try {
+      await prisma.user.upsert({
+        where: { wallet: userWallet },
+        update: { last_active: new Date() },
+        create: { wallet: userWallet },
+      });
+    } catch (userEnsureError) {
+      console.error('Error ensuring user exists:', userEnsureError);
+      return NextResponse.json(
+        { error: 'Unable to prepare user for card purchase' },
+        { status: 500 }
+      );
+    }
 
     // Check if card already exists for this tokenId
     const existingCard = await prisma.card.findUnique({
@@ -34,8 +49,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate prize and card data
-    const prize = drawPrize(friends && friends.length > 0); // e.g., 0 | 0.5 | 1 | 2 (check if friends available for free cards)
+    const prize = drawPrize(friends.length > 0); // e.g., 0 | 0.5 | 1 | 2 (check if friends available for free cards)
     // pick prize asset randomly (today pool contains USDC; add more later)
+    // const prizeAsset =
+    //   PRIZE_ASSETS[Math.floor(Math.random() * PRIZE_ASSETS.length)] || USDC_ADDRESS;
     const prizeAsset =
       PRIZE_ASSETS[Math.floor(Math.random() * PRIZE_ASSETS.length)] || USDC_ADDRESS;
     // build 12 cells (3x4) with one winning row if prize > 0
