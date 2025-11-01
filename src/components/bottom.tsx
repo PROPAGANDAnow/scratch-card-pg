@@ -1,6 +1,5 @@
 "use client";
 import { motion, AnimatePresence } from "framer-motion";
-import Image from "next/image";
 import { AppContext } from "~/app/context";
 import { FC, useContext, useEffect, useState } from "react";
 import { SET_CARDS, SET_BUY_CARDS } from "~/app/context/actions";
