@@ -4,11 +4,13 @@ import Image from "next/image";
 import { AppContext } from "~/app/context";
 import { FC, useContext, useEffect, useState } from "react";
 import { SET_CARDS, SET_BUY_CARDS } from "~/app/context/actions";
-import { encodeFunctionData, erc20Abi, parseUnits } from "viem";
+import { erc20Abi, parseUnits } from "viem";
+import { useWaitForTransactionReceipt, useWriteContract } from "wagmi";
 import { useMiniApp } from "@neynar/react";
-import sdk from "@farcaster/miniapp-sdk";
 import { USDC_ADDRESS } from "~/lib/constants";
 import { usePathname, useRouter } from "next/navigation";
+import { fetchUserCards } from "~/lib/userapis";
+import { X } from "lucide-react"
 
 const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
   mode = "normal",
@@ -19,10 +21,22 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
   const [numBuyCards, setNumBuyCards] = useState(5);
   const [unscratchedCardsCount, setUnscratchedCardsCount] = useState(0);
   const [buyingCards, setBuyingCards] = useState(false);
+  const [paymentStatus, setPaymentStatus] = useState<'idle' | 'sending' | 'confirming' | 'processing'>('idle');
+  const [pendingTx, setPendingTx] = useState<`0x${string}` | null>(null);
   const [showBuyModal, setShowBuyModal] = useState(false);
   const { haptics } = useMiniApp();
   const { push } = useRouter();
   const pathname = usePathname();
+
+  // Wagmi hooks for transaction management
+  const { writeContract } = useWriteContract();
+  const {
+    data: receipt,
+    isLoading: isConfirming,
+    error: receiptError
+  } = useWaitForTransactionReceipt({
+    hash: pendingTx || undefined,
+  });
 
   // Calculate unscratched cards count
   useEffect(() => {
@@ -31,43 +45,39 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
     }
   }, [state.unscratchedCards, mode]);
 
-  const buyCards = async (numberOfCards: number) => {
-    if (!state.publicKey) {
-      console.error("No wallet connected");
-      return;
-    }
-
-    try {
-      setBuyingCards(true);
-      const RECIPIENT_ADDRESS = process.env.NEXT_PUBLIC_ADMIN_WALLET_ADDRESS;
-
-      const data = encodeFunctionData({
-        abi: erc20Abi,
-        functionName: "transfer",
-        args: [
-          RECIPIENT_ADDRESS as `0x${string}`,
-          parseUnits(numberOfCards.toString(), 6),
-        ],
-      });
-
-      const provider = await sdk.wallet.getEthereumProvider();
-      const hash = await provider?.request({
-        method: "eth_sendTransaction",
-        params: [
-          {
-            to: USDC_ADDRESS,
-            data,
-            from: state.publicKey as `0x${string}`,
-          },
-        ],
-      });
-
-      if (!RECIPIENT_ADDRESS) {
-        console.error("Admin wallet address not configured");
-        return;
+  // Handle transaction confirmation
+  useEffect(() => {
+    if (receipt && pendingTx) {
+      if (receipt.status === 'success') {
+        // Transaction confirmed, now process with backend
+        processBackendPurchase(pendingTx);
+      } else {
+        // Transaction failed
+        console.error("Transaction failed:", receipt);
+        alert("Transaction failed. Please try again.");
+        setBuyingCards(false);
+        setPaymentStatus('idle');
+        setPendingTx(null);
       }
+    }
+  }, [receipt, pendingTx]);
 
-      // Send request to backend to create cards
+  // Handle receipt errors
+  useEffect(() => {
+    if (receiptError) {
+      console.error("Transaction receipt error:", receiptError);
+      alert(`Transaction verification failed: ${receiptError.message}`);
+      setBuyingCards(false);
+      setPaymentStatus('idle');
+      setPendingTx(null);
+    }
+  }, [receiptError]);
+
+  const processBackendPurchase = async (txHash: `0x${string}`) => {
+    try {
+      setPaymentStatus('processing');
+
+      // Send request to backend to create cards only after transaction is confirmed
       const backendResponse = await fetch("/api/cards/buy", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -76,8 +86,8 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
           userFid: state.user?.fid,
           pfp: state.user?.pfp,
           username: state.user?.username,
-          paymentTx: hash,
-          numberOfCards,
+          paymentTx: txHash,
+          numberOfCards: numBuyCards,
           friends: state.bestFriends,
         }),
       });
@@ -93,7 +103,6 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
       if (result.totalCardsCreated > 1) {
         setTimeout(async () => {
           try {
-            const { fetchUserCards } = await import("~/lib/userapis");
             const userCards = await fetchUserCards(state.publicKey);
             if (userCards) {
               dispatch({ type: SET_CARDS, payload: userCards });
@@ -108,14 +117,64 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
       haptics.notificationOccurred("success");
       setShowBuyModal(false);
     } catch (error) {
-      console.error("Error buying cards:", error);
+      console.error("Error processing backend purchase:", error);
       alert(
-        `Failed to buy cards: ${
-          error instanceof Error ? error.message : "Unknown error"
+        `Failed to create cards: ${error instanceof Error ? error.message : "Unknown error"
         }`
       );
     } finally {
       setBuyingCards(false);
+      setPaymentStatus('idle');
+      setPendingTx(null);
+    }
+  };
+
+  const buyCards = async (numberOfCards: number) => {
+    if (!state.publicKey) {
+      console.error("No wallet connected");
+      return;
+    }
+
+    const RECIPIENT_ADDRESS = process.env.NEXT_PUBLIC_ADMIN_WALLET_ADDRESS;
+
+    if (!RECIPIENT_ADDRESS) {
+      console.error("Admin wallet address not configured");
+      return;
+    }
+
+    try {
+      setBuyingCards(true);
+      setPaymentStatus('sending');
+
+      // Use wagmi's writeContract for the transaction
+      writeContract({
+        address: USDC_ADDRESS,
+        abi: erc20Abi,
+        functionName: 'transfer',
+        args: [
+          RECIPIENT_ADDRESS as `0x${string}`,
+          parseUnits(numberOfCards.toString(), 6),
+        ],
+      }, {
+        onSuccess: (hash) => {
+          setPendingTx(hash);
+          setPaymentStatus('confirming');
+        },
+        onError: (error) => {
+          console.error("Transaction error:", error);
+          alert(`Failed to send transaction: ${error.message}`);
+          setBuyingCards(false);
+          setPaymentStatus('idle');
+        },
+      });
+    } catch (error) {
+      console.error("Error buying cards:", error);
+      alert(
+        `Failed to buy cards: ${error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
+      setBuyingCards(false);
+      setPaymentStatus('idle');
     }
   };
 
@@ -180,8 +239,7 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
           >
             <p className="text-[14px] leading-[90%] font-medium text-[#fff]">
               {mode === "swipeable" ? (
-                `${unscratchedCardsCount} card${
-                  unscratchedCardsCount !== 1 ? "s" : ""
+                `${unscratchedCardsCount} card${unscratchedCardsCount !== 1 ? "s" : ""
                 } left`
               ) : (
                 <>
@@ -341,14 +399,7 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
                     buyingCards ? undefined : () => setShowBuyModal(false)
                   }
                 >
-                  <Image
-                    src={"/assets/cross-icon.svg"}
-                    alt="cross-icon"
-                    width={18}
-                    height={18}
-                    unoptimized
-                    priority
-                  />
+                  <X className="h-4 w-4" />
                 </button>
               </div>
               <div className="flex flex-col gap-2 w-full">
@@ -373,21 +424,19 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
                   {[5, 10, 20].map((amount) => (
                     <button
                       key={amount}
-                      className={`py-[14px] px-[18px] rounded-[46px] transition-colors ${
-                        numBuyCards === amount
-                          ? "bg-white shadow-lg shadow-gray-600/50 hover:bg-white"
-                          : "bg-white/10 hover:bg-white/20"
-                      }`}
+                      className={`py-[14px] px-[18px] rounded-[46px] transition-colors ${numBuyCards === amount
+                        ? "bg-white shadow-lg shadow-gray-600/50 hover:bg-white"
+                        : "bg-white/10 hover:bg-white/20"
+                        }`}
                       onClick={() => {
                         setNumBuyCards(amount);
                       }}
                     >
                       <p
-                        className={`text-[15px] font-semibold font-mono leading-[100%] ${
-                          numBuyCards === amount
-                            ? "text-[#090909]"
-                            : "text-white"
-                        }`}
+                        className={`text-[15px] font-semibold font-mono leading-[100%] ${numBuyCards === amount
+                          ? "text-[#090909]"
+                          : "text-white"
+                          }`}
                       >
                         {amount}
                       </p>
@@ -422,10 +471,18 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
               <button
                 className="w-full h-[44px] text-black font-semibold text-[14px] leading-[90%] rounded-[40px] shadow-lg shadow-gray-600/50 bg-white disabled:bg-white/80 disabled:cursor-not-allowed"
                 onClick={() => buyCards(numBuyCards)}
-                disabled={buyingCards}
+                disabled={buyingCards || isConfirming}
               >
-                {buyingCards ? (
-                  <>Please wait...</>
+                {buyingCards || isConfirming ? (
+                  paymentStatus === 'sending' ? (
+                    <>Sending transaction...</>
+                  ) : paymentStatus === 'confirming' || isConfirming ? (
+                    <>Confirming transaction...</>
+                  ) : paymentStatus === 'processing' ? (
+                    <>Creating cards...</>
+                  ) : (
+                    <>Please wait...</>
+                  )
                 ) : (
                   <>Buy Card{numBuyCards > 1 ? "s" : ""}</>
                 )}

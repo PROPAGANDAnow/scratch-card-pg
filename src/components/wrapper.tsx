@@ -103,7 +103,6 @@ const Wrapper: FC<{ children: React.ReactNode }> = ({ children }) => {
     if (!state.publicKey) return;
 
     try {
-      const { fetchUserCards } = await import("~/lib/userapis");
       const userCards = await fetchUserCards(state.publicKey);
       if (userCards) {
         dispatch({ type: SET_CARDS, payload: userCards });

@@ -501,7 +501,6 @@ async function deployToVercel(useGitHub = false) {
     );
 
     // Use spawn instead of execSync for better error handling
-    const { spawn } = await import('child_process');
     const vercelSetup = spawn('vercel', [], {
       cwd: projectRoot,
       stdio: 'inherit',
@@ -791,7 +790,7 @@ async function main() {
 
     // Check if @vercel/sdk is installed
     try {
-      await import('@vercel/sdk');
+      require('@vercel/sdk');
     } catch (error) {
       console.log('📦 Installing @vercel/sdk...');
       execSync('npm install @vercel/sdk', {

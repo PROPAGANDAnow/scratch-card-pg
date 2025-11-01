@@ -38,7 +38,7 @@ export async function GET() {
       ogDescription: "Scratch to win big!",
       ogImageUrl: "https://scratch-card-pg.vercel.app/assets/splash-image.jpg",
       // use only while testing
-      noindex: false,
+      noindex: "false",
     }),
   });
 }
