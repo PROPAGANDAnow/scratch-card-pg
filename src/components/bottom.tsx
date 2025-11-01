@@ -1,15 +1,15 @@
 "use client";
-import { motion, AnimatePresence } from "framer-motion";
-import { AppContext } from "~/app/context";
+import { useMiniApp } from "@neynar/react";
+import { AnimatePresence, motion } from "framer-motion";
+import { X } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
 import { FC, useContext, useEffect, useState } from "react";
-import { SET_CARDS, SET_BUY_CARDS } from "~/app/context/actions";
 import { erc20Abi, parseUnits } from "viem";
 import { useWaitForTransactionReceipt, useWriteContract } from "wagmi";
-import { useMiniApp } from "@neynar/react";
+import { AppContext } from "~/app/context";
+import { SET_BUY_CARDS, SET_CARDS } from "~/app/context/actions";
 import { USDC_ADDRESS } from "~/lib/constants";
-import { usePathname, useRouter } from "next/navigation";
 import { fetchUserCards } from "~/lib/userapis";
-import { X } from "lucide-react"
 
 const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
   mode = "normal",
