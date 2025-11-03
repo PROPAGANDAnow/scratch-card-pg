@@ -11,9 +11,9 @@ import { Address, formatUnits } from 'viem';
 import {
   SCRATCH_CARD_NFT_ADDRESS,
   SCRATCH_CARD_NFT_ABI,
-  GAME_CONFIG
-} from '~/lib/contracts';
-import { AddressPatterns } from '~/lib/blockchain-addresses';
+  GAME_CONFIG,
+  AddressPatterns
+} from '~/lib/blockchain';
 import { useERC20Approval } from './useERC20Approval';
 
 /**

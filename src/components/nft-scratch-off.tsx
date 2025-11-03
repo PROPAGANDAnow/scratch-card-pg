@@ -42,7 +42,7 @@ import { useWallet } from "~/hooks/useWeb3Wallet";
 import {
   ClaimSignature,
   createClaimSignature
-} from "~/lib/contracts";
+} from "~/lib/blockchain";
 import ModalPortal from "~/components/ModalPortal";
 
 interface NftScratchOffProps {

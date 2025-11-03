@@ -8,7 +8,7 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useWriteContract, useWaitForTransactionReceipt, useReadContract, usePublicClient, useWalletClient } from 'wagmi';
 import { Address, formatUnits, maxUint256 } from 'viem';
-import { USDC_ADDRESS, USDC_ABI, SCRATCH_CARD_NFT_ADDRESS } from '~/lib/contracts';
+import { USDC_ADDRESS, USDC_ABI, SCRATCH_CARD_NFT_ADDRESS } from '~/lib/blockchain';
 
 /**
  * Approval transaction states

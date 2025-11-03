@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { SCRATCH_CARD_NFT_ADDRESS } from "~/lib/contracts";
+import { SCRATCH_CARD_NFT_ADDRESS } from "~/lib/blockchain";
 import { prisma } from "~/lib/prisma";
 
 export async function GET(request: NextRequest) {
@@ -48,6 +48,8 @@ export async function GET(request: NextRequest) {
     } catch (error) {
       console.error(error);
     }
+
+    const existingCards: any[] = []; // TODO: Implement actual NFT checking logic
 
     return NextResponse.json({
       success: true,

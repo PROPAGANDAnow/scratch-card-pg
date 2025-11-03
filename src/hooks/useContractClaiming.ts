@@ -8,14 +8,14 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useWriteContract, useWaitForTransactionReceipt, useReadContract } from 'wagmi';
 import { Address, hashMessage, recoverAddress } from 'viem';
-import { 
-  SCRATCH_CARD_NFT_ADDRESS, 
+import {
+  SCRATCH_CARD_NFT_ADDRESS,
   SCRATCH_CARD_NFT_ABI,
   SIGNER_ADDRESS,
   ClaimSignature,
-  validateClaimSignature
-} from '~/lib/contracts';
-import { AddressPatterns } from '~/lib/blockchain-addresses';
+  validateClaimSignature,
+  AddressPatterns
+} from '~/lib/blockchain';
 
 /**
  * Claiming transaction states
