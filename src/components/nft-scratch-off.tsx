@@ -33,7 +33,6 @@ import { useMiniApp } from "@neynar/react";
 import { Card, CardCell, SharedUser } from "~/app/interface/card";
 import { formatCell } from "~/lib/formatCell";
 import { chunk3, findWinningRow } from "~/lib/winningRow";
-import { getRevealsToNextLevel } from "~/lib/level";
 import { BestFriend } from "~/app/interface/bestFriends";
 import { useDebouncedScratchDetection } from "~/hooks/useDebouncedScratchDetection";
 import { useBatchedUpdates } from "~/hooks/useBatchedUpdates";

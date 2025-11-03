@@ -1,12 +1,15 @@
 "use client";
 import { AnimatePresence, motion } from "framer-motion";
 import Image from "next/image";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Card } from "~/app/interface/card";
 import { CANVAS_HEIGHT, CANVAS_WIDTH } from "~/lib/constants";
+import { SCRATCH_CARD_NFT_ADDRESS } from "~/lib/blockchain";
 import { useCardStore } from "~/stores/card-store";
 import { useUIStore } from "~/stores/ui-store";
 import NftScratchOff from "./nft-scratch-off";
+import { useUserNfts } from "~/hooks/useUserNfts";
+import { useQueryClient } from '@tanstack/react-query';
 
 interface SwipeableCardStackProps {
   userWallet: string;
@@ -21,108 +24,56 @@ export default function SwipeableCardStack({
 }: SwipeableCardStackProps) {
   const setNextCardFn = useUIStore((s) => s.setNextCard);
   const setCurrentCardIndex = useCardStore((s) => s.setCurrentCardIndex);
-  const [cards, setCards] = useState<Card[]>([]);
-  const [loading, setLoading] = useState(true);
   const [currentCardNo, setCurrentCardNo] = useState<number | null>(null);
   const [direction, setDirection] = useState<1 | -1>(1);
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
   const cardRef = useRef<HTMLDivElement>(null);
 
-  // Fetch or create cards for tokenIds
-  useEffect(() => {
-    const fetchCards = async () => {
-      if (!userWallet) {
-        console.error('No userWallet provided');
-        setLoading(false);
-        return;
-      }
+  // Fetch user's NFTs using TanStack Query
+  const { data: nftData, isLoading: nftLoading, error: nftError, refetch } = useUserNfts({
+    userWallet,
+    contractAddress: SCRATCH_CARD_NFT_ADDRESS,
+    enabled: !!userWallet,
+  });
 
-      setLoading(true);
-      const fetchedCards: Card[] = [];
+  // Import query client for invalidation
+  const queryClient = useQueryClient();
 
-      try {
-        // First, check which cards already exist
-        const existingCardsResponse = await fetch(`/api/cards/batch-check?tokenIds=${tokenIds.join(',')}&userWallet=${userWallet}`);
+  // Convert NFT data to Card format and filter by tokenIds if provided
+  const cards = useMemo(() => {
+    if (!nftData?.ownedNfts) return [];
 
-        if (existingCardsResponse.ok) {
-          const existingData = await existingCardsResponse.json();
-          const existingTokenIds = new Set(existingData.existingCards.map((card: Card) => card.token_id));
+    let ownedCards: Card[] = nftData.ownedNfts.map((nft) => ({
+      id: nft.tokenId,
+      token_id: parseInt(nft.tokenId),
+      user_wallet: userWallet,
+      payment_tx: '',
+      prize_amount: nft.prizeAmount || 0,
+      scratched_at: nft.scratchedAt ? new Date(nft.scratchedAt) : null,
+      prize_asset_contract: '',
+      numbers_json: [],
+      claimed: nft.claimed,
+      payout_tx: null,
+      created_at: nft.createdAt ? new Date(nft.createdAt) : new Date(),
+      scratched: nft.scratched,
+      prize_won: nft.prizeWon,
+      contract_address: nft.contract.address,
+      shared_to: null,
+      shared_from: null,
+    }));
 
-          // Add existing cards to fetchedCards
-          fetchedCards.push(...existingData.existingCards);
-
-          // Find tokenIds that need to be created
-          const tokenIdsToCreate = tokenIds.filter(tokenId => !existingTokenIds.has(tokenId));
-
-          if (tokenIdsToCreate.length > 0) {
-            // Create missing cards in batch
-            const createResponse = await fetch('/api/cards/buy', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                tokenIds: tokenIdsToCreate,
-                userWallet,
-                friends: []
-              }),
-            });
-
-            if (createResponse.ok) {
-              const createData = await createResponse.json();
-              fetchedCards.push(...createData.cards);
-            } else {
-              const errorData = await createResponse.json().catch(() => ({}));
-              console.error(`Failed to create cards:`, errorData.error || createResponse.statusText);
-            }
-          }
-        } else {
-          // Fallback to individual card creation if batch check fails
-          for (const tokenId of tokenIds) {
-            try {
-              const response = await fetch(`/api/cards/${tokenId}`);
-              if (response.ok) {
-                const data = await response.json();
-                fetchedCards.push(data.card);
-              } else if (response.status === 404) {
-                const createResponse = await fetch('/api/cards/buy', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    tokenIds: [tokenId],
-                    userWallet,
-                    friends: []
-                  }),
-                });
-                if (createResponse.ok) {
-                  const createData = await createResponse.json();
-                  fetchedCards.push(...createData.cards);
-                } else {
-                  const errorData = await createResponse.json().catch(() => ({}));
-                  console.error(`Failed to create card for tokenId ${tokenId}:`, errorData.error || createResponse.statusText);
-                }
-              } else {
-                console.error(`Failed to fetch card for tokenId ${tokenId}: ${response.statusText}`);
-              }
-            } catch (error) {
-              console.error(`Error fetching/creating card for tokenId ${tokenId}:`, error);
-            }
-          }
-        }
-      } catch (error) {
-        console.error('Error in batch card fetching:', error);
-      }
-
-      // Sort cards by token_id to maintain order
-      fetchedCards.sort((a, b) => a.token_id - b.token_id);
-      setCards(fetchedCards);
-      setLoading(false);
-    };
-
-    if (userWallet && tokenIds.length > 0) {
-      fetchCards();
-    } else {
-      setLoading(false);
+    // Filter by specific tokenIds if provided
+    if (tokenIds && tokenIds.length > 0) {
+      ownedCards = ownedCards.filter(card => tokenIds.includes(card.token_id));
     }
-  }, [userWallet, tokenIds]);
+
+    // Sort by token_id to maintain order
+    ownedCards.sort((a, b) => a.token_id - b.token_id);
+
+    return ownedCards;
+  }, [nftData, tokenIds, userWallet]);
+
+  const loading = nftLoading;
 
   // Initialize current card number
   useEffect(() => {
@@ -201,17 +152,13 @@ export default function SwipeableCardStack({
   }, [canGoNext, currentIndex, cards]);
 
   // Handle prize revealed
-  const handlePrizeRevealed = useCallback((tokenId: number, prizeAmount: number) => {
+  const handlePrizeRevealed = useCallback((_tokenId: number, prizeAmount: number) => {
     console.log('Prize revealed:', prizeAmount);
-    // Update card state in context
-    const updatedCards = cards.map((card: Card) =>
-      card.token_id === tokenId
-        ? { ...card, scratched: true, prize_amount: prizeAmount }
-        : card
-    );
-
-    setCards(updatedCards);
-  }, []);
+    // Invalidate the query to refresh data from the API
+    queryClient.invalidateQueries({
+      queryKey: ['userNfts', userWallet, SCRATCH_CARD_NFT_ADDRESS]
+    });
+  }, [queryClient, userWallet]);
 
   // Ensure currentIndex is within bounds
   const safeIndex = Math.max(0, Math.min(currentIndex, cards.length - 1));
@@ -315,6 +262,19 @@ export default function SwipeableCardStack({
               {loading ? (
                 <div className="flex items-center justify-center h-full">
                   <div className="text-white">Loading cards...</div>
+                </div>
+              ) : nftError ? (
+                <div className="flex flex-col items-center justify-center h-full text-white p-4">
+                  <div className="text-red-400 mb-2">Error loading NFTs</div>
+                  <div className="text-sm opacity-70 text-center">
+                    {nftError instanceof Error ? nftError.message : 'Failed to load cards'}
+                  </div>
+                  <button
+                    onClick={() => refetch()}
+                    className="mt-4 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors"
+                  >
+                    Retry
+                  </button>
                 </div>
               ) : cards.length ? (
                 <NftScratchOff

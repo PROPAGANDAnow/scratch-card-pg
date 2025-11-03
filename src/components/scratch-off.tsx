@@ -640,7 +640,7 @@ const ScratchOff = ({
         cardData &&
         !cardData.scratched &&
         !scratched &&
-        cardData.shared_from?.username
+        typeof cardData.shared_from === 'object' && cardData.shared_from !== null && 'username' in cardData.shared_from
       ),
     [cardData, scratched]
   );

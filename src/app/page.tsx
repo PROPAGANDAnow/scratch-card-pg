@@ -98,7 +98,7 @@ export default function Home() {
 
   return (
     <>
-      <SwipeableCardStack userWallet={userWallet} tokenIds={[17, 18, 19]} />
+      <SwipeableCardStack userWallet={userWallet} tokenIds={tokenIds.length > 0 ? tokenIds : [17, 18, 19]} />
     </>
   );
 }

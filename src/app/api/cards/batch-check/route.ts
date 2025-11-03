@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { SCRATCH_CARD_NFT_ADDRESS } from "~/lib/blockchain";
-import { prisma } from "~/lib/prisma";
 
 export async function GET(request: NextRequest) {
   try {
@@ -32,14 +30,16 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const apiUrl = 'https://eth-mainnet.g.alchemy.com/nft/v3/sRkRYI0S4IB-LNkxhcjlE/getNFTMetadataBatch';
-    const options = {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        tokens: tokenIds.map(tokenId => ({ tokenId, contractAddress: SCRATCH_CARD_NFT_ADDRESS }))
-      })
-    };
+    const apiUrl = 'https://eth-mainnet.g.alchemy.com/nft/v3/docs-demo/getNFTsForOwner?owner=0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045';
+    const options = { method: 'GET' };
+
+    try {
+      const response = await fetch(url, options);
+      const data = await response.json();
+      console.log(data);
+    } catch (error) {
+      console.error(error);
+    }
 
     try {
       const response = await fetch(apiUrl, options);
@@ -49,12 +49,10 @@ export async function GET(request: NextRequest) {
       console.error(error);
     }
 
-    const existingCards: any[] = []; // TODO: Implement actual NFT checking logic
-
     return NextResponse.json({
       success: true,
-      existingCards,
-      count: existingCards.length
+      existingCards: [],
+      count: 0
     });
 
   } catch (error) {
