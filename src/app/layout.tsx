@@ -4,6 +4,7 @@ import "~/app/globals.css";
 import { Providers } from "~/app/providers";
 import { AppContextProvider } from "./context";
 import Wrapper from "~/components/wrapper";
+import { ToastProvider } from "~/components/ui/toast-provider";
 import { Geist, Geist_Mono } from "next/font/google";
 
 const geistSans = Geist({
@@ -59,7 +60,9 @@ export default async function RootLayout({
       >
         <Providers>
           <AppContextProvider>
-            <Wrapper>{children}</Wrapper>
+            <ToastProvider>
+              <Wrapper>{children}</Wrapper>
+            </ToastProvider>
           </AppContextProvider>
         </Providers>
       </body>

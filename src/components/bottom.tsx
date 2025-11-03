@@ -10,6 +10,7 @@ import { AppContext } from "~/app/context";
 import { SET_BUY_CARDS, SET_CARDS } from "~/app/context/actions";
 import { USDC_ADDRESS } from "~/lib/constants";
 import { fetchUserCards } from "~/lib/userapis";
+import { useToast } from "~/components/ui/toast-provider";
 
 const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
   mode = "normal",
@@ -26,6 +27,7 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
   const { haptics } = useMiniApp();
   const { push } = useRouter();
   const pathname = usePathname();
+  const { showToast } = useToast();
 
   // Wagmi hooks for transaction management
   const { writeContract } = useWriteContract();
@@ -114,6 +116,15 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
 
       haptics.impactOccurred("medium");
       haptics.notificationOccurred("success");
+
+      // Show success toast
+      const cardText = result.totalCardsCreated === 1 ? "card" : "cards";
+      showToast(
+        `Successfully bought ${result.totalCardsCreated} ${cardText}!`,
+        "success",
+        4000
+      );
+
       setShowBuyModal(false);
     } catch (error) {
       console.error("Error processing backend purchase:", error);
