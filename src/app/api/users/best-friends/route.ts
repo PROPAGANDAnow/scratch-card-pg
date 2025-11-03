@@ -3,7 +3,6 @@ import { NextResponse } from "next/server";
 
 export async function GET(request: Request) {
   const apiKey = process.env.NEYNAR_API_KEY;
-  console.log("🚀 ~ GET ~ apiKey:", apiKey)
 
   const { searchParams } = new URL(request.url);
   const fid = searchParams.get("fid");
@@ -26,16 +25,20 @@ export async function GET(request: Request) {
   }
 
   try {
-    const bulkResponse = await axios.get(
+    const bulkResponse = await fetch(
       `https://api.neynar.com/v2/farcaster/followers/reciprocal/?limit=100&sort_type=algorithmic&fid=${fid}`,
       {
         headers: {
           "x-api-key": apiKey,
         },
       }
-    );
+    ).then(a => a.json());
 
-    const users = bulkResponse.data.users.map(
+    if (bulkResponse.message) {
+      throw new Error(`${bulkResponse.code}: ${bulkResponse.message}`)
+    }
+
+    const users = bulkResponse.users.map(
       (user: {
         user: {
           fid: number;
