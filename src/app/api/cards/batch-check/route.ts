@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { SCRATCH_CARD_NFT_ADDRESS } from "~/lib/contracts";
 import { prisma } from "~/lib/prisma";
 
 export async function GET(request: NextRequest) {
@@ -31,16 +32,22 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Find existing cards for the given tokenIds and userWallet
-    const existingCards = await prisma.card.findMany({
-      where: {
-        token_id: { in: tokenIds },
-        user_wallet: userWallet
-      },
-      orderBy: {
-        token_id: 'asc'
-      }
-    });
+    const apiUrl = 'https://eth-mainnet.g.alchemy.com/nft/v3/sRkRYI0S4IB-LNkxhcjlE/getNFTMetadataBatch';
+    const options = {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        tokens: tokenIds.map(tokenId => ({ tokenId, contractAddress: SCRATCH_CARD_NFT_ADDRESS }))
+      })
+    };
+
+    try {
+      const response = await fetch(apiUrl, options);
+      const data = await response.json();
+      console.log(data);
+    } catch (error) {
+      console.error(error);
+    }
 
     return NextResponse.json({
       success: true,
