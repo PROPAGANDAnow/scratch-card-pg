@@ -9,7 +9,7 @@ import { findWinningRow } from "~/lib/winningRow";
 
 // Payment verification function for Base chain with retry logic
 async function verifyPayment(
-  paymentTx: string, 
+  paymentTx: string,
   expectedAmount: number, // Amount in USDC (e.g., 5 for 5 USDC)
   expectedRecipient?: string
 ): Promise<boolean> {
@@ -61,21 +61,21 @@ async function verifyPayment(
         if (log.address.toLowerCase() !== USDC_ADDRESS.toLowerCase()) {
           return false;
         }
-        
+
         // Check if it's a Transfer event to admin wallet
         // Transfer event signature: 0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef
         const transferEventSignature = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
-        
+
         if (!log.topics[0] || log.topics[0] !== transferEventSignature) {
           return false;
         }
-        
+
         // Check if recipient is admin wallet (topic[2] contains recipient address)
         if (log.topics[2]) {
           const recipient = '0x' + log.topics[2].slice(26); // Remove padding
           return recipient.toLowerCase() === recipientAddress.toLowerCase();
         }
-        
+
         return false;
       });
 
@@ -88,25 +88,25 @@ async function verifyPayment(
       // Amount is in the data field (32 bytes)
       const amountHex = transferEvent.data;
       const amount = parseInt(amountHex, 16) / 1e6; // Convert from smallest units to USDC
-      
+
       // Verify the amount (allow for small rounding differences)
       return Math.abs(amount - expectedAmount) <= tolerance;
 
-         } catch (error) {
-       console.error(`Error verifying payment on attempt ${attempt + 1}:`, error);
-       
-       // If it's a TransactionReceiptNotFoundError, retry
-       if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string' && error.message.includes('TransactionReceiptNotFoundError')) {
-         if (attempt < maxRetries - 1) {
-           console.log(`Transaction not mined yet, retrying in ${baseDelay * Math.pow(2, attempt)}ms...`);
-           await new Promise(resolve => setTimeout(resolve, baseDelay * Math.pow(2, attempt)));
-           continue;
-         }
-       }
-       
-       // For other errors, don't retry
-       return false;
-     }
+    } catch (error) {
+      console.error(`Error verifying payment on attempt ${attempt + 1}:`, error);
+
+      // If it's a TransactionReceiptNotFoundError, retry
+      if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string' && error.message.includes('TransactionReceiptNotFoundError')) {
+        if (attempt < maxRetries - 1) {
+          console.log(`Transaction not mined yet, retrying in ${baseDelay * Math.pow(2, attempt)}ms...`);
+          await new Promise(resolve => setTimeout(resolve, baseDelay * Math.pow(2, attempt)));
+          continue;
+        }
+      }
+
+      // For other errors, don't retry
+      return false;
+    }
   }
 
   return false;
@@ -114,8 +114,8 @@ async function verifyPayment(
 
 export async function POST(request: NextRequest) {
   try {
-    const { userWallet, paymentTx, numberOfCards, friends } = await request.json();
-    
+    const { userWallet, paymentTx, numberOfCards, friends = [] } = await request.json();
+
     if (!userWallet || !paymentTx || !numberOfCards) {
       return NextResponse.json(
         { error: "Missing required fields: userWallet, paymentTx, or numberOfCards" },
@@ -126,7 +126,7 @@ export async function POST(request: NextRequest) {
     // Verify payment transaction (1 USDC per card)
     const expectedAmount = numberOfCards; // 1 USDC per card
     const paymentVerified = await verifyPayment(paymentTx, expectedAmount);
-    
+
     if (!paymentVerified) {
       console.log("Payment verification failed for transaction:", paymentTx);
       return NextResponse.json(
@@ -152,8 +152,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Calculate starting card number
-    const startCardNo = existingCards && existingCards.length > 0 
-      ? existingCards[0].card_no + 1 
+    const startCardNo = existingCards && existingCards.length > 0
+      ? existingCards[0].card_no + 1
       : 1;
 
     // Create multiple cards
@@ -215,7 +215,7 @@ export async function POST(request: NextRequest) {
     // Update user's cards_count
     const { error: updateError } = await supabaseAdmin
       .from('users')
-      .update({ 
+      .update({
         cards_count: startCardNo + numberOfCards - 1,
         last_active: new Date().toISOString()
       })
@@ -236,7 +236,7 @@ export async function POST(request: NextRequest) {
     if (!fetchStatsError && currentStats) {
       const { error: statsError } = await supabaseAdmin
         .from('stats')
-        .update({ 
+        .update({
           cards: currentStats.cards + numberOfCards,
           updated_at: new Date().toISOString()
         })
@@ -248,14 +248,14 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       cards: newCards,
       totalCardsCreated: numberOfCards,
       startCardNo,
       endCardNo: startCardNo + numberOfCards - 1
     });
-    
+
   } catch (error) {
     console.error('Error in buy cards:', error);
     return NextResponse.json(
