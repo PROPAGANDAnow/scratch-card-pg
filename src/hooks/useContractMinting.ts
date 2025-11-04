@@ -429,7 +429,8 @@ export const useContractMinting = (userAddress: Address | null): UseContractMint
   }, [writeContract, publicClient, approvalHook.allowance, approvalHook.approve, approvalHook.checkAllowance, calculateCostBigInt, simulateMintCard]);
 
   // Mint multiple cards with simulation
-  const mintCardsBatch = useCallback(async (quantity: number, recipient?: Address) => {
+  const mintCardsBatch = useCallback(async (quantity: number, recipient: Address) => {
+    console.log("🚀 ~ useContractMinting ~ recipient:", recipient)
     try {
       // Validate quantity
       if (quantity <= 0) {
@@ -449,15 +450,15 @@ export const useContractMinting = (userAddress: Address | null): UseContractMint
       await approvalHook.approveUnlimited();
 
       // Optionally simulate tx (skipped by default)
-      if (!SKIP_SIMULATION) {
-        const simulation = await simulateMintCardsBatch(quantity, recipient);
-        if (!simulation.willSucceed) {
-          throw new Error(simulation.simulationError || 'Transaction simulation failed');
-        }
-        console.log('Simulation result:', formatSimulationResult(simulation));
+      const simulation = await simulateMintCardsBatch(quantity, recipient);
+      if (!simulation.willSucceed) {
+        throw new Error(simulation.simulationError || 'Transaction simulation failed');
       }
+      console.log('Simulation result:', formatSimulationResult(simulation));
 
       console.log("🚀 ~ useContractMinting ~ SCRATCH_CARD_NFT_ADDRESS:", SCRATCH_CARD_NFT_ADDRESS)
+      console.log("🚀 ~ useContractMinting ~ [BigInt(quantity), AddressPatterns.safeRecipient(recipient)]:", [BigInt(quantity), AddressPatterns.safeRecipient(recipient)])
+
       const txHash = await writeContract({
         address: SCRATCH_CARD_NFT_ADDRESS,
         abi: SCRATCH_CARD_NFT_ABI,

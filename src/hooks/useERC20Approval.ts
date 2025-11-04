@@ -170,6 +170,7 @@ export const useERC20Approval = (
       if (!publicClient) return
       if (!userAddress) return
 
+      console.log("🚀 ~ useERC20Approval ~ spenderAddress, amount:", spenderAddress, amount)
       // Step 1: Simulate the transaction (optional but recommended)
       const { request } = await publicClient.simulateContract({
         address: USDC_ADDRESS,

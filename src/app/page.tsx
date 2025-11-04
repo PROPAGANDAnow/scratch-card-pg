@@ -21,15 +21,16 @@ function extractUnclaimedTokenIds(cards: Token[] = []): number[] {
 
 export default function Home() {
   const setSwipableMode = useAppStore((s) => s.setSwipableMode);
-  const localCards = useCardStore((s) => s.localCards);
+  // const localCards = useCardStore((s) => s.localCards);
   const setLocalCards = useCardStore((s) => s.setLocalCards);
-  const unscratchedCards = useCardStore((s) => s.unscratchedCards);
+  // const unscratchedCards = useCardStore((s) => s.unscratchedCards);
   const userWallet = useUserStore((s) => s.user?.address || "");
   const { isPaused, formattedStats } = useContractStats();
   const { availableCards } = useUserTokens();
 
   // Stable list of unclaimed token IDs from subgraph to prevent refetch loops
   const tokenIds = useMemo(() => extractUnclaimedTokenIds(availableCards), [availableCards]);
+  console.log("🚀 ~ Home ~ tokenIds:", tokenIds)
 
   useEffect(() => {
     setSwipableMode(true);
@@ -39,37 +40,6 @@ export default function Home() {
     };
   }, [setSwipableMode, setLocalCards]);
 
-  // Sync localCards with unscratched cards and update scratched status
-  useEffect(() => {
-    if (unscratchedCards.length > 0 || localCards.length > 0) {
-      // Create a set of unscratched card IDs for quick lookup
-      const unscratchedIds = new Set(unscratchedCards.map(card => card.id));
-
-      // Update existing cards: only mark as scratched if explicitly scratched in the cards array
-      const updatedCards = localCards.map(card => {
-        if (unscratchedIds.has(card.id)) {
-          // Card is in unscratchedCards, ensure it's not marked as scratched
-          return { ...card, scratched: false };
-        } else {
-          // Card is not in unscratchedCards, check if it's already marked as scratched
-          // If not, it might be a new card that hasn't been added to unscratchedCards yet
-          return card.scratched ? card : { ...card, scratched: true };
-        }
-      });
-
-      // Add new unscratched cards that don't exist locally
-      const existingIds = new Set(localCards.map(card => card.id));
-      const newCards = unscratchedCards.filter(card => !existingIds.has(card.id));
-
-      const newLocalCards = [...updatedCards, ...newCards];
-
-      // Only update if there are actual changes to prevent infinite loop
-      const hasChanges = JSON.stringify(newLocalCards) !== JSON.stringify(localCards);
-      if (hasChanges) {
-        setLocalCards(newLocalCards);
-      }
-    }
-  }, [unscratchedCards, localCards, setLocalCards]);
 
   // Show contract pause overlay if contract is paused
   if (isPaused && formattedStats) {

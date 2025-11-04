@@ -3,6 +3,23 @@ import { SCRATCH_CARD_NFT_ADDRESS } from "~/lib/blockchain";
 import { prisma } from "~/lib/prisma";
 import { AlchemyNftResponse, OwnedNft } from "~/types/alchemy";
 
+interface Token {
+  id: string
+  owner: string
+  contract: string
+  batchId: string
+  prizeToken: string
+  prizeAmount: string
+  claimed: boolean
+  mintedAt: string
+  claimedAt: string | null
+  stateChanges: Array<{
+    id: string
+    state: string
+    timestamp: string
+  }>
+}
+
 export async function GET(request: NextRequest) {
   try {
     const url = new URL(request.url);
@@ -60,50 +77,60 @@ export async function GET(request: NextRequest) {
       }
     });
 
-    // Combine Alchemy data with our database data
-    const cardsWithDetails = data.ownedNfts.map((nft: OwnedNft) => {
+    // Combine Alchemy data with our database data and transform to Token interface
+    const tokens = data.ownedNfts.map((nft: OwnedNft) => {
       const dbCard = existingCardsInDb.find(card => card.token_id === parseInt(nft.tokenId));
 
       return {
-        // Alchemy NFT fields
-        tokenId: nft.tokenId,
-        name: nft.name,
-        description: nft.description,
-        image: nft.image.cachedUrl || nft.image.originalUrl || null,
-        contractAddress: nft.contract.address,
-        tokenType: nft.tokenType,
-        balance: nft.balance,
-        timeLastUpdated: nft.timeLastUpdated,
-
-        // Contract metadata
-        contract: {
-          address: nft.contract.address,
-          name: nft.contract.name,
-          symbol: nft.contract.symbol,
-          tokenType: nft.contract.tokenType,
-          openSeaMetadata: nft.contract.openSeaMetadata,
-        },
-
-        // Raw metadata
-        raw: nft.raw,
-        tokenUri: nft.tokenUri,
-
-        // Database-specific fields
-        scratched: dbCard?.scratched ?? false,
-        prizeAmount: dbCard?.prize_amount ?? null,
+        // Token interface fields
+        id: `${SCRATCH_CARD_NFT_ADDRESS}-${nft.tokenId}`, // Composite ID to match GraphQL format
+        owner: userWallet.toLowerCase(),
+        contract: SCRATCH_CARD_NFT_ADDRESS,
+        batchId: 'unknown', // Not available from Alchemy, would need to be stored in DB
+        prizeToken: 'unknown', // Not available from Alchemy
+        prizeAmount: dbCard?.prize_amount?.toString() || '0',
         claimed: dbCard?.claimed ?? false,
-        prizeWon: dbCard?.prize_won ?? false,
-        existsInDb: !!dbCard,
-        createdAt: dbCard?.created_at?.toISOString() || null,
-        scratchedAt: dbCard?.scratched_at?.toISOString() || null,
+        mintedAt: new Date(parseInt(nft.timeLastUpdated) * 1000).toISOString(),
+        claimedAt: dbCard?.scratched_at?.toISOString() || null,
+        stateChanges: [], // Not available from Alchemy
+
+        // Additional metadata for UI
+        metadata: {
+          tokenId: nft.tokenId,
+          name: nft.name,
+          description: nft.description,
+          image: nft.image.cachedUrl || nft.image.originalUrl || null,
+          contractAddress: nft.contract.address,
+          tokenType: nft.tokenType,
+          balance: nft.balance,
+          timeLastUpdated: nft.timeLastUpdated,
+          contract: {
+            address: nft.contract.address,
+            name: nft.contract.name,
+            symbol: nft.contract.symbol,
+            tokenType: nft.contract.tokenType,
+            openSeaMetadata: nft.contract.openSeaMetadata,
+          },
+          raw: nft.raw,
+          tokenUri: nft.tokenUri,
+          scratched: dbCard?.scratched ?? false,
+          prizeWon: dbCard?.prize_won ?? false,
+          existsInDb: !!dbCard,
+          createdAt: dbCard?.created_at?.toISOString() || null,
+          scratchedAt: dbCard?.scratched_at?.toISOString() || null,
+        }
       };
     });
+
+    // Filter available cards (unscratched)
+    const availableCards = tokens.filter(token => !token.metadata?.scratched && !token.claimed);
 
     return NextResponse.json({
       success: true,
       data: {
-        ownedNfts: cardsWithDetails,
-        totalCount: cardsWithDetails.length,
+        tokens,
+        availableCards,
+        totalCount: tokens.length,
         validAt: data.validAt
       }
     });

@@ -95,10 +95,11 @@ export const MintCardForm = ({
 
       if (!address) return
 
+      console.log("🚀 ~ MintCardForm ~ address:", address)
       // Mint cards
       await mintCardsBatch(
         quantity,
-        undefined // No recipient - mint to caller
+        address
       );
 
       // Haptic feedback

@@ -1,10 +1,32 @@
 'use client'
 
-import { useCallback } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { GET_USER_TOKENS, GET_USER_AVAILABLE_CARDS } from '../queries'
-import { makeGraphQLRequest } from '~/lib/graphql-client'
 import { useUserStore } from '~/stores/user-store'
+
+export interface TokenMetadata {
+  tokenId: string
+  name?: string
+  description?: string
+  image?: string | null
+  contractAddress: string
+  tokenType: string
+  balance: string
+  timeLastUpdated: string
+  contract: {
+    address: string
+    name?: string
+    symbol?: string
+    tokenType: string
+    openSeaMetadata?: Record<string, unknown>
+  }
+  raw?: Record<string, unknown>
+  tokenUri?: string
+  scratched?: boolean
+  prizeWon?: boolean
+  existsInDb?: boolean
+  createdAt?: string | null
+  scratchedAt?: string | null
+}
 
 export interface Token {
   id: string
@@ -21,6 +43,7 @@ export interface Token {
     state: string
     timestamp: string
   }>
+  metadata?: TokenMetadata
 }
 
 export interface UseUserTokensReturn {
@@ -34,40 +57,29 @@ export interface UseUserTokensReturn {
 export function useUserTokens(): UseUserTokensReturn {
   const userAddress = useUserStore((s) => s.user?.address)
 
-  const { data: tokensData, isLoading: tokensLoading, error: tokensError, refetch: refetchTokens } = useQuery({
+  const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['userTokens', userAddress?.toLowerCase()],
-    queryFn: () => makeGraphQLRequest<{ tokens: Token[] }>(GET_USER_TOKENS, {
-      userAddress: userAddress?.toLowerCase() || '',
-    }),
+    queryFn: async () => {
+      if (!userAddress) return null
+
+      const response = await fetch(`/api/cards/get-by-owner?userWallet=${userAddress}`)
+      if (!response.ok) {
+        throw new Error(`API request failed: ${response.statusText}`)
+      }
+      return response.json()
+    },
     enabled: !!userAddress,
     retry: 3,
     staleTime: 30000,
   })
 
-  const { data: availableCardsData, isLoading: availableCardsLoading, error: availableCardsError, refetch: refetchAvailableCards } = useQuery({
-    queryKey: ['userAvailableCards', userAddress?.toLowerCase()],
-    queryFn: () => makeGraphQLRequest<{ tokens: Token[] }>(GET_USER_AVAILABLE_CARDS, {
-      userAddress: userAddress?.toLowerCase() || '',
-    }),
-    enabled: !!userAddress,
-    retry: 3,
-    staleTime: 30000,
-  })
-
-  const tokens = tokensData?.tokens || []
-  const availableCards = availableCardsData?.tokens || []
-  const loading = tokensLoading || availableCardsLoading
-  const error = tokensError || availableCardsError
-
-  const refetch = useCallback(() => {
-    refetchTokens()
-    refetchAvailableCards()
-  }, [refetchTokens, refetchAvailableCards])
+  const tokens = data?.data?.tokens || []
+  const availableCards = data?.data?.availableCards || []
 
   return {
     tokens,
     availableCards,
-    loading,
+    loading: isLoading,
     error,
     refetch,
   }

@@ -44,22 +44,22 @@ export const BASE_CONFIG = {
  * Scratch Card NFT contract address
  * Environment variable override for different deployments
  */
-export const SCRATCH_CARD_NFT_ADDRESS = (process.env.NEXT_PUBLIC_SCRATCH_CARD_NFT_ADDRESS || '0x60F8B620D3741FE7A628CF9066229D5388723827') as ViemAddress;
+export const SCRATCH_CARD_NFT_ADDRESS = '0x60F8B620D3741FE7A628CF9066229D5388723827' as ViemAddress;
 
 /**
  * USDC contract address on Base
  */
-export const USDC_ADDRESS = (process.env.NEXT_PUBLIC_USDC_ADDRESS || '0x902C0EB8E7654B15EEc93499587e56eF75fa6AdD') as ViemAddress;
+export const USDC_ADDRESS = '0x902C0EB8E7654B15EEc93499587e56eF75fa6AdD' as ViemAddress;
 
 /**
  * Signer address for prize claim verification
  */
-export const SIGNER_ADDRESS = (process.env.NEXT_PUBLIC_SIGNER_ADDRESS || '0x2B5AD5c4795c026514f8317c7a215E218DcCD6cF') as ViemAddress;
+export const SIGNER_ADDRESS = '0x2B5AD5c4795c026514f8317c7a215E218DcCD6cF' as ViemAddress;
 
 /**
  * Admin wallet address for payments
  */
-export const ADMIN_WALLET_ADDRESS = (process.env.NEXT_PUBLIC_ADMIN_WALLET_ADDRESS || '0x0000000000000000000000000000000000000000') as ViemAddress;
+export const ADMIN_WALLET_ADDRESS = '0x0000000000000000000000000000000000000000' as ViemAddress;
 
 // ========== Address Utilities ==========
 
