@@ -1,12 +1,14 @@
 "use client";
-import { motion, AnimatePresence } from "framer-motion";
-import { FC, useEffect, useRef, useState } from "react";
-import { useUIStore } from "~/stores/ui-store";
-import { useCardStore } from "~/stores/card-store";
-import { useAppStore } from "~/stores/app-store";
+import { AnimatePresence, motion } from "framer-motion";
 import { usePathname, useRouter } from "next/navigation";
-import { MintCardForm } from "./mint-card-form";
+import { FC, useEffect, useMemo, useRef, useState } from "react";
+import { useUserTokens } from "~/hooks";
 import { useDetectClickOutside } from "~/hooks/useDetectClickOutside";
+import { extractUnclaimedTokenIds } from "~/lib/token-utils";
+import { useAppStore } from "~/stores/app-store";
+import { useCardStore } from "~/stores/card-store";
+import { useUIStore } from "~/stores/ui-store";
+import { MintCardForm } from "./mint-card-form";
 
 const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
   mode = "normal",
@@ -15,14 +17,18 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
   const setBuyCards = useUIStore((s) => s.setBuyCards);
   const unscratchedCards = useCardStore((s) => s.unscratchedCards);
   const selectedCard = useCardStore((s) => s.selectedCard);
-  const cards = useCardStore((s) => s.cards);
+  // const cards = useCardStore((s) => s.cards);
   const appColor = useAppStore((s) => s.appColor);
   const currentCardIndex = useCardStore((s) => s.currentCardIndex);
-  const localCards = useCardStore((s) => s.localCards);
+  // const localCards = useCardStore((s) => s.localCards);
   const nextCard = useUIStore((s) => s.nextCard);
   const [showBigBuy, setShowBigBuy] = useState(false);
-  const [unscratchedCardsCount, setUnscratchedCardsCount] = useState(0);
+  // const [unscratchedCardsCount, setUnscratchedCardsCount] = useState(0);
   const [showBuyModal, setShowBuyModal] = useState(false);
+
+  const { availableCards } = useUserTokens();
+  const tokenIds = useMemo(() => extractUnclaimedTokenIds(availableCards), [availableCards]);
+  const unscratchedCardsCount = availableCards.length
 
   const { push } = useRouter();
   const pathname = usePathname();
@@ -30,13 +36,6 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
   // Ref for buy modal to detect outside clicks
   const buyModalRef = useRef<HTMLDivElement | null>(null);
   useDetectClickOutside(buyModalRef, () => setShowBuyModal(false));
-
-  // Calculate unscratched cards count
-  useEffect(() => {
-    if (mode === "swipeable") {
-      setUnscratchedCardsCount(unscratchedCards.length);
-    }
-  }, [unscratchedCards, mode]);
 
   // Function to trigger buy modal - can be called from other components
   const triggerBuyModal = () => {
@@ -108,11 +107,11 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
                     <>
                       {selectedCard.token_id}
                       <span className="text-[#fff]/40">
-                        /{cards.length}
+                        /{availableCards.length}
                       </span>
                     </>
                   ) : (
-                    cards.length
+                    availableCards.length
                   )}
                 </>
               )}
@@ -147,7 +146,7 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
           {pathname === "/" &&
             !showBigBuy &&
             mode === "swipeable" &&
-            currentCardIndex < localCards.length - 1 && (
+            currentCardIndex < availableCards.length - 1 && (
               <motion.div
                 className="w-full p-1 rounded-[40px] border border-white"
                 initial={{ opacity: 0, y: 20, scale: 0.9 }}

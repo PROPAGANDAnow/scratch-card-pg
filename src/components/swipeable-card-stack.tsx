@@ -3,16 +3,24 @@ import { AnimatePresence, motion } from "framer-motion";
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Card } from "~/app/interface/card";
+import { TokenWithState, useUserTokens } from "~/hooks";
 import { CANVAS_HEIGHT, CANVAS_WIDTH } from "~/lib/constants";
+import { extractUnclaimedTokenIds } from "~/lib/token-utils";
 import { useCardStore } from "~/stores/card-store";
 import { useUIStore } from "~/stores/ui-store";
 import NftScratchOff from "./nft-scratch-off";
-import { useUserTokens } from "~/hooks";
-import { extractUnclaimedTokenIds } from "~/lib/token-utils";
 
 interface SwipeableCardStackProps {
   userWallet: string;
   initialIndex?: number;
+}
+
+export const tokenToCard = (nftToken: TokenWithState): Card => {
+  return {
+    ...nftToken.state,
+    token_id: parseInt(nftToken.metadata?.metadata?.tokenId || nftToken.id),
+    contract_address: nftToken.metadata.contract,
+  }
 }
 
 export default function SwipeableCardStack({
@@ -37,13 +45,13 @@ export default function SwipeableCardStack({
 
     // Filter by specific tokenIds if provided
     if (tokenIds && tokenIds.length > 0) {
-      cards = cards.filter(card => tokenIds.includes(parseInt(card.metadata?.tokenId || card.id)));
+      cards = cards.filter(card => tokenIds.includes(parseInt(card.metadata?.metadata?.tokenId || card.id)));
     }
 
     // Sort by tokenId to maintain order
     cards.sort((a, b) => {
-      const aTokenId = parseInt(a.metadata?.tokenId || a.id);
-      const bTokenId = parseInt(b.metadata?.tokenId || b.id);
+      const aTokenId = parseInt(a.metadata?.metadata?.tokenId || a.id);
+      const bTokenId = parseInt(b.metadata?.metadata?.tokenId || b.id);
       return aTokenId - bTokenId;
     });
 
@@ -55,14 +63,14 @@ export default function SwipeableCardStack({
   useEffect(() => {
     if (filteredCards.length > 0 && !currentCardNo) {
       const initialCard = filteredCards[initialIndex] || filteredCards[0];
-      setCurrentCardNo(parseInt(initialCard.metadata?.tokenId || initialCard.id));
+      setCurrentCardNo(parseInt(initialCard.metadata?.metadata?.tokenId || initialCard.id));
     }
   }, [filteredCards, initialIndex, currentCardNo]);
 
   // Find current card and index
-  const current = filteredCards.find((card) => parseInt(card.metadata?.tokenId || card.id) === currentCardNo);
+  const current = filteredCards.find((card) => parseInt(card.metadata?.metadata?.tokenId || card.id) === currentCardNo);
   const currentIndex = current
-    ? filteredCards.findIndex((card) => parseInt(card.metadata?.tokenId || card.id) === currentCardNo)
+    ? filteredCards.findIndex((card) => parseInt(card.metadata?.metadata?.tokenId || card.id) === currentCardNo)
     : -1;
 
   const canGoPrev = currentIndex > 0;
@@ -74,7 +82,7 @@ export default function SwipeableCardStack({
       if (canGoNext) {
         setDirection(1);
         const nextCard = filteredCards[currentIndex + 1];
-        if (nextCard) setCurrentCardNo(parseInt(nextCard.metadata?.tokenId || nextCard.id));
+        if (nextCard) setCurrentCardNo(parseInt(nextCard.metadata?.metadata?.tokenId || nextCard.id));
       }
     };
 
@@ -106,7 +114,7 @@ export default function SwipeableCardStack({
     if (canGoPrev) {
       setDirection(-1);
       const prevCard = filteredCards[currentIndex - 1];
-      if (prevCard) setCurrentCardNo(parseInt(prevCard.metadata?.tokenId || prevCard.id));
+      if (prevCard) setCurrentCardNo(parseInt(prevCard.metadata?.metadata?.tokenId || prevCard.id));
     }
   }, [canGoPrev, currentIndex, filteredCards]);
 
@@ -115,7 +123,7 @@ export default function SwipeableCardStack({
     if (canGoNext) {
       setDirection(1);
       const nextCard = filteredCards[currentIndex + 1];
-      if (nextCard) setCurrentCardNo(parseInt(nextCard.metadata?.tokenId || nextCard.id));
+      if (nextCard) setCurrentCardNo(parseInt(nextCard.metadata?.metadata?.tokenId || nextCard.id));
     }
   }, [canGoNext, currentIndex, filteredCards]);
 
@@ -123,7 +131,7 @@ export default function SwipeableCardStack({
     if (canGoNext) {
       setDirection(1);
       const nextCard = filteredCards[currentIndex + 1];
-      if (nextCard) setCurrentCardNo(parseInt(nextCard.metadata?.tokenId || nextCard.id));
+      if (nextCard) setCurrentCardNo(parseInt(nextCard.metadata?.metadata?.tokenId || nextCard.id));
     }
   }, [canGoNext, currentIndex, filteredCards]);
 

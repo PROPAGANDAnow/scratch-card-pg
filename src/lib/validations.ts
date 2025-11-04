@@ -13,12 +13,8 @@ export const TokenIdSchema = z.coerce.number().int().positive('Token ID must be 
 export const BuyCardSchema = z.object({
   tokenIds: z.array(TokenIdSchema).min(1, 'At least one token ID is required'),
   userWallet: WalletAddressSchema,
-  friends: z.array(z.object({
-    fid: z.number().int().positive(),
-    username: z.string().min(1),
-    pfp: z.string(),
-    wallet: z.string()
-  })).optional()
+  friends: z.array(z.number()).optional(),
+  contractAddress: WalletAddressSchema
 });
 
 export const GenerateClaimSignatureSchema = z.object({

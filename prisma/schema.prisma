@@ -27,7 +27,7 @@ model User {
 
 model Card {
   id                   String    @id @default(cuid())
-  payment_tx           String
+  payment_tx           String?
   prize_amount         Float
   scratched_at         DateTime? @db.Timestamp(6)
   prize_asset_contract String
@@ -43,10 +43,10 @@ model Card {
   gifter_id            String?   @map("gifter_id")
   gifted_to_user_id    String?   @map("gifted_to_user_id")
   minter_user_id       String    @map("minter_user_id")
-  scratched_by         User?     @relation("CardScratched", fields: [scratched_by_user_id], references: [id], onDelete: SetNull)
-  gifter               User?     @relation("CardGifts", fields: [gifter_id], references: [id], onDelete: SetNull)
-  gifted_to            User?     @relation("CardReceived", fields: [gifted_to_user_id], references: [id], onDelete: SetNull)
-  minter               User      @relation("CardMinted", fields: [minter_user_id], references: [id], onDelete: SetNull)
+  scratched_by         User?     @relation("CardScratched", fields: [scratched_by_user_id], references: [id])
+  gifter               User?     @relation("CardGifts", fields: [gifter_id], references: [id])
+  gifted_to            User?     @relation("CardReceived", fields: [gifted_to_user_id], references: [id])
+  minter               User      @relation("CardMinted", fields: [minter_user_id], references: [id])
 
   @@unique([token_id]) // Assuming card_no should be unique
   @@map("cards")

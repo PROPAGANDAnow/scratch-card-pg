@@ -1,24 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { SCRATCH_CARD_NFT_ADDRESS, USDC_ADDRESS } from "~/lib/blockchain";
+import { isAddress } from "viem";
+import { getBestFriends } from "~/lib/best-friends";
+import { SCRATCH_CARD_NFT_ADDRESS, ZERO_ADDRESS } from "~/lib/blockchain";
 import { prisma } from "~/lib/prisma";
+import { getTokensInBatch } from "~/lib/token-batch";
 import { AlchemyNftResponse, OwnedNft } from "~/types/alchemy";
 
-interface Token {
-  id: string
-  owner: string
-  contract: string
-  batchId: string
-  prizeToken: string
-  prizeAmount: string
-  claimed: boolean
-  mintedAt: string
-  claimedAt: string | null
-  stateChanges: Array<{
-    id: string
-    state: string
-    timestamp: string
-  }>
-}
 
 export async function GET(request: NextRequest) {
   try {
@@ -64,72 +51,64 @@ export async function GET(request: NextRequest) {
       where: {
         token_id: {
           in: tokenIds
-        }
+        },
+        scratched: false,
+        claimed: false
       },
-      select: {
-        token_id: true,
-        scratched: true,
-        prize_amount: true,
-        claimed: true,
-        prize_won: true,
-        created_at: true,
-        scratched_at: true,
-      }
     });
+
+    const totalCardCount = await prisma.card.count({
+      where: {
+        minter: {
+          address: userWallet
+        }
+      }
+    })
+
+    // Get user with fid to fetch friends if needed
+    const user = await prisma.user.findUnique({
+      where: { address: userWallet.toLowerCase() },
+      select: { fid: true }
+    });
+
+    // Fetch friends if user has fid
+    let friends: number[] = [];
+    if (user?.fid) {
+      try {
+        const bestFriends = await getBestFriends(user.fid);
+        friends = bestFriends.map(friend => friend.fid);
+      } catch (error) {
+        console.error('Failed to fetch friends:', error);
+        // Continue without friends if fetching fails
+      }
+    }
+
+    const newlyCreatedTokens = await getTokensInBatch({
+      tokenIds,
+      friends,
+      recipient: userWallet,
+      contractAddress: isAddress(SCRATCH_CARD_NFT_ADDRESS) && SCRATCH_CARD_NFT_ADDRESS || ZERO_ADDRESS
+    })
 
     // Combine Alchemy data with our database data and transform to Token interface
     const tokens = data.ownedNfts.map((nft: OwnedNft) => {
-      const dbCard = existingCardsInDb.find(card => card.token_id === parseInt(nft.tokenId));
+      const dbCard = [...existingCardsInDb, ...newlyCreatedTokens].find(card => card.token_id === parseInt(nft.tokenId));
 
       return {
-        // Token interface fields
-        id: `${SCRATCH_CARD_NFT_ADDRESS}-${nft.tokenId}`, // Composite ID to match GraphQL format
-        owner: userWallet.toLowerCase(),
-        contract: SCRATCH_CARD_NFT_ADDRESS,
-        prizeToken: USDC_ADDRESS, // Not available from Alchemy
-        prizeAmount: dbCard?.prize_amount?.toString() || '0',
-        claimed: dbCard?.claimed ?? false,
-        mintedAt: new Date(parseInt(nft.timeLastUpdated) * 1000).toISOString(),
-        claimedAt: dbCard?.scratched_at?.toISOString() || null,
-        stateChanges: [], // Not available from Alchemy
-
-        // Additional metadata for UI
-        metadata: {
-          tokenId: nft.tokenId,
-          name: nft.name,
-          description: nft.description,
-          image: nft.image.cachedUrl || nft.image.originalUrl || null,
-          contractAddress: nft.contract.address,
-          tokenType: nft.tokenType,
-          balance: nft.balance,
-          timeLastUpdated: nft.timeLastUpdated,
-          contract: {
-            address: nft.contract.address,
-            name: nft.contract.name,
-            symbol: nft.contract.symbol,
-            tokenType: nft.contract.tokenType,
-            openSeaMetadata: nft.contract.openSeaMetadata,
-          },
-          raw: nft.raw,
-          tokenUri: nft.tokenUri,
-          scratched: dbCard?.scratched ?? false,
-          prizeWon: dbCard?.prize_won ?? false,
-          existsInDb: !!dbCard,
-          createdAt: dbCard?.created_at?.toISOString() || null,
-          scratchedAt: dbCard?.scratched_at?.toISOString() || null,
-        }
+        id: nft.tokenId,
+        state: dbCard,
+        metadata: nft
       };
     });
 
     // Filter available cards (unscratched)
-    const availableCards = tokens.filter(token => !token.metadata?.scratched && !token.claimed);
+    const availableCards = tokens.filter(token => !token.state?.scratched && !token.state?.claimed);
 
     return NextResponse.json({
       success: true,
       data: {
-        tokens,
         availableCards,
-        totalCount: tokens.length,
+        totalCount: totalCardCount,
         validAt: data.validAt
       }
     });

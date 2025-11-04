@@ -1,9 +1,9 @@
 "use client";
+import { formatDistanceToNow } from "date-fns";
 import { motion } from "framer-motion";
+import { formatEther } from "viem";
 import { useUserActivity, useUserTokens } from "~/hooks";
 import { useCardStore } from "~/stores/card-store";
-import { formatEther } from "viem";
-import { formatDistanceToNow } from "date-fns";
 
 const UserCards = () => {
   const { mints, loading: mintsLoading, error: mintsError } = useUserActivity(20);
@@ -98,7 +98,7 @@ const UserCards = () => {
                 >
                   <p className="text-white text-sm font-medium">Token #{card.id}</p>
                   <p className="text-white/60 text-xs">
-                    Prize: {formatEther(BigInt(card.prizeAmount))} ETH
+                    Prize: {formatEther(BigInt(card.state.prize_amount))} ETH
                   </p>
                 </div>
               ))}

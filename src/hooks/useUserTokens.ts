@@ -1,5 +1,6 @@
 'use client'
 
+import { Card } from '@prisma/client'
 import { useQuery } from '@tanstack/react-query'
 import { useUserStore } from '~/stores/user-store'
 
@@ -47,17 +48,19 @@ export interface Token {
 }
 
 export interface UseUserTokensReturn {
-  tokens: Token[]
-  availableCards: Token[]
-  loading: boolean
+  availableCards: TokenWithState[];
+  totalCount: number;
+  loading: boolean;
   error: Error | null
   refetch: () => void
 }
 
+export interface TokenWithState { id: string, state: Card, metadata: Token }
+
 interface GetByOwnerResponse {
   data: {
-    availableCards: Token[]
-    tokens: Token[]
+    availableCards: TokenWithState[]
+    totalCount: number
   }
 }
 
@@ -81,12 +84,11 @@ export function useUserTokens(): UseUserTokensReturn {
     staleTime: 30000,
   })
 
-  const tokens = data?.data?.tokens || []
-  const availableCards = data?.data?.tokens || []
+  const availableCards = data?.data?.availableCards || []
 
   return {
-    tokens,
     availableCards,
+    totalCount: data?.data.totalCount ?? 0,
     loading: isLoading,
     error,
     refetch,
