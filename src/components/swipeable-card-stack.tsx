@@ -10,16 +10,16 @@ import { useUIStore } from "~/stores/ui-store";
 import NftScratchOff from "./nft-scratch-off";
 import { useUserNfts } from "~/hooks/useUserNfts";
 import { useQueryClient } from '@tanstack/react-query';
+import { useUserTokens } from "~/hooks";
+import { extractUnclaimedTokenIds } from "~/lib/token-utils";
 
 interface SwipeableCardStackProps {
   userWallet: string;
-  tokenIds: number[];
   initialIndex?: number;
 }
 
 export default function SwipeableCardStack({
   userWallet,
-  tokenIds,
   initialIndex = 0,
 }: SwipeableCardStackProps) {
   const setNextCardFn = useUIStore((s) => s.setNextCard);
@@ -28,6 +28,9 @@ export default function SwipeableCardStack({
   const [direction, setDirection] = useState<1 | -1>(1);
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
   const cardRef = useRef<HTMLDivElement>(null);
+
+  const { availableCards } = useUserTokens();
+  const tokenIds = useMemo(() => extractUnclaimedTokenIds(availableCards), [availableCards]);
 
   // Fetch user's NFTs using TanStack Query
   const { data: nftData, isLoading: nftLoading, error: nftError, refetch } = useUserNfts({

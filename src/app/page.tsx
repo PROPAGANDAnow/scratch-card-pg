@@ -6,18 +6,7 @@ import { useUserStore } from "~/stores/user-store";
 import SwipeableCardStack from "~/components/swipeable-card-stack";
 import { useContractStats } from "~/hooks";
 import { useUserTokens } from "~/hooks";
-import type { Token } from "~/hooks/useUserTokens";
-
-// Derive unclaimed token IDs (number[]) from subgraph tokens
-// Reference: docs/guides/FRONTEND_SUBGRAPH_INTEGRATION.md
-function extractUnclaimedTokenIds(cards: Token[] = []): number[] {
-  return cards
-    .map((token) => {
-      const idAsNumber = token.metadata?.tokenId && Number(token.metadata?.tokenId);
-      return Number.isFinite(idAsNumber) ? idAsNumber : null;
-    })
-    .filter((n): n is number => n !== null);
-}
+import { extractUnclaimedTokenIds } from "~/lib/token-utils";
 
 export default function Home() {
   const setSwipableMode = useAppStore((s) => s.setSwipableMode);
@@ -26,11 +15,11 @@ export default function Home() {
   // const unscratchedCards = useCardStore((s) => s.unscratchedCards);
   const userWallet = useUserStore((s) => s.user?.address || "");
   const { isPaused, formattedStats } = useContractStats();
-  const { availableCards } = useUserTokens();
+  // const { availableCards } = useUserTokens();
 
   // Stable list of unclaimed token IDs from subgraph to prevent refetch loops
-  const tokenIds = useMemo(() => extractUnclaimedTokenIds(availableCards), [availableCards]);
-  console.log("🚀 ~ Home ~ tokenIds:", tokenIds)
+  // const tokenIds = useMemo(() => extractUnclaimedTokenIds(availableCards), [availableCards]);
+  // console.log("🚀 ~ Home ~ tokenIds:", tokenIds)
 
   useEffect(() => {
     setSwipableMode(true);
@@ -68,7 +57,7 @@ export default function Home() {
 
   return (
     <>
-      <SwipeableCardStack userWallet={userWallet} tokenIds={tokenIds.length > 0 ? tokenIds : [17, 18, 19]} />
+      <SwipeableCardStack userWallet={userWallet} />
     </>
   );
 }
