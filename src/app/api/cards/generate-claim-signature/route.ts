@@ -1,21 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { encodeAbiParameters, keccak256 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
+import { validateRequest } from "~/lib/validations";
+import { GenerateClaimSignatureSchema } from "~/lib/validations";
 import { prisma } from "~/lib/prisma";
 import { USDC_ADDRESS } from "~/lib/constants";
-
-// Type definitions
-interface ClaimSignature {
-  prizeAmount: string;
-  tokenAddress: string;
-  deadline: string;
-  signature: string;
-}
-
-interface GenerateSignatureRequest {
-  tokenId: string;
-  userWallet: string;
-}
+import { ApiResponse } from "~/app/interface/api";
 
 /**
  * Generate claim signature for NFT scratch card prize
@@ -28,31 +18,26 @@ interface GenerateSignatureRequest {
  * @returns Claim signature with all required parameters
  */
 export async function POST(request: NextRequest) {
+  // Validate request using Zod schema
+  const validation = await validateRequest(request, GenerateClaimSignatureSchema, { method: 'POST' });
+
+  if (!validation.success) {
+    return NextResponse.json(
+      { success: false, error: validation.error } as ApiResponse,
+      { status: validation.status }
+    );
+  }
+
+  const { tokenId, userWallet } = validation.data;
+
   try {
-    const { tokenId, userWallet }: GenerateSignatureRequest = await request.json();
-
-    // Validate required fields
-    if (!tokenId || !userWallet) {
-      return NextResponse.json(
-        { error: "Missing required fields: tokenId or userWallet" },
-        { status: 400 }
-      );
-    }
-
-    // Validate wallet address format
-    if (!/^0x[a-fA-F0-9]{40}$/.test(userWallet)) {
-      return NextResponse.json(
-        { error: "Invalid wallet address format" },
-        { status: 400 }
-      );
-    }
 
     // Get signer private key from environment variables
     const signerPrivateKey = process.env.SIGNER_PRIVATE_KEY;
     if (!signerPrivateKey) {
       console.error("SIGNER_PRIVATE_KEY not configured in environment variables");
       return NextResponse.json(
-        { error: "Server configuration error" },
+        { success: false, error: "Server configuration error" } as ApiResponse,
         { status: 500 }
       );
     }
@@ -72,7 +57,7 @@ export async function POST(request: NextRequest) {
 
     if (!card) {
       return NextResponse.json(
-        { error: "Card not found" },
+        { success: false, error: "Card not found" } as ApiResponse,
         { status: 404 }
       );
     }
@@ -80,7 +65,7 @@ export async function POST(request: NextRequest) {
     // Validate card ownership
     if (card.user_wallet.toLowerCase() !== userWallet.toLowerCase()) {
       return NextResponse.json(
-        { error: "Card does not belong to this user" },
+        { success: false, error: "Card does not belong to this user" } as ApiResponse,
         { status: 403 }
       );
     }
@@ -88,7 +73,7 @@ export async function POST(request: NextRequest) {
     // Check if card has been scratched
     if (!card.scratched) {
       return NextResponse.json(
-        { error: "Card must be scratched before claiming" },
+        { success: false, error: "Card must be scratched before claiming" } as ApiResponse,
         { status: 400 }
       );
     }
@@ -96,7 +81,7 @@ export async function POST(request: NextRequest) {
     // Check if prize has already been claimed
     if (card.claimed) {
       return NextResponse.json(
-        { error: "Prize already claimed" },
+        { success: false, error: "Prize already claimed" } as ApiResponse,
         { status: 400 }
       );
     }
@@ -144,7 +129,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Return the signature and all required parameters
-    const claimSignature: ClaimSignature = {
+    const claimSignature = {
       prizeAmount: Math.floor(actualPrizeAmount * 1_000_000).toString(), // Convert to USDC units
       tokenAddress: prizeAsset,
       deadline: deadline.toString(),
@@ -155,8 +140,8 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      signature: claimSignature,
-    });
+      data: claimSignature,
+    } as ApiResponse);
 
   } catch (error) {
     console.error("Error generating claim signature:", error);
@@ -166,14 +151,14 @@ export async function POST(request: NextRequest) {
       // Don't expose internal error details in production
       if (process.env.NODE_ENV === 'development') {
         return NextResponse.json(
-          { error: `Failed to generate signature: ${error.message}` },
+          { success: false, error: `Failed to generate signature: ${error.message}` } as ApiResponse,
           { status: 500 }
         );
       }
     }
-    
+
     return NextResponse.json(
-      { error: "Failed to generate claim signature" },
+      { success: false, error: "Failed to generate claim signature" } as ApiResponse,
       { status: 500 }
     );
   }

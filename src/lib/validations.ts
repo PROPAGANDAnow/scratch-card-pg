@@ -70,6 +70,36 @@ export const FrameShareQuerySchema = z.object({
   friend_username: z.string().min(1).optional()
 });
 
+// Token validation schemas
+export const GetTokensSchema = z.object({
+  userWallet: WalletAddressSchema,
+  limit: z.coerce.number().int().positive().max(100).optional().default(20),
+  offset: z.coerce.number().int().nonnegative().optional().default(0),
+  status: z.enum(['all', 'scratched', 'unscratched', 'claimed']).optional().default('all')
+});
+
+export const GetProofSchema = z.object({
+  tokenId: TokenIdSchema,
+  userWallet: WalletAddressSchema
+});
+
+export const ScratchTokenSchema = z.object({
+  tokenId: TokenIdSchema,
+  userWallet: WalletAddressSchema,
+  timestamp: z.number().int().positive('Timestamp must be a positive integer')
+});
+
+export const BatchClaimSchema = z.object({
+  tokenIds: z.array(TokenIdSchema).min(1, 'At least one token ID is required'),
+  userWallet: WalletAddressSchema
+});
+
+export const GetLeaderboardSchema = z.object({
+  limit: z.coerce.number().int().positive().max(100).optional().default(50),
+  offset: z.coerce.number().int().nonnegative().optional().default(0),
+  timeframe: z.enum(['all', 'daily', 'weekly', 'monthly']).optional().default('all')
+});
+
 // Cron job validation (for internal use)
 export const CronAuthSchema = z.object({
   authorization: z.string().regex(/^Bearer .+$/, 'Invalid authorization format')
