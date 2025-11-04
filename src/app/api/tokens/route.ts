@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { validateRequest } from '~/lib/validations';
 import { GetTokensSchema } from '~/lib/validations';
-import prisma from '~/lib/prisma';
+import { prisma } from '~/lib/prisma';
 import { ApiResponse, TokensResponse, TokenData } from '~/app/interface/api';
 
 export async function GET(request: NextRequest) {
@@ -17,10 +17,23 @@ export async function GET(request: NextRequest) {
   const { userWallet, limit, offset, status } = validation.data;
 
   try {
-    // Build where clause based on status filter
-    const whereClause: any = {
-      user_wallet: userWallet.toLowerCase()
-    };
+    // Get user by address to filter by their cards
+    const user = userWallet ? await prisma.user.findUnique({
+      where: { address: userWallet.toLowerCase() },
+      select: { id: true }
+    }) : null;
+
+    // Build where clause based on status filter and user
+    const whereClause: {
+      minter_user_id?: string;
+      scratched?: boolean;
+      claimed?: boolean;
+      prize_won?: boolean;
+    } = {};
+
+    if (user) {
+      whereClause.minter_user_id = user.id;
+    }
 
     if (status === 'scratched') {
       whereClause.scratched = true;
@@ -46,15 +59,17 @@ export async function GET(request: NextRequest) {
       select: {
         id: true,
         token_id: true,
-        owner_wallet: true,
         prize_amount: true,
         scratched: true,
         scratched_at: true,
         claimed: true,
-        claimed_at: true,
         created_at: true,
-        updated_at: true,
-        numbers_json: true
+        numbers_json: true,
+        minter: {
+          select: {
+            address: true
+          }
+        }
       }
     });
 
@@ -62,7 +77,7 @@ export async function GET(request: NextRequest) {
     const tokenData: TokenData[] = tokens.map(token => ({
       id: token.id,
       token_id: token.token_id,
-      owner_wallet: token.user_wallet,
+      user_wallet: token.minter?.address || '',
       prize_amount: token.prize_amount,
       scratched: token.scratched,
       scratched_at: token.scratched_at,
@@ -76,9 +91,9 @@ export async function GET(request: NextRequest) {
     const response: TokensResponse = {
       tokens: tokenData,
       total,
-      limit,
-      offset,
-      hasMore: offset + limit < total
+      limit: limit || 10,
+      offset: offset || 0,
+      hasMore: (offset || 0) + (limit || 10) < total
     };
 
     return NextResponse.json({

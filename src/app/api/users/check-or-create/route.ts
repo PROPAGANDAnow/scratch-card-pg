@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "~/lib/prisma";
-import { getRevealsToNextLevel } from "~/lib/level";
+
 import { withDatabaseRetry } from "~/lib/db-utils";
-import axios from "axios";
 
 export async function POST(request: NextRequest) {
   try {
-    const { userWallet, fid, username, pfp } = await request.json();
+    const { userWallet, fid } = await request.json();
 
     if (!userWallet) {
       return NextResponse.json(
@@ -15,44 +14,34 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!fid) {
-      return NextResponse.json(
-        { error: "Missing fid" },
-        { status: 400 }
-      );
-    }
+    // FID is now optional - only validate if provided
 
     // Check if user exists
-    const existingUser = await withDatabaseRetry(() => 
+    // Note: wallet field renamed to address in User model
+    const existingUser = await withDatabaseRetry(() =>
       prisma.user.findUnique({
-        where: { wallet: userWallet },
-        select: { wallet: true, fid: true, username: true }
+        where: { address: userWallet.toLowerCase() },
+        select: { address: true, fid: true }
       })
     );
 
     if (!existingUser) {
-      const data = await axios.get(`https://api.neynar.com/v2/farcaster/user/bulk/?fids=${fid}`,
-        {
-          headers: {
-            "x-api-key": process.env.NEYNAR_API_KEY,
-          },
-        })
-      const user = data.data.users[0];
-      const isPro = user?.pro?.status === "subscribed" || false;
+      // Neynar API call disabled - user data not needed after schema changes
+      // const data = await axios.get(`https://api.neynar.com/v2/farcaster/user/bulk/?fids=${fid}`,
+      //   {
+      //     headers: {
+      //       "x-api-key": process.env.NEYNAR_API_KEY,
+      //     },
+      //   })
+      // const user = data.data.users[0]; // Unused after schema changes
 
       // Create new user
-      const newUser = await withDatabaseRetry(() => 
+      // Note: Many fields removed from User model, keeping only essential ones
+      const newUser = await withDatabaseRetry(() =>
         prisma.user.create({
           data: {
-            wallet: userWallet,
-            fid,
-            username,
-            pfp: pfp,
-            amount_won: 0,
-            cards_count: 0,
-            current_level: 1,
-            reveals_to_next_level: getRevealsToNextLevel(1),
-            is_pro: isPro
+            address: userWallet.toLowerCase(),
+            fid
           }
         })
       );
@@ -64,26 +53,20 @@ export async function POST(request: NextRequest) {
         isNewUser: true,
       });
     } else {
-      // Update last_active for existing user, and add fid/username if missing
+      // Note: last_active, username fields removed from User model
+      // Only update fid if missing
       const updateData: {
-        last_active: Date;
         fid?: number;
-        username?: string;
-      } = { last_active: new Date() };
+      } = {};
 
       // Add fid if provided and user doesn't have it
       if (fid && !existingUser.fid) {
         updateData.fid = fid;
       }
 
-      // Add username if provided and user doesn't have it
-      if (username && !existingUser.username) {
-        updateData.username = username;
-      }
-
-      const updatedUser = await withDatabaseRetry(() => 
+      const updatedUser = await withDatabaseRetry(() =>
         prisma.user.update({
-          where: { wallet: userWallet },
+          where: { address: userWallet.toLowerCase() },
           data: updateData
         })
       );

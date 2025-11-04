@@ -1,7 +1,7 @@
 // API Response Interfaces
 
 // Base API Response
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   success: boolean;
   data?: T;
   error?: string;
@@ -10,17 +10,17 @@ export interface ApiResponse<T = any> {
 
 // Token API Responses
 export interface TokenData {
-  id: number;
+  id: string; // Changed from number to string (cuid)
   token_id: number;
-  owner_wallet: string;
+  user_wallet: string; // Populated via minter relation
   prize_amount: number;
   scratched: boolean;
   scratched_at?: Date | null;
   claimed: boolean;
   claimed_at?: Date | null;
   created_at: Date;
-  updated_at: Date;
-  numbers_json: any;
+  updated_at?: Date; // Made optional as it's removed from schema
+  numbers_json: unknown; // JsonValue type - can be string, number, boolean, array, or object
 }
 
 export interface TokensResponse {
@@ -130,7 +130,7 @@ export interface ActivityEntry {
   tokenId?: number;
   amount?: number;
   timestamp: Date;
-  metadata?: any;
+  metadata?: Record<string, unknown>;
 }
 
 export interface ActivityResponse {

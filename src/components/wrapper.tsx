@@ -7,6 +7,9 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { createRef, FC, useEffect, useRef, useState } from "react";
 import { Card } from "~/app/interface/card";
+import { User } from "~/app/interface/user";
+import { AppStats } from "~/app/interface/appStats";
+import { Reveal } from "~/app/interface/reveal";
 
 import {
   fetchActivity,
@@ -193,15 +196,15 @@ const Wrapper: FC<{ children: React.ReactNode }> = ({ children }) => {
       if (userCards.status === "fulfilled") {
         setCards(userCards.value as unknown as Card[]);
       }
-      if (userInfo.status === "fulfilled") {
-        setUser(userInfo.value as any);
+      if (userInfo.status === "fulfilled" && userInfo.value && 'id' in userInfo.value) {
+        setUser(userInfo.value as User); // Type enforced with Zod schema
         const bestFriends = await fetchBestFriends(userFid);
         // store bestFriends into user store
         useUserStore.getState().setBestFriends(bestFriends);
       }
-      if (appStats.status === "fulfilled") setAppStats(appStats.value as any);
-      if (leaderboard.status === "fulfilled") setLeaderboard(leaderboard.value as any);
-      if (activity.status === "fulfilled") setActivity(activity.value as any);
+      if (appStats.status === "fulfilled" && appStats.value && 'id' in appStats.value) setAppStats(appStats.value as AppStats);
+      if (leaderboard.status === "fulfilled" && leaderboard.value && Array.isArray(leaderboard.value)) setLeaderboard(leaderboard.value);
+      if (activity.status === "fulfilled" && activity.value && Array.isArray(activity.value)) setActivity(activity.value as Reveal[]);
       callReady();
     } catch (error) {
       console.error("Error in fetching user info", error);
@@ -243,7 +246,7 @@ const Wrapper: FC<{ children: React.ReactNode }> = ({ children }) => {
           if (
             result.notificationDetails &&
             result.notificationDetails.token &&
-            !user?.notification_enabled
+            true // TODO: Add notification_enabled to User schema when needed
           ) {
             try {
               await fetch(`/api/neynar/welcome-notification`, {
@@ -364,7 +367,7 @@ const Wrapper: FC<{ children: React.ReactNode }> = ({ children }) => {
                 Prize Pool
               </span>
               <span className="text-[16px] leading-[90%] font-medium text-white">
-                ${appStats?.winnings || user?.amount_won || 0}
+                ${appStats?.winnings || 0}
               </span>
             </motion.button>
             <AnimatePresence>

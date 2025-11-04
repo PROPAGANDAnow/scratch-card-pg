@@ -32,7 +32,7 @@ export interface UseUserTokensReturn {
 }
 
 export function useUserTokens(): UseUserTokensReturn {
-  const userAddress = useUserStore((s) => s.user?.wallet)
+  const userAddress = useUserStore((s) => s.user?.address)
 
   const { data: tokensData, isLoading: tokensLoading, error: tokensError, refetch: refetchTokens } = useQuery({
     queryKey: ['userTokens', userAddress?.toLowerCase()],

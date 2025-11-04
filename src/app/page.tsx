@@ -24,7 +24,7 @@ export default function Home() {
   const localCards = useCardStore((s) => s.localCards);
   const setLocalCards = useCardStore((s) => s.setLocalCards);
   const unscratchedCards = useCardStore((s) => s.unscratchedCards);
-  const userWallet = useUserStore((s) => s.user?.wallet || "");
+  const userWallet = useUserStore((s) => s.user?.address || "");
   const { isPaused, formattedStats } = useContractStats();
   const { availableCards } = useUserTokens();
 

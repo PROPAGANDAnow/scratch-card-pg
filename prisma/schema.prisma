@@ -13,14 +13,14 @@ datasource db {
 model User {
   id         String   @id @default(cuid())
   address    String   @unique
-  fid        Int
+  fid        Int?
   created_at DateTime @default(now()) @db.Timestamp(6)
 
   // Relations
   giftedCards    Card[] @relation("CardGifts")
   receivedCards  Card[] @relation("CardReceived")
   scratchedCards Card[] @relation("CardScratched")
-  Card           Card[]
+  mintedCards    Card[] @relation("CardMinted")
 
   @@map("wallets")
 }
@@ -39,17 +39,14 @@ model Card {
   prize_won            Boolean   @default(false) // New field to track if prize was won
   token_id             Int
   contract_address     String
-  scratched_by_user_id String?
-  gifter_id            String?
-  gifted_to_user_id    String?
-
-  // Relations
-  // user          User?   @relation("UserCards", fields: [userId], references: [id])
-  scratched_by User?   @relation("CardScratched", fields: [scratched_by_user_id], references: [id])
-  gifter        User?   @relation("CardGifts", fields: [gifter_id], references: [id])
-  gifted_to     User?   @relation("CardReceived", fields: [gifted_to_user_id], references: [id])
-  User         User?   @relation(fields: [userId], references: [id])
-  userId       String?
+  scratched_by_user_id String?   @map("scratched_by_user_id")
+  gifter_id            String?   @map("gifter_id")
+  gifted_to_user_id    String?   @map("gifted_to_user_id")
+  minter_user_id       String    @map("minter_user_id")
+  scratched_by         User?     @relation("CardScratched", fields: [scratched_by_user_id], references: [id], onDelete: SetNull)
+  gifter               User?     @relation("CardGifts", fields: [gifter_id], references: [id], onDelete: SetNull)
+  gifted_to            User?     @relation("CardReceived", fields: [gifted_to_user_id], references: [id], onDelete: SetNull)
+  minter               User      @relation("CardMinted", fields: [minter_user_id], references: [id], onDelete: SetNull)
 
   @@unique([token_id]) // Assuming card_no should be unique
   @@map("cards")
@@ -57,7 +54,7 @@ model Card {
 
 model Notification {
   id         String   @id @default(cuid())
-  user_fid   Int // User's Farcaster FID
+  user_fid   Int // User's Farcaster FID (required)
   token      String // Notification token for this app
   created_at DateTime @default(now()) @db.Timestamp(6)
   updated_at DateTime @updatedAt @db.Timestamp(6)

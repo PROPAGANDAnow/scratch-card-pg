@@ -41,7 +41,7 @@ export interface UserActivity {
 }
 
 export function useUserActivity(limit = 20): UserActivity {
-  const userAddress = useUserStore((s) => s.user?.wallet)
+  const userAddress = useUserStore((s) => s.user?.address)
   const [page, setPage] = useState(0)
 
   const { data: mintsData, isLoading: mintsLoading, error: mintsError, refetch: refetchMints } = useQuery({

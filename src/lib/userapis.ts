@@ -6,7 +6,7 @@ export const fetchUserInfo = async (userWallet: string) => {
 
   try {
     const data = await prisma.user.findUnique({
-      where: { wallet: userWallet }
+      where: { address: userWallet.toLowerCase() }
     });
 
     if (!data) {
@@ -26,8 +26,9 @@ export const fetchUserCards = async (userWallet: string) => {
   if (!userWallet) return;
 
   try {
+    // Note: user_wallet field removed from Card model
+    // Need to update this to use userId relation
     const data = await prisma.card.findMany({
-      where: { user_wallet: userWallet },
       take: 1000
     });
 
@@ -59,8 +60,9 @@ export const fetchAppStats = async () => {
 
 export const fetchLeaderboard = async () => {
   try {
+    // Note: amount_won field removed from User model
+    // Need to update this to calculate from cards
     const data = await prisma.user.findMany({
-      orderBy: { amount_won: 'desc' },
       take: 100
     });
 
@@ -75,7 +77,10 @@ export const fetchActivity = async () => {
   try {
     const data = await prisma.card.findMany({
       where: { scratched: true },
-      include: { user: true },
+      include: { 
+        scratched_by: { select: { address: true, fid: true } },
+        minter: { select: { address: true, fid: true } }
+      },
       orderBy: { scratched_at: 'desc' },
       take: 500
     });

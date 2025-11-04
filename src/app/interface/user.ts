@@ -1,16 +1,10 @@
-export interface User {
-    wallet: string,
-    fid: number,
-    username: string,
-    created_at: string,
-    amount_won: number,
-    cards_count: number,
-    last_active: string,
-    total_reveals: number,
-    total_wins: number,
-    notification_enabled?: boolean,
-    notification_token?: string | null,
-    pfp: string,
-    current_level: number,
-    reveals_to_next_level: number,
-}
+import { z } from 'zod';
+
+export const UserSchema = z.object({
+  id: z.string(),
+  address: z.string(),
+  fid: z.number().optional(),
+  created_at: z.string().datetime(),
+});
+
+export type User = z.infer<typeof UserSchema>;

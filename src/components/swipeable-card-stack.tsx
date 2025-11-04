@@ -46,7 +46,6 @@ export default function SwipeableCardStack({
     let ownedCards: Card[] = nftData.ownedNfts.map((nft) => ({
       id: nft.tokenId,
       token_id: parseInt(nft.tokenId),
-      user_wallet: userWallet,
       payment_tx: '',
       prize_amount: nft.prizeAmount || 0,
       scratched_at: nft.scratchedAt ? new Date(nft.scratchedAt) : null,
@@ -58,8 +57,11 @@ export default function SwipeableCardStack({
       scratched: nft.scratched,
       prize_won: nft.prizeWon,
       contract_address: nft.contract.address,
-      shared_to: null,
-      shared_from: null,
+      // New required fields from schema
+      scratched_by_user_id: null,
+      gifter_id: null,
+      gifted_to_user_id: null,
+      minter_user_id: '',
     }));
 
     // Filter by specific tokenIds if provided

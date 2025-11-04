@@ -1,6 +1,6 @@
 import { Card as PrismaCard, Prisma } from "@prisma/client";
 
-export interface SharedUser {
+export interface GiftedUser {
   fid: string;
   username: string;
   pfp: string;
@@ -17,10 +17,8 @@ export interface CardCell {
 }
 
 // Type for Card with properly typed JSON fields
-export type Card = Omit<PrismaCard, 'numbers_json' | 'shared_to' | 'shared_from'> & {
+export type Card = Omit<PrismaCard, 'numbers_json'> & {
   numbers_json: Prisma.JsonValue;
-  shared_to?: SharedUser | null | Prisma.JsonValue;
-  shared_from?: SharedUser | null | Prisma.JsonValue;
 };
 
 // Re-export Prisma type for internal use

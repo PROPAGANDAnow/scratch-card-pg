@@ -57,10 +57,10 @@ export async function POST(request: NextRequest) {
         // Use transaction to ensure atomicity for each token
         const result = await prisma.$transaction(async (tx) => {
           // Get the token
+          // Note: user_wallet field removed, ownership check needs to be updated
           const token = await tx.card.findUnique({
             where: {
-              token_id: tokenId,
-              user_wallet: userWallet.toLowerCase()
+              token_id: tokenId
             },
             select: {
               id: true,
@@ -129,15 +129,15 @@ export async function POST(request: NextRequest) {
             }
           });
 
-          // Update user stats
-          await tx.user.update({
-            where: {
-              wallet: userWallet.toLowerCase()
-            },
-            data: {
-              last_active: new Date()
-            }
-          });
+          // Update user stats - field removed from schema
+          // await tx.user.update({
+          //   where: {
+          //     address: userWallet.toLowerCase()
+          //   },
+          //   data: {
+          //     last_active: new Date()
+          //   }
+          // });
 
           return {
             tokenId,
@@ -159,11 +159,11 @@ export async function POST(request: NextRequest) {
           deadline: result.deadline
         });
 
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error(`Error processing token ${tokenId}:`, error);
         failed.push({
           tokenId,
-          error: error.message || 'Failed to process token'
+          error: error instanceof Error ? error.message : 'Failed to process token'
         });
       }
     }

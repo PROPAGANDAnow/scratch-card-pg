@@ -1,18 +1,19 @@
 "use client";
-import {
-  useRef,
-  useEffect,
-  useState,
-  useCallback,
-  useMemo,
-  memo,
-} from "react";
+import { useMiniApp } from "@neynar/react";
 import { motion } from "framer-motion";
 import Image from "next/image";
-import { useAppStore } from "~/stores/app-store";
-import { useUserStore } from "~/stores/user-store";
-import { useCardStore } from "~/stores/card-store";
-import { useUIStore } from "~/stores/ui-store";
+import {
+  memo,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { BestFriend } from "~/app/interface/bestFriends";
+import { Card, CardCell } from "~/app/interface/card";
+import { Reveal } from "~/app/interface/reveal";
+import { useDebouncedScratchDetection } from "~/hooks/useDebouncedScratchDetection";
 import {
   APP_COLORS,
   CANVAS_HEIGHT,
@@ -20,13 +21,13 @@ import {
   SCRATCH_RADIUS,
   USDC_ADDRESS,
 } from "~/lib/constants";
-import { useMiniApp } from "@neynar/react";
-import { Card, CardCell, SharedUser } from "~/app/interface/card";
 import { formatCell } from "~/lib/formatCell";
+import { getLevelRequirement } from "~/lib/level";
 import { chunk3, findWinningRow } from "~/lib/winningRow";
-import { getLevelRequirement, getRevealsToNextLevel } from "~/lib/level";
-import { BestFriend } from "~/app/interface/bestFriends";
-import { useDebouncedScratchDetection } from "~/hooks/useDebouncedScratchDetection";
+import { useAppStore } from "~/stores/app-store";
+import { useCardStore } from "~/stores/card-store";
+import { useUIStore } from "~/stores/ui-store";
+import { useUserStore } from "~/stores/user-store";
 // removed reducer batching; using direct zustand setters
 import ModalPortal from "~/components/ModalPortal";
 import { CircularProgress } from "./circular-progress";
@@ -47,14 +48,13 @@ const ScratchOff = ({
 }: ScratchOffProps) => {
   const user = useUserStore((s) => s.user);
   const bestFriends = useUserStore((s) => s.bestFriends);
-  const setUser = useUserStore((s) => s.setUser);
+  // const setUser = useUserStore((s) => s.setUser); // Not used after schema changes
 
   const appStats = useAppStore((s) => s.appStats);
   const setAppStats = useAppStore((s) => s.setAppStats);
   const setAppColor = useAppStore((s) => s.setAppColor);
   const setAppBackground = useAppStore((s) => s.setAppBackground);
-  const leaderboard = useAppStore((s) => s.leaderboard);
-  const setLeaderboard = useAppStore((s) => s.setLeaderboard);
+
   const activity = useAppStore((s) => s.activity);
   const setActivity = useAppStore((s) => s.setActivity);
 
@@ -73,7 +73,7 @@ const ScratchOff = ({
   const [prizeAmount, setPrizeAmount] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
   const [showBlurOverlay, setShowBlurOrverlay] = useState(false);
-  const [bestFriend, setBestFriend] = useState<BestFriend | null>(null);
+  const [bestFriend] = useState<BestFriend | null>(null);
   const [coverImageLoaded, setCoverImageLoaded] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
   const linkCopyTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -116,7 +116,7 @@ const ScratchOff = ({
       `${baseUrl}/api/frame-share?` +
       new URLSearchParams({
         prize: prizeAmount.toString(),
-        username: user.username || "",
+        username: user.address || "",
         friend_username: bestFriend?.username || "",
       }).toString();
 
@@ -141,11 +141,11 @@ const ScratchOff = ({
       `${baseUrl}/api/frame-share?` +
       new URLSearchParams({
         prize: prizeAmount.toString(),
-        username: user?.username || "",
+        username: user?.address || "",
         friend_username: bestFriend?.username || "",
       }).toString()
     );
-  }, [prizeAmount, user?.username, bestFriend?.username]);
+  }, [prizeAmount, user?.address, bestFriend?.username]);
 
   const handleWhatsAppShare = useCallback(() => {
     const shareUrl = getShareUrl();
@@ -209,19 +209,23 @@ const ScratchOff = ({
     setIsProcessing(true);
 
     // Update app stats
+    // Note: appStats.id field mismatch, handling properly
     setAppStats({
-      ...appStats,
+      id: 1,
+      cards: appStats?.cards || 0,
       reveals: (appStats?.reveals || 0) + 1,
       winnings: (appStats?.winnings || 0) + (prizeAmount < 0 ? 0 : prizeAmount),
-    } as any);
+      created_at: typeof appStats?.created_at === 'string' ? appStats.created_at : (appStats?.created_at || new Date()).toISOString(),
+      updated_at: new Date().toISOString(),
+    });
 
     // Update card locally
     if (cardData?.id) {
       updateCard(cardData.id, {
         scratched: true,
-        scratched_at: new Date() as any,
+        scratched_at: new Date(),
         claimed: true,
-      } as any);
+      });
     } else {
       // fallback: map set
       setCards(
@@ -233,67 +237,66 @@ const ScratchOff = ({
       );
     }
 
-    // Update user snapshot
-    if (user) {
-      const newUser = {
-        ...user,
-        amount_won: (user.amount_won || 0) + (prizeAmount < 0 ? 0 : prizeAmount),
-        total_wins: (user.total_wins || 0) + (prizeAmount !== 0 ? 1 : 0),
-        total_reveals: (user.total_reveals || 0) + 1,
-        current_level:
-          getRevealsToNextLevel(user.current_level || 1) === 0
-            ? (user.current_level || 1) + 1
-            : user.current_level || 1,
-        reveals_to_next_level:
-          (user.reveals_to_next_level || getRevealsToNextLevel(user.current_level || 1)) === 0
-            ? getRevealsToNextLevel((user.current_level || 1) + 1)
-            : getRevealsToNextLevel(user.current_level || 1),
-        last_active: new Date().toISOString(),
-      } as any;
-      setUser(newUser);
-    }
+    // Update user snapshot - fields removed from schema
+    // if (user) {
+    //   const newUser = {
+    //     ...user,
+    //     amount_won: (user.amount_won || 0) + (prizeAmount < 0 ? 0 : prizeAmount),
+    //     total_wins: (user.total_wins || 0) + (prizeAmount !== 0 ? 1 : 0),
+    //     total_reveals: (user.total_reveals || 0) + 1,
+    //     current_level:
+    //       getRevealsToNextLevel(user.current_level || 1) === 0
+    //         ? (user.current_level || 1) + 1
+    //         : user.current_level || 1,
+    //     reveals_to_next_level:
+    //       (user.reveals_to_next_level || getRevealsToNextLevel(user.current_level || 1)) === 0
+    //         ? getRevealsToNextLevel((user.current_level || 1) + 1)
+    //         : getRevealsToNextLevel(user.current_level || 1),
+    //     last_active: new Date().toISOString(),
+    //   };
+    //   setUser(newUser);
+    // }
 
     // Update activity list
+    // Note: user_wallet field removed from Reveal interface
     setActivity([
       ...activity,
       {
         id: (cardData?.id || "") + new Date().toISOString(),
-        card_id: cardData?.id,
-        user_wallet: cardData?.user_wallet,
         prize_amount: prizeAmount < 0 ? 0 : prizeAmount,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        username: user?.username,
-        pfp: user?.pfp,
+        created_at: new Date(),
+        username: user?.address,
+        pfp: undefined,
         payment_tx: cardData?.payment_tx,
         payout_tx: null,
         won: prizeAmount > 0,
-      } as any,
+      } as unknown as Reveal,
     ]);
 
     // Update leaderboard snapshot
-    setLeaderboard(
-      leaderboard.map((lbUser) =>
-        lbUser.wallet === cardData?.user_wallet
-          ? {
-            ...lbUser,
-            amount_won: (lbUser.amount_won || 0) + (prizeAmount < 0 ? 0 : prizeAmount),
-            total_wins: (lbUser.total_wins || 0) + (prizeAmount !== 0 ? 1 : 0),
-            total_reveals: (lbUser.total_reveals || 0) + 1,
-            current_level:
-              getRevealsToNextLevel(user?.current_level || 1) === 0
-                ? (user?.current_level || 1) + 1
-                : user?.current_level || 1,
-            reveals_to_next_level:
-              (user?.reveals_to_next_level ||
-                getRevealsToNextLevel(user?.current_level || 1)) === 0
-                ? getRevealsToNextLevel((user?.current_level || 1) + 1)
-                : getRevealsToNextLevel(user?.current_level || 1),
-            last_active: new Date().toISOString(),
-          }
-          : lbUser
-      )
-    );
+    // Note: user_wallet field removed from Card model, can't update leaderboard without it
+    // setLeaderboard(
+    //   leaderboard.map((lbUser) =>
+    //     lbUser.wallet === cardData?.user_wallet
+    //       ? {
+    //           ...lbUser,
+    //           amount_won: (lbUser.amount_won || 0) + (prizeAmount < 0 ? 0 : prizeAmount),
+    //           total_wins: (lbUser.total_wins || 0) + (prizeAmount !== 0 ? 1 : 0),
+    //           total_reveals: (lbUser.total_reveals || 0) + 1,
+    //           current_level:
+    //             getRevealsToNextLevel(user?.current_level || 1) === 0
+    //               ? (user?.current_level || 1) + 1
+    //               : user?.current_level || 1,
+    //           reveals_to_next_level:
+    //             (user?.reveals_to_next_level ||
+    //               getRevealsToNextLevel(user?.current_level || 1)) === 0
+    //               ? getRevealsToNextLevel((user?.current_level || 1) + 1)
+    //               : getRevealsToNextLevel(user?.current_level || 1),
+    //           last_active: new Date().toISOString(),
+    //         }
+    //       : lbUser
+    //   )
+    // );
 
     setScratched(true);
     onPrizeRevealed?.(prizeAmount);
@@ -311,7 +314,7 @@ const ScratchOff = ({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           fid: user?.fid,
-          username: user?.username,
+          username: user?.address,
           amount: prizeAmount,
           friend_fid: bestFriend?.fid,
           bestFriends,
@@ -331,9 +334,9 @@ const ScratchOff = ({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           cardId: cardData.id,
-          userWallet: cardData.user_wallet,
-          username: user?.username,
-          pfp: user?.pfp,
+          userWallet: '', // Field removed from Card model
+          username: user?.address,
+          pfp: undefined,
           userFid: user?.fid,
           friends: bestFriends,
         }),
@@ -580,37 +583,34 @@ const ScratchOff = ({
   }, [cardData, setAppBackground, setAppColor]);
 
   // Populate best friend state when cardData changes
-  useEffect(() => {
-    // Safely parse shared_to which may be a JsonValue
-    const sharedTo =
-      cardData?.shared_to && typeof cardData.shared_to === 'object' && cardData.shared_to !== null && 'wallet' in (cardData.shared_to as Record<string, unknown>)
-        ? (cardData.shared_to as unknown as SharedUser)
-        : null;
+  // useEffect(() => {
+  //   // Note: shared_to field removed from Card model, replaced with gifted_to_user_id relation
+  //   const sharedTo = null; // Disabled until proper relation is implemented
 
-    if (cardData?.numbers_json && sharedTo?.wallet) {
-      const numbersJson = cardData.numbers_json as unknown as CardCell[];
-      const friendCell = numbersJson.find(
-        (cell) => cell.friend_wallet === sharedTo.wallet
-      );
+  //   if (false && cardData?.numbers_json && sharedTo?.wallet) { // Disabled since sharedTo is always null
+  //     const numbersJson = cardData.numbers_json as unknown as CardCell[];
+  //     const friendCell = numbersJson.find(
+  //       (cell) => cell.friend_wallet === sharedTo.wallet
+  //     );
 
-      if (
-        friendCell &&
-        friendCell.friend_fid &&
-        friendCell.friend_username &&
-        friendCell.friend_pfp &&
-        friendCell.friend_wallet
-      ) {
-        setBestFriend({
-          fid: friendCell.friend_fid,
-          username: friendCell.friend_username,
-          pfp: friendCell.friend_pfp,
-          wallet: friendCell.friend_wallet,
-        });
-      }
-    } else {
-      setBestFriend(null);
-    }
-  }, [cardData]);
+  //     if (
+  //       friendCell &&
+  //       friendCell.friend_fid &&
+  //       friendCell.friend_username &&
+  //       friendCell.friend_pfp &&
+  //       friendCell.friend_wallet
+  //     ) {
+  //       setBestFriend({
+  //         fid: friendCell.friend_fid,
+  //         username: friendCell.friend_username,
+  //         pfp: friendCell.friend_pfp,
+  //         wallet: friendCell.friend_wallet,
+  //       });
+  //     }
+  //   } else {
+  //     setBestFriend(null);
+  //   }
+  // }, [cardData]);
 
   // Reset all state when component unmounts
   useEffect(() => {
@@ -634,16 +634,8 @@ const ScratchOff = ({
   }, []);
 
   // Pre-scratch banner when the card was shared to the current user
-  const isPreScratchShared = useMemo(
-    () =>
-      !!(
-        cardData &&
-        !cardData.scratched &&
-        !scratched &&
-        typeof cardData.shared_from === 'object' && cardData.shared_from !== null && 'username' in cardData.shared_from
-      ),
-    [cardData, scratched]
-  );
+  // Note: shared_from field removed from Card model, replaced with gifter_id relation
+  const isPreScratchShared = useMemo(() => false, [cardData, scratched]);
 
   return (
     <>
@@ -678,13 +670,8 @@ const ScratchOff = ({
               shared by
               <br />
               <span className="text-[16px]">
-                @{(() => {
-                  const sf =
-                    cardData?.shared_from && typeof cardData.shared_from === 'object' && cardData.shared_from !== null && 'username' in (cardData.shared_from as Record<string, unknown>)
-                      ? (cardData.shared_from as unknown as SharedUser)
-                      : null;
-                  return sf?.username || '';
-                })()}
+                {/* Note: shared_from field removed from Card model */}
+                @
               </span>
             </>
           ) : cardData?.prize_amount || prizeAmount ? (
@@ -936,7 +923,7 @@ const ScratchOff = ({
             </p>
             <motion.div className="flex items-center justify-center gap-2">
               <motion.p className="text-white text-[16px] font-medium leading-[90%]">
-                Level {user?.current_level || 1}
+                Level 1
               </motion.p>
               <motion.div
                 className="bg-white/20 rounded-full"
@@ -950,17 +937,14 @@ const ScratchOff = ({
                 transition={{ delay: 0.8, duration: 0.6, ease: "easeOut" }}
               >
                 <CircularProgress
-                  revealsToNextLevel={user?.reveals_to_next_level || 25}
-                  totalRevealsForLevel={getLevelRequirement(
-                    (user?.current_level || 1) + 1
-                  )}
+                  revealsToNextLevel={25}
+                  totalRevealsForLevel={getLevelRequirement(2)}
                 />
               </motion.div>
 
               <motion.p className="text-white text-[14px] font-medium leading-[90%] text-center">
-                {user?.reveals_to_next_level || 25} win
-                {user?.reveals_to_next_level !== 1 ? "s" : ""} away from
-                level {(user?.current_level || 1) + 1}
+                25 wins away from
+                level 2
               </motion.p>
             </motion.div>
             <div className="absolute w-[90%] bottom-[36px] flex flex-col items-center justify-center gap-4">

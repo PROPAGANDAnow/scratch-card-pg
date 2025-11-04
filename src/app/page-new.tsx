@@ -40,7 +40,7 @@ export default function NftHome() {
 
     return tokenIds.map((tokenId: bigint) => ({
       id: tokenId.toString(),
-      user_wallet: address || '',
+      // user_wallet field removed from Card model
       payment_tx: '', // Will be populated from transaction events
       prize_amount: 0, // Will be determined when scratching
       scratched_at: null,
@@ -53,9 +53,12 @@ export default function NftHome() {
       prize_won: false,
       token_id: Number(tokenId),
       contract_address: '0x0000000000000000000000000000000000000000', // Placeholder
-      shared_to: null,
-      shared_from: null,
-    } as Card));
+      // New required fields from schema
+      scratched_by_user_id: null,
+      gifter_id: null,
+      gifted_to_user_id: null,
+      userId: null,
+    } as unknown as Card));
   }, [tokenIds, address]);
 
   // Initialize swipable mode

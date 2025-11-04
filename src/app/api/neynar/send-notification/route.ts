@@ -72,20 +72,38 @@ export async function POST(request: NextRequest) {
 
     if (bestFriendFids.length > 0) {
       try {
-        const users = await prisma.user.findMany({
+        // Since notification fields moved to separate Notification table,
+        // we need to query differently
+        const notifications = await prisma.notification.findMany({
           where: {
-            fid: { in: bestFriendFids },
-            notification_enabled: true
+            user_fid: { in: bestFriendFids }
           },
           select: {
-            fid: true,
-            username: true,
-            notification_enabled: true,
-            notification_token: true
+            user_fid: true,
+            token: true
           }
         });
 
-        usersToNotify = users;
+        // Get user details for those with notifications
+        const users = await prisma.user.findMany({
+          where: {
+            fid: { in: notifications.map(n => n.user_fid) }
+          },
+          select: {
+            fid: true
+          }
+        });
+
+        // Combine the data
+        const usersWithNotifications = users.map(user => {
+          const notification = notifications.find(n => n.user_fid === user.fid);
+          return {
+            ...user,
+            notification_token: notification?.token
+          };
+        });
+
+        usersToNotify = usersWithNotifications;
         console.log(
           `Found ${usersToNotify.length} users with notifications enabled`
         );

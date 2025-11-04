@@ -28,7 +28,6 @@ export async function GET(
       where: { token_id: cardId },
       select: {
         id: true,
-        user_wallet: true,
         prize_amount: true,
         prize_asset_contract: true,
         numbers_json: true,
@@ -48,7 +47,6 @@ export async function GET(
       success: true,
       card: {
         id: card.id,
-        userWallet: card.user_wallet,
         prizeAmount: card.prize_amount,
         prizeAsset: card.prize_asset_contract,
         numbersJson: card.numbers_json,

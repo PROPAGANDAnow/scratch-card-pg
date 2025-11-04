@@ -10,6 +10,7 @@ import { Card } from "~/app/interface/card";
 import { User } from "~/app/interface/user";
 import { AppStats } from "~/app/interface/appStats";
 import { Reveal } from "~/app/interface/reveal";
+import { LeaderboardEntry } from "~/app/interface/api";
 
 import {
   fetchActivity,
@@ -207,7 +208,7 @@ const WrapperZustand: FC<{ children: React.ReactNode }> = ({ children }) => {
       if (appStats.status === "fulfilled" && appStats.value)
         setAppStats(appStats.value as AppStats | null);
       if (leaderboard.status === "fulfilled" && leaderboard.value)
-        setLeaderboard(leaderboard.value as User[]);
+        setLeaderboard(leaderboard.value as LeaderboardEntry[]);
       if (activity.status === "fulfilled" && activity.value)
         setActivity(activity.value as Reveal[]);
       callReady();
@@ -241,7 +242,7 @@ const WrapperZustand: FC<{ children: React.ReactNode }> = ({ children }) => {
           if (
             result.notificationDetails &&
             result.notificationDetails.token &&
-            !user?.notification_enabled
+            true // notification_enabled field removed from User model
           ) {
             try {
               await fetch(`/api/neynar/welcome-notification`, {
@@ -362,7 +363,7 @@ const WrapperZustand: FC<{ children: React.ReactNode }> = ({ children }) => {
                 Prize Pool
               </span>
               <span className="text-[16px] leading-[90%] font-medium text-white">
-                ${appStats?.winnings || user?.amount_won || 0}
+                ${appStats?.winnings || 0}
               </span>
             </motion.button>
             <AnimatePresence>

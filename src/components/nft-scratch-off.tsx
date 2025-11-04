@@ -30,7 +30,7 @@ import {
   USDC_ADDRESS,
 } from "~/lib/constants";
 import { useMiniApp } from "@neynar/react";
-import { Card, CardCell, SharedUser } from "~/app/interface/card";
+import { Card, CardCell } from "~/app/interface/card";
 import { formatCell } from "~/lib/formatCell";
 import { chunk3, findWinningRow } from "~/lib/winningRow";
 import { BestFriend } from "~/app/interface/bestFriends";
@@ -74,7 +74,7 @@ const NftScratchOff = ({
   const [prizeAmount, setPrizeAmount] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
   const [showBlurOverlay, setShowBlurOverlay] = useState(false);
-  const [bestFriend, setBestFriend] = useState<BestFriend | null>(null);
+  const [bestFriend] = useState<BestFriend | null>(null);
   const [coverImageLoaded, setCoverImageLoaded] = useState(false);
   const [claimSignature, setClaimSignature] = useState<ClaimSignature | null>(null);
   const linkCopyTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -83,10 +83,16 @@ const NftScratchOff = ({
   const { batchUpdate } = useBatchedUpdates(() => { });
   const { address } = useWallet();
 
-  // Store user wallet in localStorage when it changes
+  // Store user address in localStorage when it changes
   useEffect(() => {
     if (address) {
-      localStorage.setItem('user_wallet', address);
+      // Migrate from old key if exists
+      const oldWallet = localStorage.getItem('user_wallet');
+      if (oldWallet && !localStorage.getItem('address')) {
+        localStorage.setItem('address', oldWallet);
+        localStorage.removeItem('user_wallet');
+      }
+      localStorage.setItem('address', address);
     }
   }, [address]);
 
@@ -207,7 +213,7 @@ const NftScratchOff = ({
       `${baseUrl}/api/frame-share?` +
       new URLSearchParams({
         prize: prizeAmount.toString(),
-        username: user.username || "",
+        username: user.address || "",
         friend_username: bestFriend?.username || "",
       }).toString();
 
@@ -270,7 +276,7 @@ const NftScratchOff = ({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         fid: user?.fid,
-        username: user?.username,
+        username: user?.address,
         amount: prizeAmount,
         friend_fid: bestFriend?.fid,
         bestFriends,
@@ -468,35 +474,33 @@ const NftScratchOff = ({
   }, [cardData, isProcessing, debouncedScratchDetection, scratched]);
 
   // Populate best friend state
-  useEffect(() => {
-    const sharedTo =
-      cardData?.shared_to && typeof cardData.shared_to === 'object' && cardData.shared_to !== null && 'wallet' in (cardData.shared_to as Record<string, unknown>)
-        ? (cardData.shared_to as unknown as SharedUser)
-        : null;
-    if (cardData?.numbers_json && sharedTo?.wallet) {
-      const numbersJson = cardData.numbers_json as unknown as CardCell[];
-      const friendCell = numbersJson.find(
-        (cell) => cell.friend_wallet === sharedTo.wallet
-      );
+  // useEffect(() => {
+  //   // Note: shared_to field removed from Card model, replaced with gifted_to_user_id relation
+  //   const sharedTo = null; // Disabled until proper relation is implemented
+  //   if (false && cardData?.numbers_json && sharedTo?.wallet) { // Disabled since sharedTo is always null
+  //     const numbersJson = cardData.numbers_json as unknown as CardCell[];
+  //     const friendCell = numbersJson.find(
+  //       (cell) => cell.friend_wallet === sharedTo.wallet
+  //     );
 
-      if (
-        friendCell &&
-        friendCell.friend_fid &&
-        friendCell.friend_username &&
-        friendCell.friend_pfp &&
-        friendCell.friend_wallet
-      ) {
-        setBestFriend({
-          fid: friendCell.friend_fid,
-          username: friendCell.friend_username,
-          pfp: friendCell.friend_pfp,
-          wallet: friendCell.friend_wallet,
-        });
-      }
-    } else {
-      setBestFriend(null);
-    }
-  }, [cardData]);
+  //     if (
+  //       friendCell &&
+  //       friendCell.friend_fid &&
+  //       friendCell.friend_username &&
+  //       friendCell.friend_pfp &&
+  //       friendCell.friend_wallet
+  //     ) {
+  //       setBestFriend({
+  //         fid: friendCell.friend_fid,
+  //         username: friendCell.friend_username,
+  //         pfp: friendCell.friend_pfp,
+  //         wallet: friendCell.friend_wallet,
+  //       });
+  //     }
+    // } else {
+    //   setBestFriend(null);
+    // }
+  // }, [cardData]);
 
   // Reset state when component unmounts
   useEffect(() => {

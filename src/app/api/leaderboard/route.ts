@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
 
   try {
     // Build the date filter based on timeframe
-    let dateFilter: any = {};
+    let dateFilter: { gte?: Date } | undefined = {};
     const now = new Date();
 
     switch (timeframe) {
@@ -45,24 +45,58 @@ export async function GET(request: NextRequest) {
         break;
     }
 
-    // First, get all users with their card statistics
-    const usersWithStats = await prisma.user.findMany({
-      orderBy: {
-        amount_won: 'desc'
-      },
-      take: limit! * 2, // Fetch more to account for filtering
-      skip: offset!
+    // Get all users and calculate their winnings
+    const users = await prisma.user.findMany({
+      select: {
+        id: true,
+        address: true,
+        fid: true,
+        created_at: true
+      }
     });
+
+    // Calculate total winnings for each user
+    const usersWithWinnings = await Promise.all(
+      users.map(async (user) => {
+        const wonInTimeframe = await prisma.card.aggregate({
+          where: {
+            minter_user_id: user.id,
+            scratched: true,
+            prize_amount: {
+              gt: 0
+            },
+            ...(dateFilter && {
+              scratched_at: dateFilter
+            })
+          },
+          _sum: {
+            prize_amount: true
+          }
+        });
+
+        return {
+          ...user,
+          totalWon: Number(wonInTimeframe._sum?.prize_amount || 0)
+        };
+      })
+    );
+
+    // Sort by total winnings descending
+    usersWithWinnings.sort((a, b) => b.totalWon - a.totalWon);
+
+    // Apply pagination
+    const paginatedUsers = usersWithWinnings.slice(offset!, offset! + limit!);
 
     // Get additional statistics for each user
     const leaderboardEntries: LeaderboardEntry[] = [];
     let rank = offset! + 1; // Start rank from offset
 
-    for (const user of usersWithStats) {
+    for (const user of paginatedUsers) {
       // Count scratched cards for this user
+      // Note: user_wallet field removed, need to use userId relation
       const scratchedCount = await prisma.card.count({
         where: {
-          user_wallet: user.wallet,
+          minter_user_id: user.id,
           scratched: true,
           ...(dateFilter && {
             scratched_at: dateFilter
@@ -75,7 +109,7 @@ export async function GET(request: NextRequest) {
         // Calculate biggest win for this user
         const biggestWinCard = await prisma.card.findFirst({
           where: {
-            user_wallet: user.wallet,
+            minter_user_id: user.id,
             scratched: true,
             prize_amount: {
               gt: 0
@@ -92,31 +126,25 @@ export async function GET(request: NextRequest) {
           }
         });
 
-        // Calculate win rate (wins / total scratched)
-        const winRate = user.total_reveals && user.total_reveals > 0
-          ? ((user.total_wins || 0) / user.total_reveals) * 100
-          : 0;
-
-        // Filter amount_won based on timeframe
-        let filteredAmountWon = user.amount_won || 0;
-        if (timeframe !== 'all') {
-          const wonInTimeframe = await prisma.card.aggregate({
-            where: {
-              user_wallet: user.wallet,
-              scratched: true,
-              prize_amount: {
-                gt: 0
-              },
-              ...(dateFilter && {
-                scratched_at: dateFilter
-              })
+        // Calculate wins for win rate
+        const totalWins = await prisma.card.count({
+          where: {
+            minter_user_id: user.id,
+            scratched: true,
+            prize_amount: {
+              gt: 0
             },
-            _sum: {
-              prize_amount: true
-            }
-          });
-          filteredAmountWon = Number(wonInTimeframe._sum.prize_amount || 0);
-        }
+            ...(dateFilter && {
+              scratched_at: dateFilter
+            })
+          }
+        });
+
+        // Calculate win rate (wins / total scratched)
+        const winRate = scratchedCount > 0 ? (totalWins / scratchedCount) * 100 : 0;
+
+        // Use pre-calculated totalWon
+        const filteredAmountWon = user.totalWon || 0;
 
         // Skip users with no wins in the selected timeframe
         if (timeframe !== 'all' && filteredAmountWon === 0) {
@@ -125,29 +153,17 @@ export async function GET(request: NextRequest) {
 
         const entry: LeaderboardEntry = {
           rank,
-          wallet: user.wallet,
+          wallet: user.address,
           fid: user.fid || 0,
-          username: user.username || 'Anonymous',
-          pfp: user.pfp || '',
+          username: 'Anonymous', // username field removed from schema
+          pfp: '', // pfp field removed from schema
           totalWon: filteredAmountWon,
           totalScratched: scratchedCount,
-          totalWins: timeframe === 'all' ? (user.total_wins || 0) :
-            (await prisma.card.count({
-              where: {
-                user_wallet: user.wallet,
-                scratched: true,
-                prize_amount: {
-                  gt: 0
-                },
-                ...(dateFilter && {
-                  scratched_at: dateFilter
-                })
-              }
-            })),
+          totalWins: totalWins,
           winRate: Number(winRate.toFixed(2)),
           biggestWin: biggestWinCard?.prize_amount || 0,
-          lastActive: user.last_active || new Date(),
-          level: user.current_level || 1
+          lastActive: user.created_at || new Date(), // use created_at as fallback
+          level: 1 // level field removed from schema
         };
 
         leaderboardEntries.push(entry);
@@ -161,18 +177,19 @@ export async function GET(request: NextRequest) {
     }
 
     // Get total entries count
-    const totalEntries = await prisma.user.count({
+    // Note: cards relation should be Card (capital C) based on schema
+    // Count users with at least one scratched card
+    const usersWithScratchedCards = await prisma.card.groupBy({
+      by: ['minter_user_id'],
       where: {
-        cards: {
-          some: {
-            scratched: true,
-            ...(dateFilter && {
-              scratched_at: dateFilter
-            })
-          }
-        }
+        scratched: true,
+        ...(dateFilter && {
+          scratched_at: dateFilter
+        })
       }
     });
+    
+    const totalEntries = usersWithScratchedCards.length;
 
     const response: LeaderboardResponse = {
       entries: leaderboardEntries,

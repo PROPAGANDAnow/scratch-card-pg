@@ -1,8 +1,8 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import { AppStats } from '~/app/interface/appStats';
-import { User } from '~/app/interface/user';
 import { Reveal } from '~/app/interface/reveal';
+import { LeaderboardEntry } from '~/app/interface/api';
 
 export interface AppStore {
   // UI State
@@ -13,7 +13,7 @@ export interface AppStore {
   
   // App Data
   appStats: AppStats | null;
-  leaderboard: User[];
+  leaderboard: LeaderboardEntry[];
   activity: Reveal[];
   
   // Actions
@@ -22,7 +22,7 @@ export interface AppStore {
   setIsInMiniApp: (isInMiniApp: boolean) => void;
   setSwipableMode: (swipableMode: boolean) => void;
   setAppStats: (appStats: AppStats | null) => void;
-  setLeaderboard: (leaderboard: User[]) => void;
+  setLeaderboard: (leaderboard: LeaderboardEntry[]) => void;
   setActivity: (activity: Reveal[]) => void;
 }
 

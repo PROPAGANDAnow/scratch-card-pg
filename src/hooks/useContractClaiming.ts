@@ -298,7 +298,7 @@ export const useClaimSignature = () => {
   ): Promise<ClaimSignature> => {
     try {
       // Get user wallet from localStorage (this should be passed from context in a better implementation)
-      const userWallet = localStorage.getItem('user_wallet');
+      const userWallet = localStorage.getItem('address') || localStorage.getItem('user_wallet');
       
       if (!userWallet) {
         throw new Error('User wallet not found. Please connect your wallet.');

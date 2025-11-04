@@ -12,53 +12,46 @@ export async function GET(request: NextRequest) {
     // Verify it's from Vercel cron
     const authHeader = request.headers.get('authorization');
     const expectedAuth = `Bearer ${process.env.CRON_SECRET}`;
-    
+
     if (!process.env.CRON_SECRET) {
       console.error('❌ CRON_SECRET environment variable not set');
       return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
     }
-    
+
     if (authHeader !== expectedAuth) {
       console.error('❌ Unauthorized cron request');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     console.log('🎯 Starting pro users free cards cron job...');
-    
+
     let totalProcessed = 0;
     let totalErrors = 0;
     let offset = 0;
     let hasMore = true;
 
     while (hasMore) {
-      // Fetch batch of pro users
-      const proUsers = await prisma.user.findMany({
-        where: { is_pro: true },
-        select: {
-          wallet: true,
-          username: true,
-          pfp: true,
-          fid: true,
-          cards_count: true
-        },
+      // Since is_pro field was removed, we'll get all users
+      // In a real implementation, you might want to add an is_pro field back or use another criteria
+      const users = await prisma.user.findMany({
         skip: offset,
         take: BATCH_SIZE,
         orderBy: { created_at: 'asc' }
       });
 
-      if (!proUsers || proUsers.length === 0) {
+      if (!users || users.length === 0) {
         hasMore = false;
         break;
       }
 
-      console.log(`📦 Processing batch: ${proUsers.length} users (offset: ${offset})`);
+      console.log(`📦 Processing batch: ${users.length} users (offset: ${offset})`);
 
       // Process each user in the batch
-      for (const user of proUsers) {
+      for (const user of users) {
         try {
           // Validate user data
-          if (!user.wallet || typeof user.wallet !== 'string') {
-            console.error(`❌ Invalid wallet for user:`, user);
+          if (!user.address) {
+            console.error(`❌ Invalid address for user:`, user);
             totalErrors++;
             continue;
           }
@@ -66,7 +59,7 @@ export async function GET(request: NextRequest) {
           // Generate a random prize for the free card
           const prize = drawPrize(false); // No friends available for pro users
           const prizeAsset = PRIZE_ASSETS[Math.floor(Math.random() * PRIZE_ASSETS.length)] || USDC_ADDRESS;
-          
+
           // Generate card numbers
           const numbers = generateNumbers({
             prizeAmount: prize,
@@ -78,53 +71,51 @@ export async function GET(request: NextRequest) {
 
           // Validate generated numbers
           if (!numbers || !Array.isArray(numbers) || numbers.length === 0) {
-            console.error(`❌ Failed to generate numbers for user ${user.wallet}`);
+            console.error(`❌ Failed to generate numbers for user ${user.address}`);
             totalErrors++;
             continue;
           }
 
-           // Create the free card
-           try {
-             const cardData: Prisma.CardUncheckedCreateInput = {
-               user_wallet: user.wallet,
-               payment_tx: "FREE_CARD_PRO_USER",
-               prize_amount: prize,
-               prize_asset_contract: prizeAsset,
-               numbers_json: numbers as Prisma.InputJsonValue,
-               token_id: (user.cards_count || 0) + 1,
-               contract_address: "0x0000000000000000000000000000000000000000", // Placeholder for free cards
-               prize_won: prize > 0,
-             };
-
-             await prisma.card.create({
-               data: cardData
-             });
-
-            // Update user's cards_count
-            await prisma.user.update({
-              where: { wallet: user.wallet },
-              data: {
-                cards_count: { increment: 1 },
-                last_active: new Date()
-              }
+          // Create the free card
+          try {
+            // Get next token_id globally
+            const lastCard = await prisma.card.findFirst({
+              orderBy: { token_id: 'desc' }
             });
 
-            console.log(`✅ Created free card for pro user: ${user.username || 'Unknown'} (${user.wallet})`);
+            const cardData: Prisma.CardCreateInput = {
+              payment_tx: "FREE_CARD_PRO_USER",
+              prize_amount: prize,
+              prize_asset_contract: prizeAsset,
+              numbers_json: numbers as Prisma.InputJsonValue,
+              token_id: (lastCard?.token_id || 0) + 1,
+              contract_address: "0x0000000000000000000000000000000000000000", // Placeholder for free cards
+              prize_won: prize > 0,
+              minter: {
+                connect: { id: user.id }
+              }
+            };
+
+            await prisma.card.create({
+              data: cardData
+            });
+
+            console.log(`✅ Created free card for user: ${user.address}`);
             totalProcessed++;
           } catch (createError) {
-            console.error(`❌ Error creating card for user ${user.wallet}:`, createError);
+            console.error(`❌ Error creating card for user ${user.address}:`, createError);
             totalErrors++;
             continue;
           }
 
         } catch (error) {
-          console.error(`❌ Unexpected error processing user ${user.wallet || 'unknown'}:`, error);
+          console.error(`❌ Unexpected error processing user ${user.address || 'unknown'}:`, error);
           totalErrors++;
         }
       }
 
       // Check if we have more users to process
-      hasMore = proUsers.length === BATCH_SIZE;
+      hasMore = users.length === BATCH_SIZE;
       offset += BATCH_SIZE;
 
       // Add a small delay between batches to avoid overwhelming the database
@@ -169,8 +160,8 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('💥 Fatal error in pro users free cards cron job:', error);
     return NextResponse.json(
-      { 
-        error: 'Internal server error', 
+      {
+        error: 'Internal server error',
         details: error instanceof Error ? error.message : 'Unknown error',
         timestamp: new Date().toISOString()
       },

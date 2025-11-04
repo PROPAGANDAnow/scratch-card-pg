@@ -85,7 +85,7 @@ const Leaderboard = () => {
                 className="text-[24px] font-['ABCGaisyr'] text-center text-white font-bold italic leading-[90%]"
                 style={textShadowStyle}
               >
-                {second ? formatAmount(second.amount_won) : "$0"}
+                {second ? formatAmount(second.totalWon) : "$0"}
               </p>
               <p className="text-[12px] font-medium leading-[90%] text-white/60 w-full whitespace-nowrap overflow-hidden text-ellipsis">
                 {second ? `@${truncateUsername(second.username)}` : "No data"}
@@ -121,7 +121,7 @@ const Leaderboard = () => {
                 className="text-[24px] font-['ABCGaisyr'] text-center text-white font-bold italic leading-[90%]"
                 style={textShadowStyle}
               >
-                {first ? formatAmount(first.amount_won) : "$0"}
+                {first ? formatAmount(first.totalWon) : "$0"}
               </p>
               <p className="text-[12px] font-medium leading-[90%] text-white/60 w-full whitespace-nowrap overflow-hidden text-ellipsis">
                 {first ? `@${truncateUsername(first.username)}` : "No data"}
@@ -156,7 +156,7 @@ const Leaderboard = () => {
                 className="text-[24px] font-['ABCGaisyr'] text-center text-white font-bold italic leading-[90%]"
                 style={textShadowStyle}
               >
-                {third ? formatAmount(third.amount_won) : "$0"}
+                {third ? formatAmount(third.totalWon) : "$0"}
               </p>
               <p className="text-[12px] font-medium leading-[90%] text-white/60 w-full whitespace-nowrap overflow-hidden text-ellipsis ">
                 {third ? `@${truncateUsername(third.username)}` : "No data"}
@@ -202,7 +202,7 @@ const Leaderboard = () => {
                   />
                   <div className="space-y-1">
                     <p className="text-[16px] font-bold leading-[90%] text-white font-[ABCGaisyr]">
-                      {formatAmount(user.amount_won)}
+                      {formatAmount(user.totalWon)}
                     </p>
                     <p className="text-[12px] font-medium leading-[90%] text-white/60">
                       @{truncateUsername(user.username)}
@@ -214,7 +214,7 @@ const Leaderboard = () => {
                     #{rank}
                   </p>
                   <p className="text-[12px] font-medium leading-[90%] text-white/60">
-                    {user.total_reveals} / {user.cards_count}
+                    {user.totalScratched} cards
                   </p>
                 </div>
               </motion.div>

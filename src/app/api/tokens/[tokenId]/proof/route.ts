@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { validateRequest } from '~/lib/validations';
 import { GetProofSchema } from '~/lib/validations';
 import { verifyTokenOwnership } from '~/lib/auth-utils';
-import prisma from '~/lib/prisma';
+import { prisma } from '~/lib/prisma';
 import { ApiResponse, ProofData } from '~/app/interface/api';
 import { createHash, randomBytes } from 'crypto';
 
@@ -39,7 +39,7 @@ export async function GET(
 
   try {
     // Verify ownership with quickauth - only show proof to token owner
-    const ownership = await verifyTokenOwnership(request, userWallet, tokenId);
+    const ownership = await verifyTokenOwnership(request, userWallet);
 
     if (!ownership.success) {
       return NextResponse.json(
@@ -49,6 +49,7 @@ export async function GET(
     }
 
     // Get token details from database
+    // Note: user_wallet field removed from Card model
     const token = await prisma.card.findUnique({
       where: {
         token_id: tokenId
@@ -56,7 +57,6 @@ export async function GET(
       select: {
         id: true,
         token_id: true,
-        owner_wallet: true,
         prize_amount: true,
         scratched: true,
         created_at: true
@@ -78,7 +78,7 @@ export async function GET(
     const response: ProofData = {
       tokenId: token.token_id,
       proof: proofData.proof,
-      owner: token.owner_wallet,
+      owner: userWallet, // Use the provided userWallet since field is removed from schema
       isValid: true,
       expiresAt: proofData.expiresAt
     };
@@ -102,9 +102,8 @@ export async function GET(
  * This creates a verifiable proof that can be used to verify ownership
  */
 function generateTokenProof(token: {
-  id: number;
+  id: string;
   token_id: number;
-  owner_wallet: string;
   prize_amount: number;
   scratched: boolean;
   created_at: Date;
@@ -114,7 +113,7 @@ function generateTokenProof(token: {
   const nonce = randomBytes(16).toString('hex');
 
   // Create the proof string by hashing token data with timestamp and nonce
-  const dataToHash = `${token.token_id}:${token.owner_wallet}:${token.prize_amount}:${token.scratched}:${token.created_at.getTime()}:${timestamp}:${nonce}`;
+  const dataToHash = `${token.token_id}:${token.prize_amount}:${token.scratched}:${token.created_at.getTime()}:${timestamp}:${nonce}`;
 
   const proof = createHash('sha256').update(dataToHash).digest('hex');
 
@@ -129,20 +128,3 @@ function generateTokenProof(token: {
   };
 }
 
-/**
- * Verify a token proof (utility function that could be used elsewhere)
- */
-export function verifyTokenProof(
-  token: any,
-  proof: string,
-  expiresAt: number
-): boolean {
-  // Check if proof has expired
-  if (Date.now() > expiresAt) {
-    return false;
-  }
-
-  // In a real implementation, you would verify the proof against the expected hash
-  // For now, we just check if the proof exists and hasn't expired
-  return proof && proof.length === 64; // SHA256 hex length
-}

@@ -23,15 +23,28 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // Update user with notification settings
-    const updatedUser = await prisma.user.update({
-      where: { wallet: user.wallet },
-      data: {
-        notification_enabled: true,
-        notification_token: notification_token,
-        last_active: new Date(),
-      }
+    // Create or update notification record
+    // First check if notification exists
+    const existingNotification = await prisma.notification.findFirst({
+      where: { user_fid: fid }
     });
+
+    if (existingNotification) {
+      await prisma.notification.update({
+        where: { id: existingNotification.id },
+        data: {
+          token: notification_token,
+          updated_at: new Date(),
+        }
+      });
+    } else {
+      await prisma.notification.create({
+        data: {
+          user_fid: fid,
+          token: notification_token,
+        }
+      });
+    }
 
     // Send notification via Neynar
     const neynarApiKey = process.env.NEYNAR_API_KEY;
@@ -65,7 +78,7 @@ export async function POST(request: NextRequest) {
 
       return NextResponse.json({
         success: true,
-        user: updatedUser,
+        user: { fid, address: user.address },
         notification: notificationResult.data,
       });
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
