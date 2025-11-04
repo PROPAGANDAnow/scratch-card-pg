@@ -167,15 +167,6 @@ export const useERC20Approval = (
       setState('pending');
       setError(null);
 
-      // const txHash = await writeContract({
-      //   address: USDC_ADDRESS,
-      //   abi: USDC_ABI,
-      //   functionName: 'approve',
-      //   args: [spenderAddress, amount],
-      // });
-
-      // console.log('Approval transaction submitted:', txHash);
-
       if (!publicClient) return
       if (!userAddress) return
 
@@ -206,8 +197,8 @@ export const useERC20Approval = (
       // Step 3: Wait for the transaction to be mined
       await publicClient.waitForTransactionReceipt({
         hash,
-        confirmations: 1 // Wait for 1 confirmation (default)
-      });
+        confirmations: 2 // Wait for 1 confirmation (default)
+      })
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to approve';
       setError(errorMessage);

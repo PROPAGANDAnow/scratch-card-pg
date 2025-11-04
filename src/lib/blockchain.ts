@@ -49,7 +49,7 @@ export const SCRATCH_CARD_NFT_ADDRESS = (process.env.NEXT_PUBLIC_SCRATCH_CARD_NF
 /**
  * USDC contract address on Base
  */
-export const USDC_ADDRESS = (process.env.NEXT_PUBLIC_USDC_ADDRESS || '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913') as ViemAddress;
+export const USDC_ADDRESS = (process.env.NEXT_PUBLIC_USDC_ADDRESS || '0x902C0EB8E7654B15EEc93499587e56eF75fa6AdD') as ViemAddress;
 
 /**
  * Signer address for prize claim verification

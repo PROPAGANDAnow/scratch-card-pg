@@ -94,10 +94,10 @@ export interface UseContractMintingReturn {
   /** Reset state */
   reset: () => void;
 
-/** Whether user can mint */
+  /** Whether user can mint */
   canMint: boolean;
 
-/** Approval state and functions */
+  /** Approval state and functions */
   approval: {
     state: 'idle' | 'checking' | 'pending' | 'confirming' | 'success' | 'error';
     needsApproval: boolean;
@@ -440,17 +440,13 @@ export const useContractMinting = (userAddress: Address | null): UseContractMint
         throw new Error(`Maximum batch size is ${maxBatchSize}`);
       }
 
-      // Calculate required approval = exact USDC cost
-      const actualCost = calculateCostBigInt(quantity);
-      const requiredApproval = actualCost;
-
       // Start single pending state covering approval + mint
       setState('pending');
       setError(null);
       setEnhancedReceipt(null);
 
       // Approve exact required amount first
-      await approvalHook.approve(requiredApproval);
+      await approvalHook.approveUnlimited();
 
       // Optionally simulate tx (skipped by default)
       if (!SKIP_SIMULATION) {
