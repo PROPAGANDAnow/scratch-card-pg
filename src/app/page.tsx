@@ -13,7 +13,7 @@ import type { Token } from "~/hooks/useUserTokens";
 function extractUnclaimedTokenIds(cards: Token[] = []): number[] {
   return cards
     .map((token) => {
-      const idAsNumber = Number(token.id);
+      const idAsNumber = token.metadata?.tokenId && Number(token.metadata?.tokenId);
       return Number.isFinite(idAsNumber) ? idAsNumber : null;
     })
     .filter((n): n is number => n !== null);

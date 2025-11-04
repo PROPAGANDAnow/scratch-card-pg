@@ -54,6 +54,13 @@ export interface UseUserTokensReturn {
   refetch: () => void
 }
 
+interface GetByOwnerResponse {
+  data: {
+    availableCards: Token[]
+    tokens: Token[]
+  }
+}
+
 export function useUserTokens(): UseUserTokensReturn {
   const userAddress = useUserStore((s) => s.user?.address)
 
@@ -66,7 +73,8 @@ export function useUserTokens(): UseUserTokensReturn {
       if (!response.ok) {
         throw new Error(`API request failed: ${response.statusText}`)
       }
-      return response.json()
+      const data = response.json() as Promise<GetByOwnerResponse>
+      return data
     },
     enabled: !!userAddress,
     retry: 3,
@@ -74,7 +82,7 @@ export function useUserTokens(): UseUserTokensReturn {
   })
 
   const tokens = data?.data?.tokens || []
-  const availableCards = data?.data?.availableCards || []
+  const availableCards = data?.data?.tokens || []
 
   return {
     tokens,
