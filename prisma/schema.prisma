@@ -11,14 +11,15 @@ datasource db {
 }
 
 model User {
-  fid    Int      @id
-  wallet String[]
+  id         String   @id @default(cuid())
+  address    String   @unique
+  fid        Int
+  created_at DateTime @default(now()) @db.Timestamp(6)
 
   // Relations
-  cards         Card[]
-  notifications Notification[]
+  cards Card[]
 
-  @@map("users")
+  @@map("wallets")
 }
 
 model Card {
@@ -41,7 +42,7 @@ model Card {
   shared_from          Json? // Object with fid, username, pfp, wallet
 
   // Relations
-  user User @relation(fields: [user_fid], references: [fid], onDelete: Cascade)
+  user User @relation(fields: [user_wallet], references: [address], onDelete: Cascade)
 
   @@unique([token_id]) // Assuming card_no should be unique
   @@map("cards")
@@ -53,7 +54,6 @@ model Notification {
   token      String // Notification token for this app
   created_at DateTime @default(now()) @db.Timestamp(6)
   updated_at DateTime @updatedAt @db.Timestamp(6)
-  User       User?    @relation(fields: [user_fid], references: [fid])
 
   @@map("notifications")
 }
