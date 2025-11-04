@@ -4,7 +4,7 @@ import { privateKeyToAccount } from "viem/accounts";
 import { validateRequest } from "~/lib/validations";
 import { GenerateClaimSignatureSchema } from "~/lib/validations";
 import { prisma } from "~/lib/prisma";
-import { USDC_ADDRESS } from "~/lib/constants";
+import { USDC_ADDRESS } from "~/lib/blockchain";
 import { ApiResponse } from "~/app/interface/api";
 
 /**

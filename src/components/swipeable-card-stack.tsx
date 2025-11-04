@@ -4,12 +4,9 @@ import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Card } from "~/app/interface/card";
 import { CANVAS_HEIGHT, CANVAS_WIDTH } from "~/lib/constants";
-import { SCRATCH_CARD_NFT_ADDRESS } from "~/lib/blockchain";
 import { useCardStore } from "~/stores/card-store";
 import { useUIStore } from "~/stores/ui-store";
 import NftScratchOff from "./nft-scratch-off";
-import { useUserNfts } from "~/hooks/useUserNfts";
-import { useQueryClient } from '@tanstack/react-query';
 import { useUserTokens } from "~/hooks";
 import { extractUnclaimedTokenIds } from "~/lib/token-utils";
 
@@ -32,84 +29,58 @@ export default function SwipeableCardStack({
   const { availableCards } = useUserTokens();
   const tokenIds = useMemo(() => extractUnclaimedTokenIds(availableCards), [availableCards]);
 
-  // Fetch user's NFTs using TanStack Query
-  const { data: nftData, isLoading: nftLoading, error: nftError, refetch } = useUserNfts({
-    userWallet,
-    contractAddress: SCRATCH_CARD_NFT_ADDRESS,
-    enabled: !!userWallet,
-  });
+  // Filter availableCards by specific tokenIds if provided
+  const filteredCards = useMemo(() => {
+    if (!availableCards?.length) return [];
 
-  // Import query client for invalidation
-  const queryClient = useQueryClient();
-
-  // Convert NFT data to Card format and filter by tokenIds if provided
-  const cards = useMemo(() => {
-    if (!nftData?.ownedNfts) return [];
-
-    let ownedCards: Card[] = nftData.ownedNfts.map((nft) => ({
-      id: nft.tokenId,
-      token_id: parseInt(nft.tokenId),
-      payment_tx: '',
-      prize_amount: nft.prizeAmount || 0,
-      scratched_at: nft.scratchedAt ? new Date(nft.scratchedAt) : null,
-      prize_asset_contract: '',
-      numbers_json: [],
-      claimed: nft.claimed,
-      payout_tx: null,
-      created_at: nft.createdAt ? new Date(nft.createdAt) : new Date(),
-      scratched: nft.scratched,
-      prize_won: nft.prizeWon,
-      contract_address: nft.contract.address,
-      // New required fields from schema
-      scratched_by_user_id: null,
-      gifter_id: null,
-      gifted_to_user_id: null,
-      minter_user_id: '',
-    }));
+    let cards = [...availableCards];
 
     // Filter by specific tokenIds if provided
     if (tokenIds && tokenIds.length > 0) {
-      ownedCards = ownedCards.filter(card => tokenIds.includes(card.token_id));
+      cards = cards.filter(card => tokenIds.includes(parseInt(card.metadata?.tokenId || card.id)));
     }
 
-    // Sort by token_id to maintain order
-    ownedCards.sort((a, b) => a.token_id - b.token_id);
+    // Sort by tokenId to maintain order
+    cards.sort((a, b) => {
+      const aTokenId = parseInt(a.metadata?.tokenId || a.id);
+      const bTokenId = parseInt(b.metadata?.tokenId || b.id);
+      return aTokenId - bTokenId;
+    });
 
-    return ownedCards;
-  }, [nftData, tokenIds, userWallet]);
+    return cards;
+  }, [availableCards, tokenIds]);
 
-  const loading = nftLoading;
 
   // Initialize current card number
   useEffect(() => {
-    if (cards.length > 0 && !currentCardNo) {
-      const initialCard = cards[initialIndex] || cards[0];
-      setCurrentCardNo(initialCard.token_id);
+    if (filteredCards.length > 0 && !currentCardNo) {
+      const initialCard = filteredCards[initialIndex] || filteredCards[0];
+      setCurrentCardNo(parseInt(initialCard.metadata?.tokenId || initialCard.id));
     }
-  }, [cards, initialIndex, currentCardNo]);
+  }, [filteredCards, initialIndex, currentCardNo]);
 
   // Find current card and index
-  const current = cards.find((card) => card.token_id === currentCardNo);
+  const current = filteredCards.find((card) => parseInt(card.metadata?.tokenId || card.id) === currentCardNo);
   const currentIndex = current
-    ? cards.findIndex((card) => card.token_id === currentCardNo)
+    ? filteredCards.findIndex((card) => parseInt(card.metadata?.tokenId || card.id) === currentCardNo)
     : -1;
 
   const canGoPrev = currentIndex > 0;
-  const canGoNext = currentIndex < cards.length - 1;
+  const canGoNext = currentIndex < filteredCards.length - 1;
 
   // Set up next card function and update current card index
   useEffect(() => {
     const nextCardFunction = () => {
       if (canGoNext) {
         setDirection(1);
-        const nextCard = cards[currentIndex + 1];
-        if (nextCard) setCurrentCardNo(nextCard.token_id);
+        const nextCard = filteredCards[currentIndex + 1];
+        if (nextCard) setCurrentCardNo(parseInt(nextCard.metadata?.tokenId || nextCard.id));
       }
     };
 
     setNextCardFn(nextCardFunction);
     setCurrentCardIndex(currentIndex);
-  }, [canGoNext, currentIndex, cards, setNextCardFn, setCurrentCardIndex]);
+  }, [canGoNext, currentIndex, filteredCards, setNextCardFn, setCurrentCardIndex]);
 
   // Mouse handlers for card tilt - memoized for performance
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
@@ -134,41 +105,38 @@ export default function SwipeableCardStack({
     e.stopPropagation();
     if (canGoPrev) {
       setDirection(-1);
-      const prevCard = cards[currentIndex - 1];
-      if (prevCard) setCurrentCardNo(prevCard.token_id);
+      const prevCard = filteredCards[currentIndex - 1];
+      if (prevCard) setCurrentCardNo(parseInt(prevCard.metadata?.tokenId || prevCard.id));
     }
-  }, [canGoPrev, currentIndex, cards]);
+  }, [canGoPrev, currentIndex, filteredCards]);
 
   const handleNextClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     if (canGoNext) {
       setDirection(1);
-      const nextCard = cards[currentIndex + 1];
-      if (nextCard) setCurrentCardNo(nextCard.token_id);
+      const nextCard = filteredCards[currentIndex + 1];
+      if (nextCard) setCurrentCardNo(parseInt(nextCard.metadata?.tokenId || nextCard.id));
     }
-  }, [canGoNext, currentIndex, cards]);
+  }, [canGoNext, currentIndex, filteredCards]);
 
   const handleNextFromScratch = useCallback(() => {
     if (canGoNext) {
       setDirection(1);
-      const nextCard = cards[currentIndex + 1];
-      if (nextCard) setCurrentCardNo(nextCard.token_id);
+      const nextCard = filteredCards[currentIndex + 1];
+      if (nextCard) setCurrentCardNo(parseInt(nextCard.metadata?.tokenId || nextCard.id));
     }
-  }, [canGoNext, currentIndex, cards]);
+  }, [canGoNext, currentIndex, filteredCards]);
 
   // Handle prize revealed
   const handlePrizeRevealed = useCallback((_tokenId: number, prizeAmount: number) => {
     console.log('Prize revealed:', prizeAmount);
-    // Invalidate the query to refresh data from the API
-    queryClient.invalidateQueries({
-      queryKey: ['userNfts', userWallet, SCRATCH_CARD_NFT_ADDRESS]
-    });
-  }, [queryClient, userWallet]);
+    // Query invalidation is now handled by the useUserTokens hook
+  }, []);
 
   // Ensure currentIndex is within bounds
-  const safeIndex = Math.max(0, Math.min(currentIndex, cards.length - 1));
-  const prev = canGoPrev ? cards[safeIndex - 1] : null;
-  const next = canGoNext ? cards[safeIndex + 1] : null;
+  const safeIndex = Math.max(0, Math.min(currentIndex, filteredCards.length - 1));
+  const prev = canGoPrev ? filteredCards[safeIndex - 1] : null;
+  const next = canGoNext ? filteredCards[safeIndex + 1] : null;
 
   return (
     <div className="h-full relative">
@@ -190,7 +158,7 @@ export default function SwipeableCardStack({
               }}
             >
               <NftScratchOff
-                cardData={prev}
+                cardData={tokenToCard(prev)}
                 isDetailView
                 tokenId={parseInt(prev.id)}
                 onPrizeRevealed={handlePrizeRevealed}
@@ -214,7 +182,7 @@ export default function SwipeableCardStack({
               }}
             >
               <NftScratchOff
-                cardData={next}
+                cardData={tokenToCard(next)}
                 isDetailView
                 tokenId={parseInt(next.id)}
                 onPrizeRevealed={handlePrizeRevealed}
@@ -264,26 +232,9 @@ export default function SwipeableCardStack({
 
             {/* Center 60% for scratching */}
             <div className="w-full h-[auto]">
-              {loading ? (
-                <div className="flex items-center justify-center h-full">
-                  <div className="text-white">Loading cards...</div>
-                </div>
-              ) : nftError ? (
-                <div className="flex flex-col items-center justify-center h-full text-white p-4">
-                  <div className="text-red-400 mb-2">Error loading NFTs</div>
-                  <div className="text-sm opacity-70 text-center">
-                    {nftError instanceof Error ? nftError.message : 'Failed to load cards'}
-                  </div>
-                  <button
-                    onClick={() => refetch()}
-                    className="mt-4 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors"
-                  >
-                    Retry
-                  </button>
-                </div>
-              ) : cards.length ? (
+              {filteredCards.length ? (
                 <NftScratchOff
-                  cardData={current || null}
+                  cardData={current ? tokenToCard(current) : null}
                   isDetailView
                   hasNext={canGoNext}
                   onNext={handleNextFromScratch}

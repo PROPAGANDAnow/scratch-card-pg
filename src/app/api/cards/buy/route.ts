@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
-import { PRIZE_ASSETS, USDC_ADDRESS } from "~/lib/constants";
+import { PRIZE_ASSETS } from "~/lib/constants";
+import { USDC_ADDRESS } from "~/lib/blockchain";
 import { drawPrize } from "~/lib/drawPrize";
 import { generateNumbers } from "~/lib/generateNumbers";
 import { prisma } from "~/lib/prisma";

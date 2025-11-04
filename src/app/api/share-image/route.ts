@@ -3,7 +3,7 @@ import React from "react";
 import { readFileSync } from "fs";
 import path from "path";
 import { formatCell } from "~/lib/formatCell";
-import { USDC_ADDRESS } from "~/lib/constants";
+import { USDC_ADDRESS } from "~/lib/blockchain";
 
 export const runtime = "nodejs";
 

@@ -27,8 +27,8 @@ import {
   CANVAS_HEIGHT,
   CANVAS_WIDTH,
   SCRATCH_RADIUS,
-  USDC_ADDRESS,
 } from "~/lib/constants";
+import { USDC_ADDRESS } from "~/lib/blockchain";
 import { useMiniApp } from "@neynar/react";
 import { Card, CardCell } from "~/app/interface/card";
 import { formatCell } from "~/lib/formatCell";

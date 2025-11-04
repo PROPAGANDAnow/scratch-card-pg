@@ -9,6 +9,8 @@
  * Manual changes may be overwritten during project initialization.
  */
 
+import { USDC_ADDRESS } from "./blockchain";
+
 // AccountAssociation type is not exported from the SDK currently
 type AccountAssociation = {
   header: string;
@@ -155,7 +157,6 @@ export const SIGNED_KEY_REQUEST_TYPE = [
 ];
 
 
-export const USDC_ADDRESS = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
 export const CANVAS_WIDTH = 343;
 export const CANVAS_HEIGHT = 418;
 // High-DPI scaling factor for crisp rendering

@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "~/lib/prisma";
 import { drawPrize } from "~/lib/drawPrize";
 import { generateNumbers } from "~/lib/generateNumbers";
-import { PRIZE_ASSETS, USDC_ADDRESS } from "~/lib/constants";
+import { PRIZE_ASSETS } from "~/lib/constants";
+import { USDC_ADDRESS } from "~/lib/blockchain";
 import { Prisma } from "@prisma/client";
 
 const BATCH_SIZE = 50; // Process 50 users at a time to avoid timeouts

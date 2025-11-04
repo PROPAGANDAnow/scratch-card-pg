@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { SCRATCH_CARD_NFT_ADDRESS } from "~/lib/blockchain";
+import { SCRATCH_CARD_NFT_ADDRESS, USDC_ADDRESS } from "~/lib/blockchain";
 import { prisma } from "~/lib/prisma";
 import { AlchemyNftResponse, OwnedNft } from "~/types/alchemy";
 
@@ -86,8 +86,7 @@ export async function GET(request: NextRequest) {
         id: `${SCRATCH_CARD_NFT_ADDRESS}-${nft.tokenId}`, // Composite ID to match GraphQL format
         owner: userWallet.toLowerCase(),
         contract: SCRATCH_CARD_NFT_ADDRESS,
-        batchId: 'unknown', // Not available from Alchemy, would need to be stored in DB
-        prizeToken: 'unknown', // Not available from Alchemy
+        prizeToken: USDC_ADDRESS, // Not available from Alchemy
         prizeAmount: dbCard?.prize_amount?.toString() || '0',
         claimed: dbCard?.claimed ?? false,
         mintedAt: new Date(parseInt(nft.timeLastUpdated) * 1000).toISOString(),

@@ -19,8 +19,8 @@ import {
   CANVAS_HEIGHT,
   CANVAS_WIDTH,
   SCRATCH_RADIUS,
-  USDC_ADDRESS,
 } from "~/lib/constants";
+import { USDC_ADDRESS } from "~/lib/blockchain";
 import { formatCell } from "~/lib/formatCell";
 import { getLevelRequirement } from "~/lib/level";
 import { chunk3, findWinningRow } from "~/lib/winningRow";

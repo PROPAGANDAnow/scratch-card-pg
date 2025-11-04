@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
-import { APP_SPLASH_BACKGROUND_COLOR, APP_SPLASH_URL, USDC_ADDRESS } from "~/lib/constants";
+import { USDC_ADDRESS } from "~/lib/blockchain";
+import { APP_SPLASH_BACKGROUND_COLOR, APP_SPLASH_URL } from "~/lib/constants";
 import { formatCell } from "~/lib/formatCell";
 
 export async function GET(request: NextRequest) {

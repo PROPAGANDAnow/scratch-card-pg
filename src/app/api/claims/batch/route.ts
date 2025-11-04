@@ -6,7 +6,7 @@ import { prisma } from '~/lib/prisma';
 import { ApiResponse, BatchClaimResponse } from '~/app/interface/api';
 import { encodeAbiParameters, keccak256 } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
-import { USDC_ADDRESS } from '~/lib/constants';
+import { USDC_ADDRESS } from '~/lib/blockchain';
 
 export async function POST(request: NextRequest) {
   const validation = await validateRequest(request, BatchClaimSchema, { method: 'POST' });

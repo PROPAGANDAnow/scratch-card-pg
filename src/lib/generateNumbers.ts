@@ -1,7 +1,7 @@
 // ~/lib/generateNumbers.ts
 import { BestFriend } from '~/app/interface/bestFriends';
 import type { CardCell } from '~/app/interface/cardCell';
-import { USDC_ADDRESS } from '~/lib/constants';
+import { USDC_ADDRESS } from '~/lib/blockchain';
 
 /**
  * Build a 12-cell flat array for a 3x4 card.

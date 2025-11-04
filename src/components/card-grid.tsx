@@ -4,7 +4,7 @@ import Image from "next/image";
 import { chunk3, findWinningRow } from "~/lib/winningRow";
 import { formatCell } from "~/lib/formatCell";
 import { Card, CardCell } from "~/app/interface/card";
-import { USDC_ADDRESS } from "~/lib/constants";
+import { USDC_ADDRESS } from "~/lib/blockchain";
 import { useRouter } from "next/navigation";
 
 interface CardGridProps {
