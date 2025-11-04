@@ -17,17 +17,16 @@ model User {
   created_at DateTime @default(now()) @db.Timestamp(6)
 
   // Relations
-  cards         Card[]
-  sharedCards   Card[] @relation("CardShares")
-  receivedCards Card[] @relation("CardReceived")
+  giftedCards    Card[] @relation("CardGifts")
+  receivedCards  Card[] @relation("CardReceived")
+  scratchedCards Card[] @relation("CardScratched")
+  Card           Card[]
 
   @@map("wallets")
 }
 
 model Card {
   id                   String    @id @default(cuid())
-  user_wallet          String
-  user_fid             Int
   payment_tx           String
   prize_amount         Float
   scratched_at         DateTime? @db.Timestamp(6)
@@ -40,13 +39,17 @@ model Card {
   prize_won            Boolean   @default(false) // New field to track if prize was won
   token_id             Int
   contract_address     String
-  shared_from_user_id  String?
-  shared_to_user_id    String?
+  scratched_by_user_id String?
+  gifter_id            String?
+  gifted_to_user_id    String?
 
   // Relations
-  user        User  @relation(fields: [user_wallet], references: [address], onDelete: Cascade)
-  shared_from User? @relation("CardShares", fields: [shared_from_user_id], references: [id])
-  shared_to   User? @relation("CardReceived", fields: [shared_to_user_id], references: [id])
+  // user          User?   @relation("UserCards", fields: [userId], references: [id])
+  scratched_by User?   @relation("CardScratched", fields: [scratched_by_user_id], references: [id])
+  gifter        User?   @relation("CardGifts", fields: [gifter_id], references: [id])
+  gifted_to     User?   @relation("CardReceived", fields: [gifted_to_user_id], references: [id])
+  User         User?   @relation(fields: [userId], references: [id])
+  userId       String?
 
   @@unique([token_id]) // Assuming card_no should be unique
   @@map("cards")
