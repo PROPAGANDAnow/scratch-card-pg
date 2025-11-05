@@ -7,7 +7,6 @@ import { TokenWithState, useUserTokens } from "~/hooks";
 import { CANVAS_HEIGHT, CANVAS_WIDTH } from "~/lib/constants";
 import { extractUnclaimedTokenIds } from "~/lib/token-utils";
 import { useCardStore } from "~/stores/card-store";
-import { useUIStore } from "~/stores/ui-store";
 import NftScratchOff from "./nft-scratch-off";
 
 interface SwipeableCardStackProps {

@@ -6,7 +6,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { createRef, FC, useEffect, useRef, useState } from "react";
-import { Card } from "~/app/interface/card";
 import { User } from "~/app/interface/user";
 import { AppStats } from "~/app/interface/appStats";
 import { Reveal } from "~/app/interface/reveal";
@@ -21,7 +20,6 @@ import {
 import { useUserStore } from "~/stores/user-store";
 import { useCardStore } from "~/stores/card-store";
 import { useAppStore } from "~/stores/app-store";
-import { useUIStore } from "~/stores/ui-store";
 import Bottom from "./bottom";
 import { getFromLocalStorage } from "~/lib/utils";
 import InitialScreen from "./initial-screen";
@@ -50,9 +48,6 @@ const Wrapper: FC<{ children: React.ReactNode }> = ({ children }) => {
   const setUnscratchedCards = useCardStore((s) => s.setUnscratchedCards);
   const refetchCards = useCardStore((s) => s.refetchCards);
 
-  const setPlayWinSound = useUIStore((s) => s.setPlayWinSound);
-  const setGetWinnerGif = useUIStore((s) => s.setGetWinnerGif);
-  // const setRefetchUserCards = useUIStore((s) => s.setRefetchUserCards);
   const [loading, setLoading] = useState(true);
   const [seenInitial, setSeenInitial] = useState(false);
   const [showWinRates, setShowWinRates] = useState(false);
@@ -68,60 +63,10 @@ const Wrapper: FC<{ children: React.ReactNode }> = ({ children }) => {
 
   useDetectClickOutside(prizePoolRef, () => setShowWinRates(false));
 
-  // Audio for win sounds - load once and reuse
-  const winAudioRef = useRef<HTMLAudioElement | null>(null);
-
-  // Images for scratch-off - preload once and reuse
-  const winnerGifRef = useRef<HTMLImageElement | null>(null);
-
-  // Initialize audio and images on component mount
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      // Preload audio
-      winAudioRef.current = new Audio("/assets/win.mp3");
-      winAudioRef.current.preload = "auto";
-      winAudioRef.current.volume = 0.7; // Set volume to 70%
-
-      // Preload winner gif
-      winnerGifRef.current = new window.Image();
-      winnerGifRef.current.src = "/assets/winner.gif";
-    }
-  }, []);
-
   // Initialize/record initial-screen flag once on mount
   useEffect(() => {
     const seenInitial = getFromLocalStorage(INITIAL_SCREEN_KEY, false);
     setSeenInitial(seenInitial);
-  }, []);
-
-  // Function to play win sound
-  const playWinSound = () => {
-    if (winAudioRef.current) {
-      winAudioRef.current.currentTime = 0; // Reset to beginning
-      winAudioRef.current.play().catch((error) => {
-        console.log("Audio play failed:", error);
-      });
-    }
-  };
-
-  // Function to get preloaded winner gif
-  const getWinnerGif = () => winnerGifRef.current;
-
-  // Helper function to filter unscratched cards
-  const getUnscratchedCards = (cards: Card[]) => {
-    return cards.filter((card) => !card.scratched);
-  };
-
-  // Refetch function for user cards
-  // const refetchUserCards = async () => {
-  //   await refetchCards();
-  // };
-
-  // Set UI functions into store
-  useEffect(() => {
-    setPlayWinSound(playWinSound);
-    setGetWinnerGif(getWinnerGif);
-    // setRefetchUserCards(refetchUserCards);
   }, []);
 
   // Keep ref updated with current cards

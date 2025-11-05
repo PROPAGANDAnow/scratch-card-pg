@@ -6,21 +6,18 @@ import { useUserTokens } from "~/hooks";
 import { useDetectClickOutside } from "~/hooks/useDetectClickOutside";
 import { useAppStore } from "~/stores/app-store";
 import { useCardStore } from "~/stores/card-store";
-import { useUIStore } from "~/stores/ui-store";
+import { useUIActions } from "~/hooks/useUIActions";
 import { MintCardForm } from "./mint-card-form";
 
 const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
   mode = "normal",
-  loading: initialDataLoading = false,
 }) => {
-  const setBuyCards = useUIStore((s) => s.setBuyCards);
   const selectedCard = useCardStore((s) => s.selectedCard);
   const appColor = useAppStore((s) => s.appColor);
   const currentCardIndex = useCardStore((s) => s.currentCardIndex);
+  const setCurrentCardIndex = useCardStore((s) => s.setCurrentCardIndex);
   console.log("🚀 ~ Bottom ~ currentCardIndex:", currentCardIndex)
-  const nextCard = useUIStore((s) => s.nextCard);
   const [showBigBuy, setShowBigBuy] = useState(false);
-  // const [unscratchedCardsCount, setUnscratchedCardsCount] = useState(0);
   const [showBuyModal, setShowBuyModal] = useState(false);
 
   const { availableCards, loading: isFetchingCards } = useUserTokens();
@@ -34,15 +31,14 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
   const buyModalRef = useRef<HTMLDivElement | null>(null);
   useDetectClickOutside(buyModalRef, () => setShowBuyModal(false));
 
-  // Function to trigger buy modal - can be called from other components
+  // Function to trigger buy modal
   const triggerBuyModal = () => {
     setShowBuyModal(true);
   };
 
-  // Set the buy function in the app context so other components can access it
-  useEffect(() => {
-    setBuyCards(triggerBuyModal);
-  }, [setBuyCards]);
+  const nextCard = () => {
+
+  }
 
   useEffect(() => {
     if (mode === "swipeable") {
@@ -163,7 +159,7 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
                 }}
               >
                 <motion.button
-                  onClick={() => nextCard?.()}
+                  onClick={() => nextCard()}
                   className="w-full py-2 bg-white/80 rounded-[40px] font-semibold text-[14px] hover:bg-white h-11 transition-colors"
                   style={{
                     color: appColor,

@@ -9,6 +9,9 @@ export { useUserTokens } from './useUserTokens'
 export { useContractMinting, useMintingCost, useMintingEvents, useUserCards } from './useContractMinting'
 export { useERC20Approval, useUSDCBalance } from './useERC20Approval'
 
+// Export UI actions hook
+export { useUIActions } from './useUIActions'
+
 // Export types
 export type { MintingState, TransactionReceipt, UseContractMintingReturn } from './useContractMinting'
 export type { ContractStats, FormattedContractStats, UseContractStatsReturn } from './useContractStats'

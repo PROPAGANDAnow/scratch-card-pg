@@ -29,6 +29,7 @@ export interface CardStore {
   updateUnscratchedCards: () => void;
   addCard: (card: TokenWithState) => void;
   updateCard: (cardId: string, updates: Partial<TokenWithState>) => void;
+  updateCardMeta: (cardId: string, metaUpdates: Partial<TokenWithState['state']>) => void;
   refetchCards: (address?: string) => Promise<void>;
 }
 
@@ -82,6 +83,37 @@ export const useCardStore = create<CardStore>()(
         // Update selected card if it's the one being updated
         if (selectedCard?.id === cardId) {
           set({ selectedCard: { ...selectedCard, ...updates } });
+        }
+
+        get().updateUnscratchedCards();
+      },
+
+      updateCardMeta: (cardId, metaUpdates) => {
+        const { cards, selectedCard } = get();
+        const updatedCards = cards.map((card) =>
+          card.id === cardId
+            ? {
+                ...card,
+                state: {
+                  ...card.state,
+                  ...metaUpdates
+                }
+              }
+            : card
+        );
+        set({ cards: updatedCards });
+
+        // Update selected card if it's the one being updated
+        if (selectedCard?.id === cardId) {
+          set({
+            selectedCard: {
+              ...selectedCard,
+              state: {
+                ...selectedCard.state,
+                ...metaUpdates
+              }
+            }
+          });
         }
 
         get().updateUnscratchedCards();

@@ -24,10 +24,8 @@ import { USDC_ADDRESS } from "~/lib/blockchain";
 import { formatCell } from "~/lib/formatCell";
 import { getLevelRequirement } from "~/lib/level";
 import { chunk3, findWinningRow } from "~/lib/winningRow";
-import { useAppStore } from "~/stores/app-store";
-import { useCardStore } from "~/stores/card-store";
-import { useUIStore } from "~/stores/ui-store";
-import { useUserStore } from "~/stores/user-store";
+import { useAppStore, useCardStore, useUserStore } from "~/stores";
+import { useUIActions } from "~/hooks/useUIActions";
 // removed reducer batching; using direct zustand setters
 import ModalPortal from "~/components/ModalPortal";
 import { CircularProgress } from "./circular-progress";
@@ -61,11 +59,9 @@ const ScratchOff = ({
   const cards = useCardStore((s) => s.cards);
   const setCards = useCardStore((s) => s.setCards);
   const updateCard = useCardStore((s) => s.updateCard);
+  const updateCardMeta = useCardStore((s) => s.updateCardMeta);
 
-  const playWinSound = useUIStore((s) => s.playWinSound);
-  const getWinnerGif = useUIStore((s) => s.getWinnerGif);
-  const refetchUserCards = useUIStore((s) => s.refetchUserCards);
-  const buyCards = useUIStore((s) => s.buyCards);
+  const { playWinSound, getWinnerGif } = useUIActions();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
   const [scratched, setScratched] = useState(false);
@@ -221,7 +217,7 @@ const ScratchOff = ({
 
     // Update card locally
     if (cardData?.id) {
-      updateCard(cardData.id, {
+      updateCardMeta(cardData.id, {
         scratched: true,
         scratched_at: new Date(),
         claimed: true,
@@ -308,7 +304,7 @@ const ScratchOff = ({
       haptics.impactOccurred("heavy");
       haptics.notificationOccurred("success");
       // Play win sound
-      playWinSound?.();
+      playWinSound();
       fetch("/api/neynar/send-notification", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -888,7 +884,7 @@ const ScratchOff = ({
                 className="filter brightness-0 invert"
               />
             </button>
-            {getWinnerGif?.() ? (
+            {getWinnerGif() ? (
               <img
                 src={getWinnerGif()?.src || "/assets/winner.gif"}
                 alt="winner"

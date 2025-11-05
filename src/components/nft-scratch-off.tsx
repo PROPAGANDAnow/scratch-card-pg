@@ -20,7 +20,7 @@ import { motion } from "framer-motion";
 import Image from "next/image";
 import { Address } from "viem";
 import { useAppStore } from "~/stores/app-store";
-import { useUIStore } from "~/stores/ui-store";
+import { useUIActions } from "~/hooks/useUIActions";
 import { useUserStore } from "~/stores/user-store";
 import {
   APP_COLORS,
@@ -62,9 +62,7 @@ const NftScratchOff = ({
 }: NftScratchOffProps) => {
   const setAppColor = useAppStore((s) => s.setAppColor);
   const setAppBackground = useAppStore((s) => s.setAppBackground);
-  const getWinnerGif = useUIStore((s) => s.getWinnerGif);
-  const playWinSound = useUIStore((s) => s.playWinSound);
-  const buyCards = useUIStore((s) => s.buyCards);
+  const { getWinnerGif, playWinSound } = useUIActions();
   const user = useUserStore((s) => s.user);
   const bestFriends = useUserStore((s) => s.bestFriends);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -264,7 +262,7 @@ const NftScratchOff = ({
       setAppBackground(`linear-gradient(to bottom, #090210, ${APP_COLORS.WON})`);
       haptics.impactOccurred("heavy");
       haptics.notificationOccurred("success");
-      playWinSound?.();
+      playWinSound();
     } else {
       setAppColor(APP_COLORS.LOST);
       setAppBackground(`linear-gradient(to bottom, #090210, ${APP_COLORS.LOST})`);
@@ -497,9 +495,9 @@ const NftScratchOff = ({
   //         wallet: friendCell.friend_wallet,
   //       });
   //     }
-    // } else {
-    //   setBestFriend(null);
-    // }
+  // } else {
+  //   setBestFriend(null);
+  // }
   // }, [cardData]);
 
   // Reset state when component unmounts
@@ -765,7 +763,7 @@ const NftScratchOff = ({
               />
             </button>
 
-            {getWinnerGif?.() ? (
+            {getWinnerGif() ? (
               <img
                 src={getWinnerGif()?.src || "/assets/winner.gif"}
                 alt="winner"
@@ -943,11 +941,11 @@ const NftScratchOff = ({
                     Next Card
                   </button>
                 </div>
-              ) : buyCards && !hasNext ? (
+              ) : !hasNext ? (
                 <div className="w-full p-1 rounded-[40px] border border-white">
                   <button
                     onClick={() => {
-                      buyCards?.();
+                      // buyCards?.();
                       setShowBlurOverlay(false);
                     }}
                     className="w-full py-2 bg-white/80 rounded-[40px] font-semibold text-[14px] hover:bg-white h-11 transition-colors"
