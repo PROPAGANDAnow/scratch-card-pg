@@ -6,7 +6,6 @@ import { useUserTokens } from "~/hooks";
 import { useDetectClickOutside } from "~/hooks/useDetectClickOutside";
 import { useAppStore } from "~/stores/app-store";
 import { useCardStore } from "~/stores/card-store";
-import { useUIActions } from "~/hooks/useUIActions";
 import { MintCardForm } from "./mint-card-form";
 
 const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
@@ -16,7 +15,8 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
   const appColor = useAppStore((s) => s.appColor);
   const currentCardIndex = useCardStore((s) => s.currentCardIndex);
   const setCurrentCardIndex = useCardStore((s) => s.setCurrentCardIndex);
-  console.log("🚀 ~ Bottom ~ currentCardIndex:", currentCardIndex)
+  const setDirection = useCardStore((s) => s.setCardDirection)
+
   const [showBigBuy, setShowBigBuy] = useState(false);
   const [showBuyModal, setShowBuyModal] = useState(false);
 
@@ -36,8 +36,24 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
     setShowBuyModal(true);
   };
 
-  const nextCard = () => {
+  const canGoPrev = currentCardIndex > 0;
+  const canGoNext = currentCardIndex < availableCards.length - 1;
 
+
+  const handleNextClick = () => {
+    if (canGoNext) {
+      setDirection(1);
+      // Set to the next array index, not token ID
+      setCurrentCardIndex(currentCardIndex + 1);
+    }
+  }
+
+  const handlePrevClick = () => {
+    if (canGoPrev) {
+      setDirection(-1);
+      // Set to the next array index, not token ID
+      setCurrentCardIndex(currentCardIndex - 1);
+    }
   }
 
   useEffect(() => {
@@ -144,9 +160,33 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
         <AnimatePresence>
           {pathname === "/" &&
             !showBigBuy &&
-            mode === "swipeable" &&
-            currentCardIndex < availableCards.length - 1 && (
-              <motion.div
+            mode === "swipeable" && <>
+              {currentCardIndex < availableCards.length - 1 ? (
+                <motion.div
+                  className="w-full p-1 rounded-[40px] border border-white"
+                  initial={{ opacity: 0, y: 20, scale: 0.9 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 20, scale: 0.9 }}
+                  transition={{
+                    type: "spring",
+                    stiffness: 700,
+                    damping: 45,
+                    duration: 0.15,
+                  }}
+                >
+                  <motion.button
+                    onClick={handleNextClick}
+                    className="w-full py-2 bg-white/80 rounded-[40px] font-semibold text-[14px] hover:bg-white h-11 transition-colors"
+                    style={{
+                      color: appColor,
+                    }}
+                    whileTap={{ scale: 0.98 }}
+                    transition={{ duration: 0.1 }}
+                  >
+                    Next Card
+                  </motion.button>
+                </motion.div>
+              ) : <motion.div
                 className="w-full p-1 rounded-[40px] border border-white"
                 initial={{ opacity: 0, y: 20, scale: 0.9 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -159,7 +199,7 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
                 }}
               >
                 <motion.button
-                  onClick={() => nextCard()}
+                  onClick={handlePrevClick}
                   className="w-full py-2 bg-white/80 rounded-[40px] font-semibold text-[14px] hover:bg-white h-11 transition-colors"
                   style={{
                     color: appColor,
@@ -167,10 +207,11 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
                   whileTap={{ scale: 0.98 }}
                   transition={{ duration: 0.1 }}
                 >
-                  Next Card
+                  Prev Card
                 </motion.button>
-              </motion.div>
-            )}
+              </motion.div>}
+            </>
+          }
         </AnimatePresence>
 
         <AnimatePresence>

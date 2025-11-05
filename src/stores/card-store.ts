@@ -14,6 +14,8 @@ export interface CardStore {
   loading: boolean;
   error: Error | null;
   totalCount: number;
+  cardDirection: 1 | -1;
+
 
   // Actions
   setSelectedCard: (selectedCard: TokenWithState | null) => void;
@@ -24,6 +26,7 @@ export interface CardStore {
   setLoading: (loading: boolean) => void;
   setError: (error: Error | null) => void;
   setTotalCount: (totalCount: number) => void;
+  setCardDirection: (direction: 1 | -1) => void
 
   // Computed actions
   updateUnscratchedCards: () => void;
@@ -39,12 +42,15 @@ export const useCardStore = create<CardStore>()(
       // Initial state
       selectedCard: null,
       cards: [],
+      isCardSwipingDirectionLeft: false,
       unscratchedCards: [],
       localCards: [],
       currentCardIndex: 0,
       loading: false,
       error: null,
       totalCount: 0,
+
+      setCardDirection: (cardDirection) => set({ cardDirection }),
 
       // Basic actions
       setSelectedCard: (selectedCard) => set({ selectedCard }),
@@ -93,12 +99,12 @@ export const useCardStore = create<CardStore>()(
         const updatedCards = cards.map((card) =>
           card.id === cardId
             ? {
-                ...card,
-                state: {
-                  ...card.state,
-                  ...metaUpdates
-                }
+              ...card,
+              state: {
+                ...card.state,
+                ...metaUpdates
               }
+            }
             : card
         );
         set({ cards: updatedCards });

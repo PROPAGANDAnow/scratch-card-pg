@@ -28,7 +28,9 @@ export default function SwipeableCardStack({
   const currentCardNo = useCardStore((s) => s.currentCardIndex);
   const setCurrentCardNo = useCardStore((s) => s.setCurrentCardIndex);
 
-  const [direction, setDirection] = useState<1 | -1>(1);
+  // const [direction, setDirection] = useState<1 | -1>(1);
+  const direction = useCardStore((s) => s.cardDirection)
+  const setDirection = useCardStore((s) => s.setCardDirection)
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
   const cardRef = useRef<HTMLDivElement>(null);
 
