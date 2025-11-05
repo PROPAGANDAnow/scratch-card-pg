@@ -42,13 +42,13 @@ export const useCardStore = create<CardStore>()(
       // Initial state
       selectedCard: null,
       cards: [],
-      isCardSwipingDirectionLeft: false,
       unscratchedCards: [],
       localCards: [],
       currentCardIndex: 0,
       loading: false,
       error: null,
       totalCount: 0,
+      cardDirection: 1,
 
       setCardDirection: (cardDirection) => set({ cardDirection }),
 

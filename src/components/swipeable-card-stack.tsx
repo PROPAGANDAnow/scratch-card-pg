@@ -30,6 +30,7 @@ export default function SwipeableCardStack({
 
   // const [direction, setDirection] = useState<1 | -1>(1);
   const direction = useCardStore((s) => s.cardDirection)
+  console.log("🚀 ~ SwipeableCardStack ~ direction:", direction)
   const setDirection = useCardStore((s) => s.setCardDirection)
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
   const cardRef = useRef<HTMLDivElement>(null);
@@ -38,25 +39,7 @@ export default function SwipeableCardStack({
   const tokenIds = useMemo(() => extractUnclaimedTokenIds(availableCards), [availableCards]);
 
   // Filter availableCards by specific tokenIds if provided
-  const filteredCards = useMemo(() => {
-    if (!availableCards?.length) return [];
-
-    let cards = [...availableCards];
-
-    // Filter by specific tokenIds if provided
-    if (tokenIds && tokenIds.length > 0) {
-      cards = cards.filter(card => tokenIds.includes(parseInt(card.metadata?.metadata?.tokenId || card.id)));
-    }
-
-    // Sort by tokenId to maintain order
-    cards.sort((a, b) => {
-      const aTokenId = parseInt(a.metadata?.metadata?.tokenId || a.id);
-      const bTokenId = parseInt(b.metadata?.metadata?.tokenId || b.id);
-      return aTokenId - bTokenId;
-    });
-
-    return cards;
-  }, [availableCards, tokenIds]);
+  const filteredCards = availableCards
 
 
   // Initialize current card number
