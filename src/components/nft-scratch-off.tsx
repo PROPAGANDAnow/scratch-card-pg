@@ -38,6 +38,7 @@ import { useDebouncedScratchDetection } from "~/hooks/useDebouncedScratchDetecti
 import { useBatchedUpdates } from "~/hooks/useBatchedUpdates";
 import { useContractClaiming, useTokenClaimability, useClaimSignature } from "~/hooks/useContractClaiming";
 import { useWallet } from "~/hooks/useWeb3Wallet";
+import { isMobile } from "~/lib/devices";
 import {
   ClaimSignature,
   createClaimSignature
@@ -76,8 +77,14 @@ const NftScratchOff = ({
   const [coverImageLoaded, setCoverImageLoaded] = useState(false);
   const [claimSignature, setClaimSignature] = useState<ClaimSignature | null>(null);
   const linkCopyTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [isDesktop, setIsDesktop] = useState(false);
 
   const { actions, haptics } = useMiniApp();
+
+  // Check if desktop
+  useEffect(() => {
+    setIsDesktop(!isMobile());
+  }, []);
   const { batchUpdate } = useBatchedUpdates(() => { });
   const { address } = useWallet();
 
@@ -229,11 +236,8 @@ const NftScratchOff = ({
     }
   }, [user, prizeAmount, bestFriend?.username, actions]);
 
-  // Debounced scratch detection with Web3 integration
-  const {
-    debouncedCallback: debouncedScratchDetection,
-    cancel: cancelScratchDetection,
-  } = useDebouncedScratchDetection(async () => {
+  // Scratch detection handler
+  const handleScratchDetection = useCallback(async () => {
     if (!cardData || isProcessing) return;
 
     const prizeAmount = cardData?.prize_amount || 0;
@@ -282,7 +286,13 @@ const NftScratchOff = ({
     }).catch((error) => {
       console.error("Failed to send notification:", error);
     });
-  }, 100);
+  }, [cardData, isProcessing, generateClaimSignature, batchUpdate, tokenId, onPrizeRevealed, setAppColor, setAppBackground, haptics, playWinSound, user, bestFriends, bestFriend?.fid]);
+
+  // Debounced scratch detection with Web3 integration
+  const {
+    debouncedCallback: debouncedScratchDetection,
+    cancel: cancelScratchDetection,
+  } = useDebouncedScratchDetection(handleScratchDetection, 100);
 
   // Canvas setup (maintains existing scratch mechanics)
   useEffect(() => {
@@ -727,6 +737,104 @@ const NftScratchOff = ({
                     willChange: "transform",
                   }}
                 />
+              )}
+
+              {/* Quick reveal buttons - show when card is not scratched */}
+              {!cardData?.scratched && !scratched && (
+                <motion.div
+                  className="absolute bottom-[120px] left-1/2 transform -translate-x-1/2 z-30 flex gap-3"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.5, duration: 0.3 }}
+                >
+                  <button
+                    onClick={() => {
+                      // Clear the canvas to reveal the card
+                      const canvas = canvasRef.current;
+                      if (canvas) {
+                        const ctx = canvas.getContext("2d");
+                        if (ctx) {
+                          ctx.clearRect(0, 0, canvas.width, canvas.height);
+                        }
+                      }
+                      // Trigger scratch detection
+                      handleScratchDetection();
+                    }}
+                  >
+                    <div className="px-8 py-4 bg-white/90 backdrop-blur-sm rounded-full shadow-lg hover:bg-white transition-colors">
+                      <span className="font-[ABCGaisyr] font-bold text-[20px] italic" style={{ color: APP_COLORS.WON }}>
+                        Quick Reveal
+                      </span>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      // Create scratch animation effect
+                      const canvas = canvasRef.current;
+                      if (canvas) {
+                        const ctx = canvas.getContext("2d");
+                        if (ctx) {
+                          // Create a scratch pattern to simulate scratching
+                          ctx.globalCompositeOperation = "destination-out";
+
+                          // Create multiple scratch lines for a realistic effect
+                          const scratchPattern = () => {
+                            for (let i = 0; i < 20; i++) {
+                              const startX = Math.random() * CANVAS_WIDTH;
+                              const startY = Math.random() * CANVAS_HEIGHT;
+                              const endX = Math.random() * CANVAS_WIDTH;
+                              const endY = Math.random() * CANVAS_HEIGHT;
+
+                              ctx.beginPath();
+                              ctx.moveTo(startX, startY);
+                              ctx.lineTo(endX, endY);
+                              ctx.lineWidth = SCRATCH_RADIUS * 2;
+                              ctx.lineCap = "round";
+                              ctx.stroke();
+                            }
+
+                            // Add some circular scratches
+                            for (let i = 0; i < 30; i++) {
+                              const x = Math.random() * CANVAS_WIDTH;
+                              const y = Math.random() * CANVAS_HEIGHT;
+
+                              ctx.beginPath();
+                              ctx.arc(x, y, SCRATCH_RADIUS, 0, 2 * Math.PI);
+                              ctx.fill();
+                            }
+                          };
+
+                          // Animate the scratching
+                          let scratches = 0;
+                          const animateScratch = () => {
+                            if (scratches < 5) {
+                              scratchPattern();
+                              scratches++;
+                              requestAnimationFrame(animateScratch);
+                            } else {
+                              // Final clear to ensure full reveal
+                              ctx.clearRect(0, 0, canvas.width, canvas.height);
+                              // Trigger scratch detection
+                              handleScratchDetection();
+                            }
+                          };
+                          animateScratch();
+                        }
+                      }
+                    }}
+                  >
+                    <div className="px-8 py-4 bg-gradient-to-r from-purple-500/90 to-pink-500/90 backdrop-blur-sm rounded-full shadow-lg hover:from-purple-500 hover:to-pink-500 transition-all">
+                      <span className="font-[ABCGaisyr] font-bold text-[20px] italic text-white flex items-center gap-2">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="animate-pulse">
+                          <path d="M9 3L15 12L9 21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                          <path d="M15 3L21 12L15 21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                        Scratch All
+                      </span>
+                    </div>
+                  </button>
+                </motion.div>
               )}
             </div>
           </motion.div>
