@@ -30,13 +30,11 @@ export default function SwipeableCardStack({
 
   // const [direction, setDirection] = useState<1 | -1>(1);
   const direction = useCardStore((s) => s.cardDirection)
-  console.log("🚀 ~ SwipeableCardStack ~ direction:", direction)
   const setDirection = useCardStore((s) => s.setCardDirection)
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
   const cardRef = useRef<HTMLDivElement>(null);
 
   const { availableCards } = useUserTokens();
-  const tokenIds = useMemo(() => extractUnclaimedTokenIds(availableCards), [availableCards]);
 
   // Filter availableCards by specific tokenIds if provided
   const filteredCards = availableCards
@@ -62,7 +60,6 @@ export default function SwipeableCardStack({
 
   // Set up next card function and update current card index
   // useEffect(() => {
-  //   console.log("🚀 ~ SwipeableCardStack ~ canGoNext, filteredCards, setNextCardFn:", canGoNext, filteredCards, setNextCardFn)
   //   const nextCardFunction = () => {
   //     if (canGoNext) {
   //       setDirection(1);
@@ -122,7 +119,6 @@ export default function SwipeableCardStack({
 
   // Handle prize revealed
   const handlePrizeRevealed = useCallback((_tokenId: number, prizeAmount: number) => {
-    console.log('Prize revealed:', prizeAmount);
     // Query invalidation is now handled by the useUserTokens hook
   }, []);
 

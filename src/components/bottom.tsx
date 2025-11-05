@@ -21,7 +21,6 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
   const [showBuyModal, setShowBuyModal] = useState(false);
 
   const { availableCards, loading: isFetchingCards } = useUserTokens();
-  console.log("🚀 ~ Bottom ~ availableCards:", availableCards)
   const unscratchedCardsCount = availableCards.filter(card => !card.state.scratched).length
 
   const { push } = useRouter();
@@ -66,8 +65,6 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
   const loading = isFetchingCards
   // const loading = (initialDataLoading || isFetchingCards)
   // console.log("🚀 ~ Bottom ~ initialDataLoading || isFetchingCards:", initialDataLoading, isFetchingCards)
-
-  console.log(`🚀 ~ Bottom ~ pathname === "/" && !showBigBuy && mode === "swipeable" && currentCardIndex < availableCards.length - 1:`, pathname === "/", !showBigBuy, mode === "swipeable", currentCardIndex, availableCards.length)
 
   return (
     <>
