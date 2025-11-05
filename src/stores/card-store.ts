@@ -1,26 +1,35 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
-import { Card } from '~/app/interface/card';
+import { TokenWithState } from '~/hooks';
+// import { Card } from '~/app/interface/card';
+import { useUserStore } from '~/stores/user-store';
 
 export interface CardStore {
   // Card State
-  selectedCard: Card | null;
-  cards: Card[];
-  unscratchedCards: Card[];
-  localCards: Card[];
+  selectedCard: TokenWithState | null;
+  cards: TokenWithState[];
+  unscratchedCards: TokenWithState[];
+  localCards: TokenWithState[];
   currentCardIndex: number;
-  
+  loading: boolean;
+  error: Error | null;
+  totalCount: number;
+
   // Actions
-  setSelectedCard: (selectedCard: Card | null) => void;
-  setCards: (cards: Card[]) => void;
-  setUnscratchedCards: (unscratchedCards: Card[]) => void;
-  setLocalCards: (localCards: Card[]) => void;
+  setSelectedCard: (selectedCard: TokenWithState | null) => void;
+  setCards: (cards: TokenWithState[]) => void;
+  setUnscratchedCards: (unscratchedCards: TokenWithState[]) => void;
+  setLocalCards: (localCards: TokenWithState[]) => void;
   setCurrentCardIndex: (currentCardIndex: number) => void;
-  
+  setLoading: (loading: boolean) => void;
+  setError: (error: Error | null) => void;
+  setTotalCount: (totalCount: number) => void;
+
   // Computed actions
   updateUnscratchedCards: () => void;
-  addCard: (card: Card) => void;
-  updateCard: (cardId: string, updates: Partial<Card>) => void;
+  addCard: (card: TokenWithState) => void;
+  updateCard: (cardId: string, updates: Partial<TokenWithState>) => void;
+  refetchCards: (address?: string) => Promise<void>;
 }
 
 export const useCardStore = create<CardStore>()(
@@ -32,6 +41,9 @@ export const useCardStore = create<CardStore>()(
       unscratchedCards: [],
       localCards: [],
       currentCardIndex: 0,
+      loading: false,
+      error: null,
+      totalCount: 0,
 
       // Basic actions
       setSelectedCard: (selectedCard) => set({ selectedCard }),
@@ -42,11 +54,14 @@ export const useCardStore = create<CardStore>()(
       setUnscratchedCards: (unscratchedCards) => set({ unscratchedCards }),
       setLocalCards: (localCards) => set({ localCards }),
       setCurrentCardIndex: (currentCardIndex) => set({ currentCardIndex }),
+      setLoading: (loading) => set({ loading }),
+      setError: (error) => set({ error }),
+      setTotalCount: (totalCount) => set({ totalCount }),
 
       // Computed actions
       updateUnscratchedCards: () => {
         const { cards } = get();
-        const unscratchedCards = cards.filter((card) => !card.scratched);
+        const unscratchedCards = cards.filter((card) => !card.state.scratched);
         set({ unscratchedCards });
       },
 
@@ -63,13 +78,60 @@ export const useCardStore = create<CardStore>()(
           card.id === cardId ? { ...card, ...updates } : card
         );
         set({ cards: updatedCards });
-        
+
         // Update selected card if it's the one being updated
         if (selectedCard?.id === cardId) {
           set({ selectedCard: { ...selectedCard, ...updates } });
         }
-        
+
         get().updateUnscratchedCards();
+      },
+
+      refetchCards: async (userAddress?: string) => {
+        const { selectedCard } = get();
+        const currUserAddress = useUserStore.getState().user?.address;
+
+        userAddress = userAddress || currUserAddress
+
+        if (!userAddress) {
+          console.error("User address not found")
+          set({ error: new Error('User address not found') });
+          return;
+        }
+
+        set({ loading: true, error: null });
+
+        try {
+          const response = await fetch(`/api/cards/get-by-owner?userWallet=${userAddress}`);
+          if (!response.ok) {
+            throw new Error(`API request failed: ${response.statusText}`);
+          }
+          const data = await response.json();
+          const newCards = data.data?.availableCards || [];
+          const totalCount = data.data?.totalCount ?? 0;
+
+          set({
+            cards: newCards,
+            totalCount,
+            loading: false
+          });
+
+          // Update selected card if it exists
+          if (selectedCard) {
+            const updatedSelectedCard = newCards.find(
+              (item: { metadata: TokenWithState }) => item.metadata.id === selectedCard.id
+            );
+            if (updatedSelectedCard) {
+              set({ selectedCard: updatedSelectedCard.metadata });
+            }
+          }
+        } catch (error) {
+          console.error('Failed to refetch user cards:', error);
+          set({
+            error: error instanceof Error ? error : new Error('Failed to fetch cards'),
+            loading: false
+          });
+        }
       },
     }),
     {

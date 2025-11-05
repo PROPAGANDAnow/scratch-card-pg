@@ -11,7 +11,7 @@ import { useUIStore } from "~/stores/ui-store";
 import NftScratchOff from "./nft-scratch-off";
 
 interface SwipeableCardStackProps {
-  userWallet: string;
+  userWallet?: string;
   initialIndex?: number;
 }
 
@@ -24,12 +24,11 @@ export const tokenToCard = (nftToken: TokenWithState): Card => {
 }
 
 export default function SwipeableCardStack({
-  userWallet,
   initialIndex = 0,
 }: SwipeableCardStackProps) {
-  const setNextCardFn = useUIStore((s) => s.setNextCard);
-  const setCurrentCardIndex = useCardStore((s) => s.setCurrentCardIndex);
-  const [currentCardNo, setCurrentCardNo] = useState<number | null>(null);
+  const currentCardNo = useCardStore((s) => s.currentCardIndex);
+  const setCurrentCardNo = useCardStore((s) => s.setCurrentCardIndex);
+
   const [direction, setDirection] = useState<1 | -1>(1);
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
   const cardRef = useRef<HTMLDivElement>(null);
@@ -77,18 +76,19 @@ export default function SwipeableCardStack({
   const canGoNext = currentIndex < filteredCards.length - 1;
 
   // Set up next card function and update current card index
-  useEffect(() => {
-    const nextCardFunction = () => {
-      if (canGoNext) {
-        setDirection(1);
-        const nextCard = filteredCards[currentIndex + 1];
-        if (nextCard) setCurrentCardNo(parseInt(nextCard.metadata?.metadata?.tokenId || nextCard.id));
-      }
-    };
+  // useEffect(() => {
+  //   console.log("🚀 ~ SwipeableCardStack ~ canGoNext, filteredCards, setNextCardFn:", canGoNext, filteredCards, setNextCardFn)
+  //   const nextCardFunction = () => {
+  //     if (canGoNext) {
+  //       setDirection(1);
+  //       const nextCard = filteredCards[currentIndex + 1];
+  //       if (nextCard) setCurrentCardNo(parseInt(nextCard.metadata?.metadata?.tokenId || nextCard.id));
+  //     }
+  //   };
 
-    setNextCardFn(nextCardFunction);
-    setCurrentCardIndex(currentIndex);
-  }, [canGoNext, currentIndex, filteredCards, setNextCardFn, setCurrentCardIndex]);
+  //   setNextCardFn(nextCardFunction);
+  //   setCurrentCardIndex(currentIndex);
+  // }, [canGoNext, filteredCards, setNextCardFn]);
 
   // Mouse handlers for card tilt - memoized for performance
   const handleMouseMove = useCallback((e: React.MouseEvent) => {

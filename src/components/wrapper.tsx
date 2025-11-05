@@ -16,7 +16,6 @@ import {
   fetchAppStats,
   fetchBestFriends,
   fetchLeaderboard,
-  fetchUserCards,
   fetchUserInfo,
 } from "~/lib/userapis";
 import { useUserStore } from "~/stores/user-store";
@@ -48,12 +47,12 @@ const Wrapper: FC<{ children: React.ReactNode }> = ({ children }) => {
   const cards = useCardStore((s) => s.cards);
   const unscratchedCards = useCardStore((s) => s.unscratchedCards);
   const setSelectedCard = useCardStore((s) => s.setSelectedCard);
-  const setCards = useCardStore((s) => s.setCards);
   const setUnscratchedCards = useCardStore((s) => s.setUnscratchedCards);
+  const refetchCards = useCardStore((s) => s.refetchCards);
 
   const setPlayWinSound = useUIStore((s) => s.setPlayWinSound);
   const setGetWinnerGif = useUIStore((s) => s.setGetWinnerGif);
-  const setRefetchUserCards = useUIStore((s) => s.setRefetchUserCards);
+  // const setRefetchUserCards = useUIStore((s) => s.setRefetchUserCards);
   const [loading, setLoading] = useState(true);
   const [seenInitial, setSeenInitial] = useState(false);
   const [showWinRates, setShowWinRates] = useState(false);
@@ -114,42 +113,21 @@ const Wrapper: FC<{ children: React.ReactNode }> = ({ children }) => {
   };
 
   // Refetch function for user cards
-  const refetchUserCards = async () => {
-    if (!publicKey) return;
-
-    try {
-      const { fetchUserCards } = await import("~/lib/userapis");
-      const userCards = await fetchUserCards(publicKey);
-      if (userCards) {
-        setCards(userCards as unknown as Card[]);
-        setUnscratchedCards(getUnscratchedCards(userCards as unknown as Card[]));
-
-        // If there's a selected card, update it with the latest data to preserve its state
-        if (selectedCard) {
-          const updatedSelectedCard = userCards.find(
-            (card) => card.id === selectedCard!.id
-          );
-          if (updatedSelectedCard) {
-            setSelectedCard(updatedSelectedCard);
-          }
-        }
-      }
-    } catch (error) {
-      console.error("Failed to refetch user cards:", error);
-    }
-  };
+  // const refetchUserCards = async () => {
+  //   await refetchCards();
+  // };
 
   // Set UI functions into store
   useEffect(() => {
     setPlayWinSound(playWinSound);
     setGetWinnerGif(getWinnerGif);
-    setRefetchUserCards(refetchUserCards);
+    // setRefetchUserCards(refetchUserCards);
   }, []);
 
   // Keep ref updated with current cards
   useEffect(() => {
     currentCardsRef.current = cards;
-    setUnscratchedCards(getUnscratchedCards(cards));
+    setUnscratchedCards(cards);
   }, [cards, setUnscratchedCards]);
 
   // Keep ref updated with current leaderboard
@@ -180,22 +158,23 @@ const Wrapper: FC<{ children: React.ReactNode }> = ({ children }) => {
     if (!userFid) return;
 
     setLoading(true);
+    // Set loading state for cards
+    useCardStore.getState().setLoading(true);
 
     try {
       const promises = [
-        fetchUserCards(userWallet),
         fetchUserInfo(userWallet),
         fetchAppStats(),
         fetchLeaderboard(),
         fetchActivity(),
       ];
 
-      const [userCards, userInfo, appStats, leaderboard, activity] =
+      const [userInfo, appStats, leaderboard, activity] =
         await Promise.allSettled(promises);
 
-      if (userCards.status === "fulfilled") {
-        setCards(userCards.value as unknown as Card[]);
-      }
+      // Fetch cards separately to use store's refetchCards function
+      await refetchCards(userWallet);
+
       if (userInfo.status === "fulfilled" && userInfo.value && 'id' in userInfo.value) {
         setUser(userInfo.value as User); // Type enforced with Zod schema
         const bestFriends = await fetchBestFriends(userFid);
@@ -210,6 +189,8 @@ const Wrapper: FC<{ children: React.ReactNode }> = ({ children }) => {
       console.error("Error in fetching user info", error);
     } finally {
       setLoading(false);
+      // Set loading state for cards to false
+      useCardStore.getState().setLoading(false);
     }
   };
 

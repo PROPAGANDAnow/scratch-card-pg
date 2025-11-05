@@ -1,8 +1,9 @@
 'use client'
 
 import { Card } from '@prisma/client'
-import { useQuery } from '@tanstack/react-query'
-import { useUserStore } from '~/stores/user-store'
+import { useEffect } from 'react'
+import { useAccount } from 'wagmi'
+import { useCardStore } from '~/stores/card-store'
 
 export interface TokenMetadata {
   tokenId: string
@@ -52,45 +53,28 @@ export interface UseUserTokensReturn {
   totalCount: number;
   loading: boolean;
   error: Error | null
-  refetch: () => void
+  refetch: (address?: string) => Promise<void>
 }
 
 export interface TokenWithState { id: string, state: Card, metadata: Token }
 
-interface GetByOwnerResponse {
-  data: {
-    availableCards: TokenWithState[]
-    totalCount: number
-  }
-}
-
 export function useUserTokens(): UseUserTokensReturn {
-  const userAddress = useUserStore((s) => s.user?.address)
+  const { address } = useAccount()
+  const { cards, loading, error, refetchCards, totalCount } = useCardStore()
 
-  const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ['userTokens', userAddress?.toLowerCase()],
-    queryFn: async () => {
-      if (!userAddress) return null
+  useEffect(() => {
+    if (address)
+      refetchCards(address)
+  }, [address])
 
-      const response = await fetch(`/api/cards/get-by-owner?userWallet=${userAddress}`)
-      if (!response.ok) {
-        throw new Error(`API request failed: ${response.statusText}`)
-      }
-      const data = response.json() as Promise<GetByOwnerResponse>
-      return data
-    },
-    enabled: !!userAddress,
-    retry: 3,
-    staleTime: 30000,
-  })
-
-  const availableCards = data?.data?.availableCards || []
+  // Convert cards to TokenWithState format
+  const availableCards: TokenWithState[] = cards
 
   return {
     availableCards,
-    totalCount: data?.data.totalCount ?? 0,
-    loading: isLoading,
+    totalCount,
+    loading,
     error,
-    refetch,
+    refetch: refetchCards
   }
 }

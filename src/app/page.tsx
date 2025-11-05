@@ -1,12 +1,10 @@
 "use client";
-import { useEffect, useMemo } from "react";
+import { useEffect } from "react";
 import { useAppStore } from "~/stores/app-store";
 import { useCardStore } from "~/stores/card-store";
 import { useUserStore } from "~/stores/user-store";
 import SwipeableCardStack from "~/components/swipeable-card-stack";
 import { useContractStats } from "~/hooks";
-import { useUserTokens } from "~/hooks";
-import { extractUnclaimedTokenIds } from "~/lib/token-utils";
 
 export default function Home() {
   const setSwipableMode = useAppStore((s) => s.setSwipableMode);
