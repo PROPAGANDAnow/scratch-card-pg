@@ -15,10 +15,11 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
   const appColor = useAppStore((s) => s.appColor);
   const currentCardIndex = useCardStore((s) => s.currentCardIndex);
   const setCurrentCardIndex = useCardStore((s) => s.setCurrentCardIndex);
-  const setDirection = useCardStore((s) => s.setCardDirection)
+  const setDirection = useCardStore((s) => s.setCardDirection);
+  const showBuyModal = useCardStore((s) => s.showBuyModal);
+  const setShowBuyModal = useCardStore((s) => s.setShowBuyModal);
 
   const [showBigBuy, setShowBigBuy] = useState(false);
-  const [showBuyModal, setShowBuyModal] = useState(false);
 
   const { availableCards, loading: isFetchingCards } = useUserTokens();
   const unscratchedCardsCount = availableCards.filter(card => !card.state.scratched).length

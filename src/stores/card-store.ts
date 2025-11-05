@@ -15,6 +15,7 @@ export interface CardStore {
   error: Error | null;
   totalCount: number;
   cardDirection: 1 | -1;
+  showBuyModal: boolean;
 
 
   // Actions
@@ -26,7 +27,8 @@ export interface CardStore {
   setLoading: (loading: boolean) => void;
   setError: (error: Error | null) => void;
   setTotalCount: (totalCount: number) => void;
-  setCardDirection: (direction: 1 | -1) => void
+  setCardDirection: (direction: 1 | -1) => void;
+  setShowBuyModal: (showBuyModal: boolean) => void;
 
   // Computed actions
   updateUnscratchedCards: () => void;
@@ -49,8 +51,10 @@ export const useCardStore = create<CardStore>()(
       error: null,
       totalCount: 0,
       cardDirection: 1,
+      showBuyModal: false,
 
       setCardDirection: (cardDirection) => set({ cardDirection }),
+      setShowBuyModal: (showBuyModal) => set({ showBuyModal }),
 
       // Basic actions
       setSelectedCard: (selectedCard) => set({ selectedCard }),

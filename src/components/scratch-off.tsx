@@ -26,6 +26,7 @@ import { getLevelRequirement } from "~/lib/level";
 import { chunk3, findWinningRow } from "~/lib/winningRow";
 import { useAppStore, useCardStore, useUserStore } from "~/stores";
 import { useUIActions } from "~/hooks/useUIActions";
+import { useUserTokens } from "~/hooks";
 // removed reducer batching; using direct zustand setters
 import ModalPortal from "~/components/ModalPortal";
 import { CircularProgress } from "./circular-progress";
@@ -58,10 +59,12 @@ const ScratchOff = ({
 
   const cards = useCardStore((s) => s.cards);
   const setCards = useCardStore((s) => s.setCards);
-  const updateCard = useCardStore((s) => s.updateCard);
   const updateCardMeta = useCardStore((s) => s.updateCardMeta);
+  const showBuyModal = useCardStore((s) => s.showBuyModal);
+  const setShowBuyModal = useCardStore((s) => s.setShowBuyModal);
 
   const { playWinSound, getWinnerGif } = useUIActions();
+  const { refetch } = useUserTokens();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
   const [scratched, setScratched] = useState(false);
@@ -73,6 +76,7 @@ const ScratchOff = ({
   const [coverImageLoaded, setCoverImageLoaded] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
   const linkCopyTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
 
   const { actions, haptics } = useMiniApp();
 
@@ -347,7 +351,7 @@ const ScratchOff = ({
             // If user leveled up and got free cards, refetch user cards
             if (processData.leveledUp && processData.freeCardsAwarded > 0) {
               setTimeout(() => {
-                refetchUserCards?.();
+                refetch();
               }, 1000); // Wait 1 second for database to be fully updated
             }
           }
@@ -943,6 +947,8 @@ const ScratchOff = ({
                 level 2
               </motion.p>
             </motion.div>
+
+
             <div className="absolute w-[90%] bottom-[36px] flex flex-col items-center justify-center gap-4">
               {bestFriend?.username && prizeAmount === -1 ? (
                 <div className="w-full p-1 rounded-[40px] border border-white">
