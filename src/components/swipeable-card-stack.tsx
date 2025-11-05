@@ -60,17 +60,18 @@ export default function SwipeableCardStack({
 
   // Initialize current card number
   useEffect(() => {
-    if (filteredCards.length > 0 && !currentCardNo) {
-      const initialCard = filteredCards[initialIndex] || filteredCards[0];
-      setCurrentCardNo(parseInt(initialCard.metadata?.metadata?.tokenId || initialCard.id));
+    if (filteredCards.length > 0) {
+      // Ensure currentCardNo is within bounds
+      if (currentCardNo >= filteredCards.length || currentCardNo < 0) {
+        setCurrentCardNo(initialIndex);
+      }
     }
-  }, [filteredCards, initialIndex, currentCardNo]);
+  }, [filteredCards, currentCardNo, initialIndex]);
 
   // Find current card and index
-  const current = filteredCards.find((card) => parseInt(card.metadata?.metadata?.tokenId || card.id) === currentCardNo);
-  const currentIndex = current
-    ? filteredCards.findIndex((card) => parseInt(card.metadata?.metadata?.tokenId || card.id) === currentCardNo)
-    : -1;
+  // currentCardNo is now the array index, not the token ID
+  const currentIndex = Math.min(currentCardNo, filteredCards.length - 1);
+  const current = filteredCards[currentIndex];
 
   const canGoPrev = currentIndex > 0;
   const canGoNext = currentIndex < filteredCards.length - 1;
@@ -113,27 +114,27 @@ export default function SwipeableCardStack({
     e.stopPropagation();
     if (canGoPrev) {
       setDirection(-1);
-      const prevCard = filteredCards[currentIndex - 1];
-      if (prevCard) setCurrentCardNo(parseInt(prevCard.metadata?.metadata?.tokenId || prevCard.id));
+      // Set to the previous array index, not token ID
+      setCurrentCardNo(currentIndex - 1);
     }
-  }, [canGoPrev, currentIndex, filteredCards]);
+  }, [canGoPrev, currentIndex]);
 
   const handleNextClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     if (canGoNext) {
       setDirection(1);
-      const nextCard = filteredCards[currentIndex + 1];
-      if (nextCard) setCurrentCardNo(parseInt(nextCard.metadata?.metadata?.tokenId || nextCard.id));
+      // Set to the next array index, not token ID
+      setCurrentCardNo(currentIndex + 1);
     }
-  }, [canGoNext, currentIndex, filteredCards]);
+  }, [canGoNext, currentIndex]);
 
   const handleNextFromScratch = useCallback(() => {
     if (canGoNext) {
       setDirection(1);
-      const nextCard = filteredCards[currentIndex + 1];
-      if (nextCard) setCurrentCardNo(parseInt(nextCard.metadata?.metadata?.tokenId || nextCard.id));
+      // Set to the next array index, not token ID
+      setCurrentCardNo(currentIndex + 1);
     }
-  }, [canGoNext, currentIndex, filteredCards]);
+  }, [canGoNext, currentIndex]);
 
   // Handle prize revealed
   const handlePrizeRevealed = useCallback((_tokenId: number, prizeAmount: number) => {
