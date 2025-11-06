@@ -45,7 +45,28 @@ export const getTokensInBatch = async (args: GetTokensInBatchArgs): Promise<Card
 
   const cardsData: Prisma.CardCreateInput[] = [];
 
-  for (const tokenId of tokenIds) {
+  // check how many have already in db
+  const existingCards = await prisma.card.findMany({
+    where: {
+      token_id: { in: tokenIds },
+      contract_address: contractAddress
+    },
+  });
+
+  const currUser = await prisma.user.findFirst({
+    where: {
+      address: args.recipient
+    },
+  });
+
+  if (!currUser) {
+    throw new Error("user not found")
+  }
+
+  // check for the new tokenIds that are not in database yet
+  const newTokenIds = tokenIds.filter(t => !existingCards.find(a => a.token_id === t))
+
+  for (const tokenId of newTokenIds) {
     // Generate prize and card data for each token
     const prize = drawPrize(friends.length > 0); // e.g., 0 | 0.5 | 1 | 2 (check if friends available for free cards)
 
@@ -66,35 +87,16 @@ export const getTokensInBatch = async (args: GetTokensInBatchArgs): Promise<Card
       token_id: tokenId, // Use tokenId as token_id
       contract_address: contractAddress, // Placeholder for NFT contract
       minter: {
-        connect: { address: recipient }
+        connect: { id: currUser?.id }
       }
     };
 
     cardsData.push(cardData);
   }
 
-  // check how many have already in db
-  const existingCards = await prisma.card.findMany({
-    where: {
-      token_id: { in: tokenIds },
-      contract_address: contractAddress
-    },
-    select: { token_id: true }
+  const createdCards = await prisma.card.createManyAndReturn({
+    data: cardsData.map(a => ({ ...a, minter_user_id: currUser?.id }))
   });
 
-  const existingTokenIds = new Set(existingCards.map(card => card.token_id));
-
-  // create a filtered array from the cards that are not in the db already
-  const newCardsData = cardsData.filter(card => !existingTokenIds.has(card.token_id as number));
-
-  // Create cards individually to handle relations properly
-  const createdCards: Card[] = [];
-  for (const cardData of newCardsData) {
-    const createdCard = await prisma.card.create({
-      data: cardData
-    });
-    createdCards.push(createdCard);
-  }
-
-  return createdCards;
+  return [...existingCards, ...createdCards].sort(a => a.token_id);
 };

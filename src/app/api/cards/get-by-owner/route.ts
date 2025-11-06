@@ -6,7 +6,6 @@ import { prisma } from "~/lib/prisma";
 import { getTokensInBatch } from "~/lib/token-batch";
 import { AlchemyNftResponse, OwnedNft } from "~/types/alchemy";
 
-
 export async function GET(request: NextRequest) {
   try {
     const url = new URL(request.url);
@@ -102,7 +101,7 @@ export async function GET(request: NextRequest) {
     });
 
     // Filter available cards (unscratched)
-    const availableCards = tokens.filter(token => !token.state?.scratched && !token.state?.claimed);
+    const availableCards = tokens;
 
     return NextResponse.json({
       success: true,
