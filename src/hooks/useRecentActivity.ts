@@ -3,7 +3,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { GET_RECENT_ACTIVITY } from '../queries'
 import { makeGraphQLRequest } from '~/lib/graphql-client'
-import { formatEther } from 'viem'
+import { formatEther, formatUnits } from 'viem'
 import { formatDistanceToNow } from 'date-fns'
 
 export interface RecentMint {
@@ -64,7 +64,7 @@ export function useRecentActivity(limit = 10): UseRecentActivityReturn {
 
   const recentClaims = (data?.prizeClaims || []).map((claim: RecentClaim): FormattedRecentClaim => ({
     ...claim,
-    formattedPrize: formatEther(BigInt(claim.prizeAmount)),
+    formattedPrize: formatUnits(BigInt(claim.prizeAmount), 6), // USDC has 6 decimals
     formattedTime: formatDistanceToNow(new Date(Number(claim.claimedAt) * 1000), { addSuffix: true }),
     truncatedAddress: `${claim.winner.slice(0, 6)}...${claim.winner.slice(-4)}`,
   }))

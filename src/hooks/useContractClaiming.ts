@@ -323,10 +323,10 @@ export const useClaimSignature = () => {
 
       // Convert the returned signature to the expected format
       const claimSignature: ClaimSignature = {
-        prizeAmount: BigInt(result.signature.prizeAmount),
-        tokenAddress: result.signature.tokenAddress as Address,
-        deadline: BigInt(result.signature.deadline),
-        signature: result.signature.signature as `0x${string}`,
+        prizeAmount: BigInt(result.data.prizeAmount),
+        tokenAddress: result.data.tokenAddress as Address,
+        deadline: BigInt(result.data.deadline),
+        signature: result.data.signature as `0x${string}`,
       };
 
       return claimSignature;

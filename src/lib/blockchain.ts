@@ -618,7 +618,7 @@ export const createClaimSignature = (
   deadline: number,
   signature: `0x${string}`
 ): ClaimSignature => ({
-  prizeAmount: BigInt(prizeAmount),
+  prizeAmount: BigInt(Math.floor(prizeAmount * 1_000_000)), // Convert USDC amount to smallest unit (6 decimals)
   tokenAddress,
   deadline: BigInt(deadline),
   signature,

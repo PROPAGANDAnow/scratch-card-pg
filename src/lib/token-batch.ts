@@ -6,6 +6,7 @@ import { PRIZE_ASSETS } from "~/lib/constants";
 import { drawPrize } from "~/lib/drawPrize";
 import { generateNumbers } from "~/lib/generateNumbers";
 import { prisma } from "~/lib/prisma";
+import { getOrCreateUserByAddress } from "./neynar-users";
 
 interface GetTokensInBatchArgs {
   tokenIds: number[];
@@ -53,11 +54,7 @@ export const getTokensInBatch = async (args: GetTokensInBatchArgs): Promise<Card
     },
   });
 
-  const currUser = await prisma.user.findFirst({
-    where: {
-      address: args.recipient
-    },
-  });
+  const currUser = await getOrCreateUserByAddress(args.recipient);
 
   if (!currUser) {
     throw new Error("user not found")

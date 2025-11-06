@@ -68,6 +68,7 @@ const NftScratchOff = ({
   const bestFriends = useUserStore((s) => s.bestFriends);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
+
   const [scratched, setScratched] = useState(false);
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
   const [prizeAmount, setPrizeAmount] = useState(0);
@@ -82,24 +83,10 @@ const NftScratchOff = ({
   const { batchUpdate } = useBatchedUpdates(() => { });
   const { address } = useWallet();
 
-  // Store user address in localStorage when it changes
-  useEffect(() => {
-    if (address) {
-      // Migrate from old key if exists
-      const oldWallet = localStorage.getItem('user_wallet');
-      if (oldWallet && !localStorage.getItem('address')) {
-        localStorage.setItem('address', oldWallet);
-        localStorage.removeItem('user_wallet');
-      }
-      localStorage.setItem('address', address);
-    }
-  }, [address]);
-
   // Web3 claiming hooks
   const {
     claimPrize,
     claimPrizeWithBonus,
-    state: claimingState,
     reset: resetClaiming
   } = useContractClaiming();
 
@@ -538,16 +525,15 @@ const NftScratchOff = ({
       <div
         className="h-full w-full flex flex-col items-center justify-center"
         style={{
-          touchAction: !cardData?.scratched && !scratched ? "none" : "auto",
+          touchAction: !scratched ? "none" : "auto",
         }}
       >
         <p
           className={`font-[ABCGaisyr] text-center mb-1 font-bold italic rotate-[-4deg] text-[30px]`}
           style={{
-            visibility:
-              cardData?.scratched || scratched
-                ? "visible"
-                : "hidden",
+            visibility: scratched
+              ? "visible"
+              : "hidden",
             color: cardData?.prize_amount || prizeAmount
               ? "#fff"
               : "rgba(255, 255, 255, 0.4)",
@@ -635,7 +621,7 @@ const NftScratchOff = ({
                 }}
               />
               {cardData?.numbers_json &&
-                (cardData?.scratched || scratched || coverImageLoaded) ? (
+                (scratched || coverImageLoaded) ? (
                 <div className="absolute inset-0 z-10 flex flex-col items-center justify-center text-center rotate-[-4deg]">
                   {(() => {
                     const numbersJson = cardData.numbers_json as unknown as CardCell[];
@@ -714,7 +700,7 @@ const NftScratchOff = ({
               ) : null}
 
               {/* Scratch cover */}
-              {(!cardData || (!cardData?.scratched && !scratched)) && (
+              {(!cardData || (!scratched)) && (
                 <canvas
                   ref={canvasRef}
                   style={{
@@ -737,7 +723,7 @@ const NftScratchOff = ({
               )}
 
               {/* Quick reveal buttons - show when card is not scratched */}
-              {!cardData?.scratched && !scratched && (
+              {!scratched && (
                 <motion.div
                   className="absolute bottom-[120px] left-0 transform -translate-x-1/2 z-30 flex gap-3"
                   initial={{ opacity: 0, y: 20 }}
