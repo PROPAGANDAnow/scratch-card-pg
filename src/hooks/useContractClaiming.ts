@@ -6,7 +6,7 @@
  */
 
 import { useState, useCallback, useMemo, useEffect } from 'react';
-import { useWriteContract, useWaitForTransactionReceipt, useReadContract } from 'wagmi';
+import { useWriteContract, useWaitForTransactionReceipt, useReadContract, usePublicClient } from 'wagmi';
 import { Address, hashMessage, recoverAddress } from 'viem';
 import {
   SCRATCH_CARD_NFT_ADDRESS,
@@ -64,11 +64,13 @@ export interface UseContractClaimingReturn {
 export const useContractClaiming = (): UseContractClaimingReturn => {
   // Contract write hooks
   const {
-    writeContract,
+    writeContractAsync,
     data: hash,
     isPending: isWritePending,
     error: writeError
   } = useWriteContract();
+
+  const publicClient = usePublicClient()
 
   const {
     isLoading: isConfirming,
@@ -118,7 +120,7 @@ export const useContractClaiming = (): UseContractClaimingReturn => {
       setState('pending');
       setError(null);
 
-      writeContract({
+      const hash = await writeContractAsync({
         address: SCRATCH_CARD_NFT_ADDRESS,
         abi: SCRATCH_CARD_NFT_ABI,
         functionName: 'claimPrize',
@@ -129,13 +131,15 @@ export const useContractClaiming = (): UseContractClaimingReturn => {
         ],
       });
 
+      await publicClient?.waitForTransactionReceipt({ hash })
+
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to claim prize';
       setError(errorMessage);
       setState('error');
       console.error('Claiming error:', err);
     }
-  }, [writeContract]);
+  }, [writeContractAsync]);
 
   // Claim prize with bonus
   const claimPrizeWithBonus = useCallback(async (
@@ -157,7 +161,7 @@ export const useContractClaiming = (): UseContractClaimingReturn => {
       setState('pending');
       setError(null);
 
-      writeContract({
+      const hash = await writeContractAsync({
         address: SCRATCH_CARD_NFT_ADDRESS,
         abi: SCRATCH_CARD_NFT_ABI,
         functionName: 'claimPrizeWithBonus',
@@ -169,13 +173,15 @@ export const useContractClaiming = (): UseContractClaimingReturn => {
         ],
       });
 
+      await publicClient?.waitForTransactionReceipt({ hash })
+
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to claim prize with bonus';
       setError(errorMessage);
       setState('error');
       console.error('Bonus claiming error:', err);
     }
-  }, [writeContract]);
+  }, [writeContractAsync]);
 
   // Reset state
   const reset = useCallback(() => {

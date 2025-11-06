@@ -90,10 +90,10 @@ const NftScratchOff = ({
     reset: resetClaiming
   } = useContractClaiming();
 
-  const { canClaim: canClaimToken, isClaimed: isTokenClaimed } = useTokenClaimability(
-    tokenId || null,
-    address || null
-  );
+  // const { canClaim: canClaimToken, isClaimed: isTokenClaimed } = useTokenClaimability(
+  //   tokenId || null,
+  //   address || null
+  // );
 
   const { createSignature } = useClaimSignature();
 
@@ -148,9 +148,7 @@ const NftScratchOff = ({
   }, [tokenId, cardData, createSignature]);
 
   // Handle prize claiming on-chain
-  const handleClaimPrize = useCallback(async (claimSignature: ClaimSignature) => {
-    if (!tokenId || !canClaimToken) return;
-
+  const handleClaimPrize = useCallback(async (tokenId: number, claimSignature: ClaimSignature) => {
     try {
       if (bestFriend && cardData?.prize_amount === -1) {
         // Claim with bonus for friend
@@ -177,7 +175,6 @@ const NftScratchOff = ({
     }
   }, [
     tokenId,
-    canClaimToken,
     bestFriend,
     cardData,
     claimPrize,
@@ -215,25 +212,19 @@ const NftScratchOff = ({
 
   // Scratch detection handler
   const handleScratchDetection = useCallback(async () => {
-    debugger;
     if (!cardData || isProcessing) return;
 
     const prizeAmount = cardData?.prize_amount || 0;
-    setPrizeAmount(prizeAmount);
-    setShowBlurOverlay(prizeAmount > 0 || prizeAmount === -1);
     setIsProcessing(true);
 
     // Generate claim signature for on-chain claiming
     const signature = await generateClaimSignature(cardData);
-    // if (signature) {
-    //   setClaimSignature(signature);
-    // }
 
     if (!signature) {
       throw new Error("signature not found")
     }
 
-    await handleClaimPrize(signature)
+    await handleClaimPrize(Number(cardData.id), signature)
 
     // Update local state (optimistic updates)
     // no-op batching retained; state updates handled elsewhere
@@ -271,6 +262,9 @@ const NftScratchOff = ({
     }).catch((error) => {
       console.error("Failed to send notification:", error);
     });
+
+    setPrizeAmount(prizeAmount);
+    setShowBlurOverlay(prizeAmount > 0 || prizeAmount === -1);
   }, [cardData, isProcessing, generateClaimSignature, batchUpdate, tokenId, onPrizeRevealed, setAppColor, setAppBackground, haptics, playWinSound, user, bestFriends, bestFriend?.fid]);
 
   // Debounced scratch detection with Web3 integration
@@ -514,11 +508,6 @@ const NftScratchOff = ({
       setAppBackground(`linear-gradient(to bottom, #090210, ${APP_COLORS.DEFAULT})`);
     };
   }, [resetClaiming, setAppBackground, setAppColor]);
-
-  // Check if token is already claimed
-  const isAlreadyClaimed = useMemo(() => {
-    return isTokenClaimed || (cardData && cardData.claimed);
-  }, [isTokenClaimed, cardData]);
 
   return (
     <>
