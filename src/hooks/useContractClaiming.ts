@@ -112,9 +112,13 @@ export const useContractClaiming = (): UseContractClaimingReturn => {
     recipient?: Address
   ) => {
     try {
-      // Validate claim signature
+      // Validate inputs
       if (!validateClaimSignature(claimSig)) {
         throw new Error('Invalid claim signature format');
+      }
+
+      if (isNaN(tokenId) || tokenId < 0) {
+        throw new Error(`Invalid tokenId: ${tokenId}`);
       }
 
       setState('pending');
@@ -152,6 +156,10 @@ export const useContractClaiming = (): UseContractClaimingReturn => {
       // Validate inputs
       if (!validateClaimSignature(claimSig)) {
         throw new Error('Invalid claim signature format');
+      }
+
+      if (isNaN(tokenId) || tokenId < 0) {
+        throw new Error(`Invalid tokenId: ${tokenId}`);
       }
 
       if (!bonusRecipient) {

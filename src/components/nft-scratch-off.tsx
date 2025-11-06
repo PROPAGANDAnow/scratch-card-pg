@@ -215,6 +215,7 @@ const NftScratchOff = ({
     if (!cardData || isProcessing) return;
 
     const prizeAmount = cardData?.prize_amount || 0;
+    const tokenId = cardData.token_id;
     setIsProcessing(true);
 
     // Generate claim signature for on-chain claiming
@@ -224,7 +225,7 @@ const NftScratchOff = ({
       throw new Error("signature not found")
     }
 
-    await handleClaimPrize(Number(cardData.id), signature)
+    await handleClaimPrize(tokenId, signature)
 
     // Update local state (optimistic updates)
     // no-op batching retained; state updates handled elsewhere
