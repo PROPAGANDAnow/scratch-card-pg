@@ -36,7 +36,7 @@ import { chunk3, findWinningRow } from "~/lib/winningRow";
 import { BestFriend } from "~/app/interface/bestFriends";
 import { useDebouncedScratchDetection } from "~/hooks/useDebouncedScratchDetection";
 import { useBatchedUpdates } from "~/hooks/useBatchedUpdates";
-import { useContractClaiming, useTokenClaimability, useClaimSignature } from "~/hooks/useContractClaiming";
+import { useContractClaiming, useTokenClaimability, useClaimSignature, ClaimingState } from "~/hooks/useContractClaiming";
 import { useWallet } from "~/hooks/useWeb3Wallet";
 import { isMobile } from "~/lib/devices";
 import {
@@ -75,16 +75,10 @@ const NftScratchOff = ({
   const [showBlurOverlay, setShowBlurOverlay] = useState(false);
   const [bestFriend] = useState<BestFriend | null>(null);
   const [coverImageLoaded, setCoverImageLoaded] = useState(false);
-  const [claimSignature, setClaimSignature] = useState<ClaimSignature | null>(null);
   const linkCopyTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const [isDesktop, setIsDesktop] = useState(false);
 
   const { actions, haptics } = useMiniApp();
 
-  // Check if desktop
-  useEffect(() => {
-    setIsDesktop(!isMobile());
-  }, []);
   const { batchUpdate } = useBatchedUpdates(() => { });
   const { address } = useWallet();
 
@@ -150,18 +144,13 @@ const NftScratchOff = ({
 
     try {
       const deadline = Math.floor(Date.now() / 1000) + 3600; // 1 hour from now
-      const signature = await createSignature(
-        tokenId,
-        cardData.prize_amount,
-        USDC_ADDRESS as Address,
-        deadline
-      );
+      const { signature } = await createSignature(tokenId);
 
       return createClaimSignature(
         cardData.prize_amount,
         USDC_ADDRESS as Address,
         deadline,
-        signature.signature
+        signature
       );
     } catch (error) {
       console.error('Failed to generate claim signature:', error);
@@ -170,8 +159,8 @@ const NftScratchOff = ({
   }, [tokenId, cardData, createSignature]);
 
   // Handle prize claiming on-chain
-  const handleClaimPrize = useCallback(async () => {
-    if (!tokenId || !claimSignature || !canClaimToken) return;
+  const handleClaimPrize = useCallback(async (claimSignature: ClaimSignature) => {
+    if (!tokenId || !canClaimToken) return;
 
     try {
       if (bestFriend && cardData?.prize_amount === -1) {
@@ -199,7 +188,6 @@ const NftScratchOff = ({
     }
   }, [
     tokenId,
-    claimSignature,
     canClaimToken,
     bestFriend,
     cardData,
@@ -247,13 +235,19 @@ const NftScratchOff = ({
 
     // Generate claim signature for on-chain claiming
     const signature = await generateClaimSignature();
-    if (signature) {
-      setClaimSignature(signature);
+    // if (signature) {
+    //   setClaimSignature(signature);
+    // }
+
+    if (!signature) {
+      throw new Error("signature not found")
     }
+
+    await handleClaimPrize(signature)
 
     // Update local state (optimistic updates)
     // no-op batching retained; state updates handled elsewhere
-    batchUpdate([]);
+    // batchUpdate([]);
     setScratched(true);
 
     if (tokenId && onPrizeRevealed) {
@@ -273,6 +267,7 @@ const NftScratchOff = ({
     }
 
     // Send notification (maintains existing social features)
+    // TODO: make this quick auth as well 
     fetch("/api/neynar/send-notification", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -519,7 +514,6 @@ const NftScratchOff = ({
       setShowBlurOverlay(false);
       setTilt({ x: 0, y: 0 });
       setCoverImageLoaded(false);
-      setClaimSignature(null);
       resetClaiming();
 
       if (linkCopyTimeoutRef.current) {
@@ -742,7 +736,7 @@ const NftScratchOff = ({
               {/* Quick reveal buttons - show when card is not scratched */}
               {!cardData?.scratched && !scratched && (
                 <motion.div
-                  className="absolute bottom-[120px] left-1/2 transform -translate-x-1/2 z-30 flex gap-3"
+                  className="absolute bottom-[120px] left-0 transform -translate-x-1/2 z-30 flex gap-3"
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.5, duration: 0.3 }}
@@ -905,69 +899,6 @@ const NftScratchOff = ({
                 </>
               ) : null}
             </p>
-
-            {/* Web3 Claim Status */}
-            {claimSignature && (
-              <motion.div
-                className="bg-black/80 backdrop-blur-sm rounded-[24px] p-6 w-full max-w-[320px] mb-6"
-                initial={{ opacity: 0, y: 20, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-              >
-                <div className="text-center mb-4">
-                  {isAlreadyClaimed ? (
-                    <div className="text-yellow-400">
-                      <div className="text-lg font-semibold mb-2">Already Claimed</div>
-                      <div className="text-sm opacity-80">This prize has already been claimed</div>
-                    </div>
-                  ) : claimingState === 'pending' || claimingState === 'confirming' ? (
-                    <div className="text-blue-400">
-                      <motion.div
-                        className="w-8 h-8 border-2 border-blue-400 border-t-transparent rounded-full mx-auto mb-2"
-                        animate={{ rotate: 360 }}
-                        transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                      />
-                      <div className="text-lg font-semibold">
-                        {claimingState === 'pending' ? 'Claiming...' : 'Confirming...'}
-                      </div>
-                    </div>
-                  ) : claimingState === 'success' ? (
-                    <div className="text-green-400">
-                      <div className="text-lg font-semibold mb-2">Claim Successful!</div>
-                      <div className="text-sm opacity-80">Prize sent to your wallet</div>
-                    </div>
-                  ) : claimingState === 'error' ? (
-                    <div className="text-red-400">
-                      <div className="text-lg font-semibold mb-2">Claim Failed</div>
-                      <div className="text-sm opacity-80">Please try again</div>
-                    </div>
-                  ) : (
-                    <div className="text-white">
-                      <div className="text-lg font-semibold mb-2">Ready to Claim</div>
-                      <div className="text-sm opacity-80">Click below to claim your prize</div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Claim Button */}
-                <motion.button
-                  className={`w-full py-3 rounded-full font-semibold transition-all duration-200 ${!canClaimToken || isAlreadyClaimed || claimingState !== 'idle'
-                    ? 'bg-gray-500 cursor-not-allowed'
-                    : 'bg-green-500 hover:bg-green-600'
-                    }`}
-                  onClick={handleClaimPrize}
-                  disabled={!canClaimToken || isAlreadyClaimed || claimingState !== 'idle'}
-                  whileHover={canClaimToken && !isAlreadyClaimed && claimingState === 'idle' ? { scale: 1.02 } : {}}
-                  whileTap={canClaimToken && !isAlreadyClaimed && claimingState === 'idle' ? { scale: 0.98 } : {}}
-                >
-                  {isAlreadyClaimed ? 'Already Claimed' :
-                    claimingState === 'pending' ? 'Claiming...' :
-                      claimingState === 'confirming' ? 'Confirming...' :
-                        claimingState === 'success' ? 'Claimed!' :
-                          claimingState === 'error' ? 'Try Again' :
-                            'Claim Prize'}
-                </motion.button>
-              </motion.div>
-            )}
 
             {/* Social sharing (maintains existing functionality) */}
             <div className="absolute w-[90%] bottom-[36px] flex flex-col items-center justify-center gap-4">

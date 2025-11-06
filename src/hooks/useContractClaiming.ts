@@ -28,31 +28,31 @@ export type ClaimingState = 'idle' | 'pending' | 'confirming' | 'success' | 'err
 export interface UseContractClaimingReturn {
   /** Current claiming state */
   state: ClaimingState;
-  
+
   /** Transaction hash if pending/confirming */
   transactionHash: `0x${string}` | null;
-  
+
   /** Error message if failed */
   error: string | null;
-  
+
   /** Claim prize for a token */
   claimPrize: (
-    tokenId: number, 
-    claimSig: ClaimSignature, 
+    tokenId: number,
+    claimSig: ClaimSignature,
     recipient?: Address
   ) => Promise<void>;
-  
+
   /** Claim prize with bonus for friend */
   claimPrizeWithBonus: (
-    tokenId: number, 
-    claimSig: ClaimSignature, 
+    tokenId: number,
+    claimSig: ClaimSignature,
     recipient?: Address,
     bonusRecipient?: Address
   ) => Promise<void>;
-  
+
   /** Reset state */
   reset: () => void;
-  
+
   /** Whether user can claim */
   canClaim: boolean;
 }
@@ -63,18 +63,18 @@ export interface UseContractClaimingReturn {
  */
 export const useContractClaiming = (): UseContractClaimingReturn => {
   // Contract write hooks
-  const { 
-    writeContract, 
-    data: hash, 
+  const {
+    writeContract,
+    data: hash,
     isPending: isWritePending,
-    error: writeError 
+    error: writeError
   } = useWriteContract();
-  
-  const { 
-    isLoading: isConfirming, 
+
+  const {
+    isLoading: isConfirming,
     isSuccess: isConfirmed,
-    error: confirmError 
-  } = useWaitForTransactionReceipt({ 
+    error: confirmError
+  } = useWaitForTransactionReceipt({
     hash: hash || undefined,
     confirmations: 2, // Wait for 2 confirmations on Base
   });
@@ -105,8 +105,8 @@ export const useContractClaiming = (): UseContractClaimingReturn => {
 
   // Claim prize
   const claimPrize = useCallback(async (
-    tokenId: number, 
-    claimSig: ClaimSignature, 
+    tokenId: number,
+    claimSig: ClaimSignature,
     recipient?: Address
   ) => {
     try {
@@ -139,8 +139,8 @@ export const useContractClaiming = (): UseContractClaimingReturn => {
 
   // Claim prize with bonus
   const claimPrizeWithBonus = useCallback(async (
-    tokenId: number, 
-    claimSig: ClaimSignature, 
+    tokenId: number,
+    claimSig: ClaimSignature,
     recipient?: Address,
     bonusRecipient?: Address
   ) => {
@@ -266,7 +266,7 @@ export const useTokenClaimability = (tokenId: number | null, userAddress: Addres
 
   const canClaim = useMemo(() => {
     if (!tokenData || !owner || !userAddress) return false;
-    
+
     return (
       !tokenData.claimed && // Not already claimed
       owner.toLowerCase() === userAddress.toLowerCase() // User owns the token
@@ -289,22 +289,17 @@ export const useTokenClaimability = (tokenId: number | null, userAddress: Addres
 export const useClaimSignature = () => {
   const createSignature = useCallback(async (
     tokenId: number,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    _prizeAmount?: number,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    _tokenAddress?: Address,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    _deadline?: number
   ): Promise<ClaimSignature> => {
     try {
       // Get user wallet from localStorage (this should be passed from context in a better implementation)
       const userWallet = localStorage.getItem('address') || localStorage.getItem('user_wallet');
-      
+
       if (!userWallet) {
         throw new Error('User wallet not found. Please connect your wallet.');
       }
 
       // Call the server endpoint to generate signature
+      // TODO: we should impleement quick auth here. 
       const response = await fetch('/api/cards/generate-claim-signature', {
         method: 'POST',
         headers: {
@@ -353,7 +348,7 @@ export const useClaimSignature = () => {
 export const useClaimingEvents = () => {
   // TODO: Implement event listening with useWatchContractEvent
   // This will replace current API-based approach
-  
+
   return {
     claimedPrizes: [],
     bonusCards: [],
