@@ -139,8 +139,10 @@ const NftScratchOff = ({
   }, []);
 
   // Generate claim signature when card is scratched
-  const generateClaimSignature = useCallback(async () => {
-    if (!tokenId || !cardData) return null;
+  const generateClaimSignature = useCallback(async (cardData: Card) => {
+    if (!cardData) return null;
+
+    const tokenId = cardData.token_id
 
     try {
       const deadline = Math.floor(Date.now() / 1000) + 3600; // 1 hour from now
@@ -226,6 +228,7 @@ const NftScratchOff = ({
 
   // Scratch detection handler
   const handleScratchDetection = useCallback(async () => {
+    debugger;
     if (!cardData || isProcessing) return;
 
     const prizeAmount = cardData?.prize_amount || 0;
@@ -234,7 +237,7 @@ const NftScratchOff = ({
     setIsProcessing(true);
 
     // Generate claim signature for on-chain claiming
-    const signature = await generateClaimSignature();
+    const signature = await generateClaimSignature(cardData);
     // if (signature) {
     //   setClaimSignature(signature);
     // }

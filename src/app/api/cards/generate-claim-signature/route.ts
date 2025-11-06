@@ -62,24 +62,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // TODO: Implement proper ownership validation using userId relation
+    // TODO: Implement proper ownership validation using userId relation with quick auth
     // For now, skip ownership check as user_wallet field is removed
 
-    // Check if card has been scratched
-    if (!card.scratched) {
-      return NextResponse.json(
-        { success: false, error: "Card must be scratched before claiming" } as ApiResponse,
-        { status: 400 }
-      );
-    }
-
-    // Check if prize has already been claimed
-    if (card.claimed) {
-      return NextResponse.json(
-        { success: false, error: "Prize already claimed" } as ApiResponse,
-        { status: 400 }
-      );
-    }
 
     // Get prize details
     const prizeAmount = Number(card.prize_amount || 0);
@@ -96,8 +81,6 @@ export async function POST(request: NextRequest) {
     const signerAccount = privateKeyToAccount(
       signerPrivateKey as `0x${string}`
     );
-
-    
 
     // Create the message to sign
     // This should match the format expected by the smart contract
@@ -133,6 +116,24 @@ export async function POST(request: NextRequest) {
 
     console.log(`Generated claim signature for token ${tokenId} for user ${userWallet}`);
 
+    const currUser = await prisma.user.findFirst({
+      where: {
+        address: validation.data.userWallet
+      }
+    })
+
+    // update prisma
+    await prisma.card.update({
+      where: {
+        token_id: validation.data.tokenId
+      },
+      data: {
+        scratched: true,
+        scratched_by_user_id: currUser?.id,
+        scratched_at: new Date().toISOString(),
+      }
+    })
+
     return NextResponse.json({
       success: true,
       data: claimSignature,
@@ -140,7 +141,7 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error("Error generating claim signature:", error);
-    
+
     // Return a more user-friendly error message
     if (error instanceof Error) {
       // Don't expose internal error details in production
@@ -163,8 +164,8 @@ export async function POST(request: NextRequest) {
  * Health check endpoint
  */
 export async function GET() {
-  return NextResponse.json({ 
-    status: "ok", 
+  return NextResponse.json({
+    status: "ok",
     timestamp: new Date().toISOString(),
     endpoint: "/api/cards/generate-claim-signature"
   });
