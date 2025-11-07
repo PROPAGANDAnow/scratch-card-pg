@@ -54,7 +54,7 @@ export const USDC_ADDRESS = '0x902C0EB8E7654B15EEc93499587e56eF75fa6AdD' as Viem
 /**
  * Signer address for prize claim verification
  */
-export const SIGNER_ADDRESS = '0x2B5AD5c4795c026514f8317c7a215E218DcCD6cF' as ViemAddress;
+export const SIGNER_ADDRESS = '0xB48B07A013275600945DFAb3385FFf00014986C5' as ViemAddress;
 
 /**
  * Admin wallet address for payments
