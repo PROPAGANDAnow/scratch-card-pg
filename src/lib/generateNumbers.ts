@@ -1,7 +1,7 @@
 // ~/lib/generateNumbers.ts
 import { Address } from 'viem';
 import type { CardCell } from '~/app/interface/cardCell';
-import { USDC_ADDRESS } from '~/lib/blockchain';
+import { PAYMENT_TOKEN } from '~/lib/blockchain';
 
 /**
  * Build a 12-cell flat array for a 3x4 card.
@@ -14,13 +14,13 @@ export function generateNumbers(params: {
   prizeAsset: Address;           // defaults to USDC (not used for friend wins)
   decoyAmounts: number[];       // defaults [0.5, 1, 2]
   decoyAssets: string[];        // defaults [USDC]
-  friends: number[];               // Array of best friends to choose from
+  friends: { fid: number }[];      // Array of best friends to choose from
 }): CardCell[] {
   const {
     prizeAmount,
-    prizeAsset = USDC_ADDRESS,
+    prizeAsset = PAYMENT_TOKEN.ADDRESS,
     decoyAmounts = [0.5, 1, 2],
-    decoyAssets = [USDC_ADDRESS],
+    decoyAssets = [PAYMENT_TOKEN.ADDRESS],
     friends = [], // Default to empty array
   } = params;
 

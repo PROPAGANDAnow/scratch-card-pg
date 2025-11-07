@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
         user = await getOrCreateUserByAddress(userWallet);
         // Also update the FID if not already set
         if (!user.fid) {
-          user = await withDatabaseRetry(() => updateUser(user.id, { fid }));
+          user = await withDatabaseRetry(() => updateUser(user!.id, { fid }));
         }
         isNewUser = true;
       }

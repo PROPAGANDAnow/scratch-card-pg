@@ -44,12 +44,22 @@ export const BASE_CONFIG = {
  * Scratch Card NFT contract address
  * Environment variable override for different deployments
  */
-export const SCRATCH_CARD_NFT_ADDRESS = '0x60F8B620D3741FE7A628CF9066229D5388723827' as ViemAddress;
+export const SCRATCH_CARD_NFT_ADDRESS = '0x00aD588484a71b3A22182f6413cb3616440f71eA' as ViemAddress;
 
 /**
- * USDC contract address on Base
+ * Payment token configuration
+ * Update these values to change the payment token
  */
-export const USDC_ADDRESS = '0x902C0EB8E7654B15EEc93499587e56eF75fa6AdD' as ViemAddress;
+export const PAYMENT_TOKEN = {
+  /** Token contract address on Base */
+  ADDRESS: '0x902c0eb8e7654b15eec93499587e56ef75fa6add' as ViemAddress,
+  /** Token decimals - affects how amounts are calculated */
+  DECIMALS: 18,
+  /** Token symbol - for display purposes */
+  SYMBOL: 'SAMP',
+  /** Token name - for display purposes */
+  NAME: 'Sample Coin',
+} as const;
 
 /**
  * Signer address for prize claim verification
@@ -120,9 +130,10 @@ export const AddressPatterns = {
 // ========== Contract ABIs ==========
 
 /**
- * USDC ERC20 ABI (minimal - only functions needed)
+ * ERC20 ABI for payment tokens (minimal - only functions needed)
+ * Works with any ERC20 token used for payments
  */
-export const USDC_ABI = [
+export const ERC20_ABI = [
   {
     inputs: [
       { name: 'spender', type: 'address' },
@@ -157,17 +168,95 @@ export const USDC_ABI = [
     stateMutability: 'view',
     type: 'function',
   },
+  {
+    inputs: [],
+    name: 'symbol',
+    outputs: [{ name: '', type: 'string' }],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [],
+    name: 'name',
+    outputs: [{ name: '', type: 'string' }],
+    stateMutability: 'view',
+    type: 'function',
+  },
 ] as const;
+
+/**
+ * @deprecated Use ERC20_ABI instead
+ * Kept for backward compatibility
+ */
+export const USDC_ABI = ERC20_ABI;
 
 /**
  * Complete ABI for the Scratch Card NFT contract
  */
 export const SCRATCH_CARD_NFT_ABI = [
+  // Struct definitions
+  {
+    name: 'ClaimSignature',
+    type: 'tuple',
+    components: [
+      { name: 'prizeAmount', type: 'uint256' },
+      { name: 'tokenAddress', type: 'address' },
+      { name: 'deadline', type: 'uint256' },
+      { name: 'signature', type: 'bytes' }
+    ]
+  },
+  {
+    name: 'TokenData',
+    type: 'tuple',
+    components: [
+      { name: 'claimed', type: 'bool' },
+      { name: 'registeredAt', type: 'uint256' },
+      { name: 'tokenAddress', type: 'address' }
+    ]
+  },
+
   // Read Functions
   {
     inputs: [{ name: 'owner', type: 'address' }],
     name: 'getUserTokens',
     outputs: [{ name: '', type: 'uint256[]' }],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [
+      { name: 'tokenId', type: 'uint256' },
+      { name: 'prizeAmount', type: 'uint256' },
+      { name: 'tokenAddress', type: 'address' },
+      { name: 'deadline', type: 'uint256' }
+    ],
+    name: 'getClaimMessageHash',
+    outputs: [{ name: '', type: 'bytes32' }],
+    stateMutability: 'pure',
+    type: 'function',
+  },
+  {
+    inputs: [
+      { name: 'tokenId', type: 'uint256' },
+      { name: 'prizeAmount', type: 'uint256' },
+      { name: 'tokenAddress', type: 'address' },
+      { name: 'deadline', type: 'uint256' }
+    ],
+    name: 'getClaimEthSignedMessageHash',
+    outputs: [{ name: '', type: 'bytes32' }],
+    stateMutability: 'pure',
+    type: 'function',
+  },
+  {
+    inputs: [
+      { name: 'tokenId', type: 'uint256' },
+      { name: 'prizeAmount', type: 'uint256' },
+      { name: 'tokenAddress', type: 'address' },
+      { name: 'deadline', type: 'uint256' },
+      { name: 'signature', type: 'bytes' }
+    ],
+    name: 'verifyClaimSignature',
+    outputs: [{ name: '', type: 'bool' }],
     stateMutability: 'view',
     type: 'function',
   },
@@ -279,7 +368,16 @@ export const SCRATCH_CARD_NFT_ABI = [
   {
     inputs: [
       { name: 'tokenId', type: 'uint256' },
-      { name: 'claimSig', type: 'tuple' },
+      {
+        name: 'claimSig',
+        type: 'tuple',
+        components: [
+          { name: 'prizeAmount', type: 'uint256' },
+          { name: 'tokenAddress', type: 'address' },
+          { name: 'deadline', type: 'uint256' },
+          { name: 'signature', type: 'bytes' }
+        ]
+      },
       { name: 'recipient', type: 'address' }
     ],
     name: 'claimPrize',
@@ -290,7 +388,16 @@ export const SCRATCH_CARD_NFT_ABI = [
   {
     inputs: [
       { name: 'tokenId', type: 'uint256' },
-      { name: 'claimSig', type: 'tuple' },
+      {
+        name: 'claimSig',
+        type: 'tuple',
+        components: [
+          { name: 'prizeAmount', type: 'uint256' },
+          { name: 'tokenAddress', type: 'address' },
+          { name: 'deadline', type: 'uint256' },
+          { name: 'signature', type: 'bytes' }
+        ]
+      },
       { name: 'recipient', type: 'address' },
       { name: 'bonusRecipient', type: 'address' }
     ],
@@ -342,8 +449,8 @@ export const SCRATCH_CARD_NFT_ABI = [
  * Game configuration constants
  */
 export const GAME_CONFIG = {
-  /** Default card price in USDC (6 decimals) */
-  CARD_PRICE: 1_000_000, // 1 USDC
+  /** Default card price in payment token units (depends on token decimals) */
+  CARD_PRICE: 1_000_000, // 1 unit of payment token (e.g., 1 USDC if using USDC)
 
   /** Maximum batch size for minting */
   MAX_BATCH_SIZE: 50,
@@ -356,6 +463,9 @@ export const GAME_CONFIG = {
 
   /** Base URI for token metadata */
   BASE_URI: 'https://api.scratchcards.com',
+
+  /** Payment token decimals - dynamically from payment token config */
+  PAYMENT_TOKEN_DECIMALS: PAYMENT_TOKEN.DECIMALS,
 } as const;
 
 /**
@@ -471,7 +581,7 @@ export interface ClaimSignature {
   prizeAmount: bigint;
   tokenAddress: ViemAddress;
   deadline: bigint;
-  signature: `0x${string}`;
+  signature: `0x${string}` | Uint8Array; // Can be hex string or bytes array
 }
 
 /**
@@ -529,7 +639,7 @@ export const getCurrentNetwork = () => {
 export const getContractAddresses = () => {
   return {
     scratchCardNFT: SCRATCH_CARD_NFT_ADDRESS,
-    usdc: USDC_ADDRESS,
+    paymentToken: PAYMENT_TOKEN.ADDRESS,
     signer: SIGNER_ADDRESS,
     adminWallet: ADMIN_WALLET_ADDRESS,
   };
@@ -559,19 +669,19 @@ export const calculatePrice = (quantity: number): { price: number; discount: num
 /**
  * Format price from contract units to display format
  */
-export const formatPrice = (price: number | bigint): string => {
-  const priceInUSDC = typeof price === 'bigint'
-    ? Number(price) / 1_000_000
+export const formatPrice = (price: number | bigint, decimals: number = GAME_CONFIG.PAYMENT_TOKEN_DECIMALS): string => {
+  const priceInToken = typeof price === 'bigint'
+    ? Number(price) / Math.pow(10, decimals)
     : price;
 
-  return priceInUSDC.toFixed(2);
+  return priceInToken.toFixed(2);
 };
 
 /**
  * Convert display price to contract units
  */
-export const priceToContractUnits = (price: number): bigint => {
-  return BigInt(Math.floor(price * 1_000_000));
+export const priceToContractUnits = (price: number, decimals: number = GAME_CONFIG.PAYMENT_TOKEN_DECIMALS): bigint => {
+  return BigInt(Math.floor(price * Math.pow(10, decimals)));
 };
 
 /**

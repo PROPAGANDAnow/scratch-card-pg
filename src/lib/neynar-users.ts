@@ -1,5 +1,4 @@
 import { prisma } from "./prisma";
-import { withDatabaseRetry } from "./db-utils";
 import { User } from "@prisma/client";
 
 export interface NeynarUser {

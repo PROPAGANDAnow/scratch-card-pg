@@ -4,7 +4,7 @@ import Image from "next/image";
 import { chunk3, findWinningRow } from "~/lib/winningRow";
 import { formatCell } from "~/lib/formatCell";
 import { Card, CardCell } from "~/app/interface/card";
-import { USDC_ADDRESS } from "~/lib/blockchain";
+import { PAYMENT_TOKEN } from "~/lib/blockchain";
 import { useRouter } from "next/navigation";
 
 interface CardGridProps {
@@ -52,7 +52,7 @@ export default function CardGrid({
                     textShadow: "0px 0px 1px rgba(0, 0, 0, 0.15), 0px 0px 2px rgba(0, 0, 0, 0.15), 0px 0px 6px rgba(0, 0, 0, 0.15)",
                   }}
                 >
-                  {card.prize_amount > 0 ? `${formatCell(card.prize_amount, card.prize_asset_contract || USDC_ADDRESS)}` : ""}
+                  {card.prize_amount > 0 ? `${formatCell(card.prize_amount, card.prize_asset_contract || PAYMENT_TOKEN.ADDRESS)}` : ""}
                 </div>
               ) : null}
               {card.scratched && card.numbers_json ? (

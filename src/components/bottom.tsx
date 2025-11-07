@@ -31,11 +31,6 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
   const buyModalRef = useRef<HTMLDivElement | null>(null);
   useDetectClickOutside(buyModalRef, () => setShowBuyModal(false));
 
-  // Function to trigger buy modal
-  const triggerBuyModal = () => {
-    setShowBuyModal(true);
-  };
-
   const canGoPrev = currentCardIndex > 0;
   const canGoNext = currentCardIndex < availableCards.length - 1;
 

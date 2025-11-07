@@ -65,7 +65,7 @@ export function useUserTokens(): UseUserTokensReturn {
   useEffect(() => {
     if (address)
       refetchCards(address)
-  }, [address])
+  }, [address, refetchCards])
 
   // Convert cards to TokenWithState format
   const availableCards: TokenWithState[] = cards

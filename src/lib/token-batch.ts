@@ -10,7 +10,7 @@ import { getOrCreateUserByAddress } from "./neynar-users";
 
 interface GetTokensInBatchArgs {
   tokenIds: number[];
-  friends: number[];
+  friends: { fid: number }[];
   recipient: string;
   contractAddress: string;
 }
@@ -22,7 +22,7 @@ interface GetTokensInBatchArgs {
  * @throws Error - If contract address is invalid or payment token is not found
  */
 export const getTokensInBatch = async (args: GetTokensInBatchArgs): Promise<Card[]> => {
-  const { tokenIds, friends = [], recipient, contractAddress } = args;
+  const { tokenIds, friends = [], contractAddress } = args;
 
   const publicClient = await createPublicClient({
     chain: base,
@@ -44,7 +44,7 @@ export const getTokensInBatch = async (args: GetTokensInBatchArgs): Promise<Card
     throw new Error(`payment token from the nft contract is not valid, got ${paymentToken}`);
   }
 
-  const cardsData: Prisma.CardCreateInput[] = [];
+  const cardsData = [];
 
   // check how many have already in db
   const existingCards = await prisma.card.findMany({
@@ -77,15 +77,12 @@ export const getTokensInBatch = async (args: GetTokensInBatchArgs): Promise<Card
     });
 
     // Create card data for this token
-    const cardData: Prisma.CardCreateInput = {
+    const cardData = {
       prize_amount: prize,
       prize_asset_contract: paymentToken,
       numbers_json: numbers as Prisma.InputJsonValue,
       token_id: tokenId, // Use tokenId as token_id
       contract_address: contractAddress, // Placeholder for NFT contract
-      minter: {
-        connect: { id: currUser?.id }
-      }
     };
 
     cardsData.push(cardData);

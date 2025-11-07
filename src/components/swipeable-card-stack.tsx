@@ -1,11 +1,10 @@
 "use client";
 import { AnimatePresence, motion } from "framer-motion";
 import Image from "next/image";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Card } from "~/app/interface/card";
 import { TokenWithState, useUserTokens } from "~/hooks";
 import { CANVAS_HEIGHT, CANVAS_WIDTH } from "~/lib/constants";
-import { extractUnclaimedTokenIds } from "~/lib/token-utils";
 import { useCardStore } from "~/stores/card-store";
 import NftScratchOff from "./nft-scratch-off";
 
@@ -48,7 +47,7 @@ export default function SwipeableCardStack({
         setCurrentCardNo(initialIndex);
       }
     }
-  }, [filteredCards, currentCardNo, initialIndex]);
+  }, [filteredCards, currentCardNo, initialIndex, setCurrentCardNo]);
 
   // Find current card and index
   // currentCardNo is now the array index, not the token ID
@@ -98,7 +97,7 @@ export default function SwipeableCardStack({
       // Set to the previous array index, not token ID
       setCurrentCardNo(currentIndex - 1);
     }
-  }, [canGoPrev, currentIndex]);
+  }, [canGoPrev, currentIndex, setCurrentCardNo, setDirection]);
 
   const handleNextClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
@@ -107,7 +106,7 @@ export default function SwipeableCardStack({
       // Set to the next array index, not token ID
       setCurrentCardNo(currentIndex + 1);
     }
-  }, [canGoNext, currentIndex]);
+  }, [canGoNext, currentIndex, setCurrentCardNo, setDirection]);
 
   const handleNextFromScratch = useCallback(() => {
     if (canGoNext) {
@@ -115,10 +114,10 @@ export default function SwipeableCardStack({
       // Set to the next array index, not token ID
       setCurrentCardNo(currentIndex + 1);
     }
-  }, [canGoNext, currentIndex]);
+  }, [canGoNext, currentIndex, setCurrentCardNo, setDirection]);
 
   // Handle prize revealed
-  const handlePrizeRevealed = useCallback((_tokenId: number, prizeAmount: number) => {
+  const handlePrizeRevealed = useCallback(() => {
     // Query invalidation is now handled by the useUserTokens hook
   }, []);
 

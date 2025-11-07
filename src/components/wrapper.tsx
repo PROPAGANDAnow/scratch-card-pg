@@ -5,7 +5,7 @@ import { useMiniApp } from "@neynar/react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { createRef, FC, useEffect, useRef, useState } from "react";
+import { createRef, FC, useCallback, useEffect, useRef, useState } from "react";
 import { User } from "~/app/interface/user";
 import { AppStats } from "~/app/interface/appStats";
 import { Reveal } from "~/app/interface/reveal";
@@ -90,15 +90,19 @@ const Wrapper: FC<{ children: React.ReactNode }> = ({ children }) => {
     currentUnscratchedCardsRef.current = unscratchedCards;
   }, [unscratchedCards]);
 
-  // Fetch all data when wallet connects
-  useEffect(() => {
-    if (publicKey && userFid) {
-      fetchAllData(publicKey, userFid);
+  const callReady = useCallback(async () => {
+    if (publicKey) {
+      try {
+        await sdk.actions.ready();
+        readyCalled.current = true;
+      } catch (error) {
+        console.error("Failed to signal app ready:", error);
+      }
     }
-  }, [publicKey, userFid]);
+  }, [publicKey]);
 
   // Fetch all data when wallet connects using Promise.allSettled
-  const fetchAllData = async (userWallet: string, userFid: number) => {
+  const fetchAllData = useCallback(async (userWallet: string, userFid: number) => {
     if (!userWallet) return;
     if (!userFid) return;
 
@@ -137,18 +141,14 @@ const Wrapper: FC<{ children: React.ReactNode }> = ({ children }) => {
       // Set loading state for cards to false
       useCardStore.getState().setLoading(false);
     }
-  };
+  }, [refetchCards, setUser, setAppStats, setLeaderboard, setActivity, callReady]);
 
-  const callReady = async () => {
-    if (publicKey) {
-      try {
-        await sdk.actions.ready();
-        readyCalled.current = true;
-      } catch (error) {
-        console.error("Failed to signal app ready:", error);
-      }
+  // Fetch all data when wallet connects
+  useEffect(() => {
+    if (publicKey && userFid) {
+      fetchAllData(publicKey, userFid);
     }
-  };
+  }, [publicKey, userFid, fetchAllData]);
 
   // Fetch all data when wallet connects
   // useEffect(() => {

@@ -9,7 +9,7 @@
  * Manual changes may be overwritten during project initialization.
  */
 
-import { USDC_ADDRESS } from "./blockchain";
+import { PAYMENT_TOKEN } from "./blockchain";
 
 // AccountAssociation type is not exported from the SDK currently
 type AccountAssociation = {
@@ -173,15 +173,18 @@ export const APP_COLORS = {
 };
 
 export const PRIZE_ASSETS = [
-  USDC_ADDRESS,
+  PAYMENT_TOKEN.ADDRESS,
   // '0xUSDT...', '0xDAI...'
 ] as const;
 
 export type TokenMeta = { symbol: string; decimals: number };
 
 export const TOKENS: Record<string, TokenMeta> = {
-  [USDC_ADDRESS.toLowerCase()]: { symbol: 'USDC', decimals: 6 },
-  // add new tokens’ decimals here
+  [PAYMENT_TOKEN.ADDRESS.toLowerCase()]: {
+    symbol: PAYMENT_TOKEN.SYMBOL,
+    decimals: PAYMENT_TOKEN.DECIMALS
+  },
+  // add new tokens' decimals here
 };
 
 export function tokenMeta(addr: string): TokenMeta {

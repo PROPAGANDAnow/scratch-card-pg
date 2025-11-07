@@ -112,6 +112,14 @@ export const useContractClaiming = (): UseContractClaimingReturn => {
     recipient?: Address
   ) => {
     try {
+
+
+      console.log("🚀 ~ useContractClaiming", [
+        BigInt(tokenId),
+        claimSig,
+        AddressPatterns.safeRecipient(recipient) // Use zero address for self
+      ])
+
       // Validate inputs
       if (!validateClaimSignature(claimSig)) {
         throw new Error('Invalid claim signature format');
@@ -133,6 +141,7 @@ export const useContractClaiming = (): UseContractClaimingReturn => {
           claimSig,
           AddressPatterns.safeRecipient(recipient) // Use zero address for self
         ],
+
       });
 
       await publicClient?.waitForTransactionReceipt({ hash })
@@ -142,8 +151,9 @@ export const useContractClaiming = (): UseContractClaimingReturn => {
       setError(errorMessage);
       setState('error');
       console.error('Claiming error:', err);
+      throw err
     }
-  }, [writeContractAsync]);
+  }, [writeContractAsync, publicClient]);
 
   // Claim prize with bonus
   const claimPrizeWithBonus = useCallback(async (
@@ -169,6 +179,13 @@ export const useContractClaiming = (): UseContractClaimingReturn => {
       setState('pending');
       setError(null);
 
+      console.log("🚀 ~ useContractClaiming ~", [
+        BigInt(tokenId),
+        claimSig,
+        AddressPatterns.safeRecipient(recipient), // Use zero address for self
+        bonusRecipient
+      ])
+
       const hash = await writeContractAsync({
         address: SCRATCH_CARD_NFT_ADDRESS,
         abi: SCRATCH_CARD_NFT_ABI,
@@ -188,8 +205,9 @@ export const useContractClaiming = (): UseContractClaimingReturn => {
       setError(errorMessage);
       setState('error');
       console.error('Bonus claiming error:', err);
+      throw err
     }
-  }, [writeContractAsync]);
+  }, [writeContractAsync, publicClient]);
 
   // Reset state
   const reset = useCallback(() => {
@@ -313,8 +331,8 @@ export const useClaimSignature = () => {
       }
 
       // Call the server endpoint to generate signature
-      // TODO: we should impleement quick auth here. 
-      const response = await fetch('/api/cards/generate-claim-signature', {
+      // Using the new v2 endpoint that uses contract-generated hashes
+      const response = await fetch('/api/cards/generate-claim-signature-v2', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

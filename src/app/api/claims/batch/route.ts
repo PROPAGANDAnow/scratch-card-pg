@@ -6,7 +6,7 @@ import { prisma } from '~/lib/prisma';
 import { ApiResponse, BatchClaimResponse } from '~/app/interface/api';
 import { encodeAbiParameters, keccak256 } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
-import { USDC_ADDRESS } from '~/lib/blockchain';
+import { PAYMENT_TOKEN } from '~/lib/blockchain';
 
 export async function POST(request: NextRequest) {
   const validation = await validateRequest(request, BatchClaimSchema, { method: 'POST' });
@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
 
           // Get prize details
           const prizeAmount = Number(token.prize_amount || 0);
-          const prizeAsset = token.prize_asset_contract || USDC_ADDRESS;
+          const prizeAsset = token.prize_asset_contract || PAYMENT_TOKEN.ADDRESS;
 
           // For friend wins (prize_amount === -1), set actual prize to 0
           const actualPrizeAmount = prizeAmount === -1 ? 0 : prizeAmount;

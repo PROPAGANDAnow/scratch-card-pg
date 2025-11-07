@@ -8,7 +8,7 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useWriteContract, useWaitForTransactionReceipt, useReadContract, usePublicClient, useWalletClient } from 'wagmi';
 import { Address, formatUnits, maxUint256 } from 'viem';
-import { USDC_ADDRESS, USDC_ABI, SCRATCH_CARD_NFT_ADDRESS } from '~/lib/blockchain';
+import { PAYMENT_TOKEN, ERC20_ABI, SCRATCH_CARD_NFT_ADDRESS } from '~/lib/blockchain';
 
 /**
  * Approval transaction states
@@ -63,7 +63,6 @@ export const useERC20Approval = (
   const walletClient = useWalletClient()
   // Contract write hooks for approval
   const {
-    writeContract,
     data: hash,
     isPending: isWritePending,
     error: writeError
@@ -82,8 +81,8 @@ export const useERC20Approval = (
 
   // Read current allowance
   const { data: allowanceRaw } = useReadContract({
-    address: USDC_ADDRESS,
-    abi: USDC_ABI,
+    address: PAYMENT_TOKEN.ADDRESS,
+    abi: ERC20_ABI,
     functionName: 'allowance',
     args: userAddress && spenderAddress ? [userAddress, spenderAddress] : undefined,
     query: {
@@ -173,7 +172,7 @@ export const useERC20Approval = (
       console.log("🚀 ~ useERC20Approval ~ spenderAddress, amount:", spenderAddress, amount)
       // Step 1: Simulate the transaction (optional but recommended)
       const { request } = await publicClient.simulateContract({
-        address: USDC_ADDRESS,
+        address: PAYMENT_TOKEN.ADDRESS,
         abi: [{
           name: 'approve',
           type: 'function',
@@ -207,7 +206,7 @@ export const useERC20Approval = (
       console.error('Approval error:', err);
       throw err;
     }
-  }, [writeContract, userAddress, spenderAddress, publicClient, walletClient.data]);
+  }, [userAddress, spenderAddress, publicClient, walletClient.data]);
 
   // Approve unlimited amount
   const approveUnlimited = useCallback(async () => {
@@ -239,15 +238,15 @@ export const useERC20Approval = (
  */
 export const useUSDCBalance = (userAddress: Address | null) => {
   const { data: balanceRaw, isLoading, error } = useReadContract({
-    address: USDC_ADDRESS,
-    abi: USDC_ABI,
+    address: PAYMENT_TOKEN.ADDRESS,
+    abi: ERC20_ABI,
     functionName: 'balanceOf',
     args: userAddress ? [userAddress] : undefined,
   }) as { data: bigint | undefined; isLoading: boolean; error: Error | null };
 
   const { data: decimals } = useReadContract({
-    address: USDC_ADDRESS,
-    abi: USDC_ABI,
+    address: PAYMENT_TOKEN.ADDRESS,
+    abi: ERC20_ABI,
     functionName: 'decimals',
   }) as { data: number | undefined; isLoading: boolean; error: Error | null };
 
@@ -265,6 +264,6 @@ export const useUSDCBalance = (userAddress: Address | null) => {
     balanceBigInt,
     isLoading,
     error,
-    decimals: decimals || 6, // USDC typically has 6 decimals
+    decimals: decimals, // USDC typically has 6 decimals
   };
 };

@@ -84,7 +84,7 @@ export async function GET(request: NextRequest) {
 
     const newlyCreatedTokens = await getTokensInBatch({
       tokenIds,
-      friends,
+      friends: friends.map(fid => ({ fid })),
       recipient: userWallet,
       contractAddress: isAddress(SCRATCH_CARD_NFT_ADDRESS) && SCRATCH_CARD_NFT_ADDRESS || ZERO_ADDRESS
     })

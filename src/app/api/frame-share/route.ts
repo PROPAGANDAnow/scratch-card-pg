@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { USDC_ADDRESS } from "~/lib/blockchain";
+import { PAYMENT_TOKEN } from "~/lib/blockchain";
 import { APP_SPLASH_BACKGROUND_COLOR, APP_SPLASH_URL } from "~/lib/constants";
 import { formatCell } from "~/lib/formatCell";
 
@@ -17,10 +17,10 @@ export async function GET(request: NextRequest) {
       <html>
         <head>
           <meta name="fc:frame" content='{"version":"next","imageUrl":"${baseUrl}/api/share-image?prize=${prizeAmount}&username=${username}&friend_username=${friendUsername}","button":{"title":"Play Scratch Off","action":{"type":"launch_miniapp","name":"Scratch Off","url":"${baseUrl}","splashImageUrl":"${APP_SPLASH_URL}","splashBackgroundColor":"${APP_SPLASH_BACKGROUND_COLOR}"}}}' />
-          <title>Won ${Number(prizeAmount) > 0 ? `${formatCell(Number(prizeAmount), USDC_ADDRESS)}!` : `a free card for @${friendUsername}!`}</title>
+          <title>Won ${Number(prizeAmount) > 0 ? `${formatCell(Number(prizeAmount), PAYMENT_TOKEN.ADDRESS)}!` : `a free card for @${friendUsername}!`}</title>
         </head>
         <body>
-          <h1>${username} won ${Number(prizeAmount) > 0 ? `${formatCell(Number(prizeAmount), USDC_ADDRESS)}!` : `a free card for @${friendUsername}!`}</h1>
+          <h1>${username} won ${Number(prizeAmount) > 0 ? `${formatCell(Number(prizeAmount), PAYMENT_TOKEN.ADDRESS)}!` : `a free card for @${friendUsername}!`}</h1>
         </body>
       </html>
     `;

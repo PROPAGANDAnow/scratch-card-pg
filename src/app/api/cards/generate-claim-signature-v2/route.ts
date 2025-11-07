@@ -1,20 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
-import { keccak256, toHex, recoverAddress, hashMessage } from "viem";
+import { createPublicClient, http } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { ApiResponse } from "~/app/interface/api";
-import { SIGNER_ADDRESS, PAYMENT_TOKEN } from "~/lib/blockchain";
+import { PAYMENT_TOKEN, SCRATCH_CARD_NFT_ADDRESS, SIGNER_ADDRESS } from "~/lib/blockchain";
 import { prisma } from "~/lib/prisma";
 import { GenerateClaimSignatureSchema, validateRequest } from "~/lib/validations";
 
 /**
- * Generate claim signature for NFT scratch card prize
- * 
- * This endpoint generates a signature that allows the user to claim their prize
- * on-chain through the smart contract. The signature is created using the 
- * signer's private key and includes all necessary parameters for verification.
- * 
- * @param request - Contains tokenId and userWallet
- * @returns Claim signature with all required parameters
+ * Generate claim signature using contract hash generation
+ *
+ * This endpoint uses the contract's getClaimMessageHash function to generate
+ * the message hash, ensuring perfect consistency with on-chain verification.
  */
 export async function POST(request: NextRequest) {
   // Validate request using Zod schema
@@ -30,7 +26,6 @@ export async function POST(request: NextRequest) {
   const { tokenId, userWallet } = validation.data;
 
   try {
-
     // Get signer private key from environment variables
     const signerPrivateKey = process.env.SIGNER_PRIVATE_KEY;
     if (!signerPrivateKey) {
@@ -41,8 +36,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Fetch card data from database to verify ownership and prize
-    // Note: user_wallet field removed from Card model, ownership check needs to be updated
+    // Fetch card data from database
     const card = await prisma.card.findUnique({
       where: { token_id: tokenId },
       select: {
@@ -61,105 +55,113 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // TODO: Implement proper ownership validation using userId relation with quick auth
-    // For now, skip ownership check as user_wallet field is removed
-
-
     // Get prize details
     const prizeAmount = Number(card.prize_amount || 0);
     const prizeAsset = card.prize_asset_contract || PAYMENT_TOKEN.ADDRESS;
 
     // For friend wins (prize_amount === -1), we still need to generate a signature
-    // The smart contract will handle the friend win logic
     const actualPrizeAmount = prizeAmount === -1 ? 0 : prizeAmount;
 
-    // Set deadline (24 hours from now to avoid timing issues)
-    const deadline = Math.floor(Date.now() / 1000) + (24 * 3600); // 24 hours from now
+    // Set deadline (24 hours from now)
+    const deadline = Math.floor(Date.now() / 1000) + (24 * 3600);
 
     // Create signer account from private key
     const signerAccount = privateKeyToAccount(
       signerPrivateKey as `0x${string}`
     );
 
-    // Create the message hash exactly as the contract does (abi.encodePacked)
+    // Create a public client to interact with the contract
+    const publicClient = createPublicClient({
+      chain: {
+        id: 8453,
+        name: 'Base',
+        nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
+        rpcUrls: {
+          default: { http: ['https://mainnet.base.org'] },
+        },
+        blockExplorers: {
+          default: { name: 'Basescan', url: 'https://basescan.org' },
+        },
+      },
+      transport: http()
+    });
+
     // Convert prize amount to contract units using payment token decimals
     const prizeAmountContractUnits = Math.floor(actualPrizeAmount * Math.pow(10, PAYMENT_TOKEN.DECIMALS));
 
-    // Create packed data exactly like Solidity's abi.encodePacked
-    const tokenIdBytes = toHex(BigInt(tokenId), { size: 32 }).slice(2); // Remove 0x
-    const prizeAmountBytes = toHex(BigInt(prizeAmountContractUnits), { size: 32 }).slice(2);
-    const tokenAddressBytes = (prizeAsset as `0x${string}`).slice(2).padStart(40, '0'); // Address is 20 bytes
-    const deadlineBytes = toHex(BigInt(deadline), { size: 32 }).slice(2);
+    // Get the message hash from the contract
+    console.log('Getting message hash from contract...');
+    const messageHash = await publicClient.readContract({
+      address: SCRATCH_CARD_NFT_ADDRESS,
+      abi: [
+        {
+          inputs: [
+            { name: 'tokenId', type: 'uint256' },
+            { name: 'prizeAmount', type: 'uint256' },
+            { name: 'tokenAddress', type: 'address' },
+            { name: 'deadline', type: 'uint256' }
+          ],
+          name: 'getClaimMessageHash',
+          outputs: [{ name: '', type: 'bytes32' }],
+          stateMutability: 'pure',
+          type: 'function'
+        }
+      ],
+      functionName: 'getClaimMessageHash',
+      args: [BigInt(tokenId), BigInt(prizeAmountContractUnits), prizeAsset as `0x${string}`, BigInt(deadline)]
+    });
 
-    // Concatenate all values (this simulates abi.encodePacked)
-    const packedData = `0x${tokenIdBytes}${prizeAmountBytes}${tokenAddressBytes}${deadlineBytes}`;
-    const messageHash = keccak256(packedData as `0x${string}`);
+    console.log('Message Hash from contract:', messageHash);
 
-    // Sign the message - sign the hash as a string (viem handles prefix correctly)
+    // Sign the raw hash (as bytes) - this matches what the contract expects
     const signature = await signerAccount.signMessage({
-      message: messageHash
+      message: { raw: new Uint8Array(Buffer.from(messageHash.slice(2), 'hex')) }
     });
 
-    // Detailed debug logging
-    const debugInfo = {
-      tokenId,
-      actualPrizeAmount,
-      prizeAmount: Math.floor(actualPrizeAmount * 1_000_000),
-      prizeAmountContractUnits,
-      tokenAddress: prizeAsset,
-      deadline,
-      deadlineISO: new Date(deadline * 1000).toISOString(),
-      packedData,
-      messageHash: messageHash,
-      messageHashSource: 'abi.encodePacked simulation (matches contract exactly)',
-      signerAddress: signerAccount.address,
-      signature,
-    };
+    console.log('Signature:', signature);
 
-    console.log('=== SIGNATURE DEBUG INFO ===');
-    console.log(JSON.stringify(debugInfo, null, 2));
-
-    // Test signature recovery (simulates what contract does)
-    // When signing a string message, viem's signMessage adds the prefix
-    // We need to use hashMessage to get the same hash for verification
-    const ethSignedMessageHash = hashMessage(messageHash);
-
-    // Verify the signature (like the contract would)
-    const recoveredAddress = await recoverAddress({
-      hash: ethSignedMessageHash,
-      signature
+    // Verify the signature using the contract's verify function
+    console.log('Verifying signature with contract...');
+    const isValid = await publicClient.readContract({
+      address: SCRATCH_CARD_NFT_ADDRESS,
+      abi: [
+        {
+          inputs: [
+            { name: 'tokenId', type: 'uint256' },
+            { name: 'prizeAmount', type: 'uint256' },
+            { name: 'tokenAddress', type: 'address' },
+            { name: 'deadline', type: 'uint256' },
+            { name: 'signature', type: 'bytes' }
+          ],
+          name: 'verifyClaimSignature',
+          outputs: [{ name: '', type: 'bool' }],
+          stateMutability: 'view',
+          type: 'function'
+        }
+      ],
+      functionName: 'verifyClaimSignature',
+      args: [BigInt(tokenId), BigInt(prizeAmountContractUnits), prizeAsset as `0x${string}`, BigInt(deadline), signature]
     });
-    console.log("🚀 ~ POST ~ recoveredAddress:", recoveredAddress)
 
-    const isSignatureValid = recoveredAddress.toLowerCase() === signerAccount.address.toLowerCase();
-    const signerMatches = signerAccount.address.toLowerCase() === SIGNER_ADDRESS.toLowerCase();
+    console.log('Contract verification result:', isValid);
 
-    console.log('\nSignature Verification Test:');
-    console.log('- Message Hash:', messageHash);
-    console.log('- Eth Signed Message Hash:', ethSignedMessageHash);
-    console.log('- Expected Signer (from config):', SIGNER_ADDRESS);
-    console.log('- Actual Signer (from private key):', signerAccount.address);
-    console.log('- Recovered Address:', recoveredAddress);
-    console.log('- Signature valid:', isSignatureValid);
-    console.log('- Signer address matches config:', signerMatches);
+    const isSignerCorrect = signerAccount.address.toLowerCase() === SIGNER_ADDRESS.toLowerCase();
 
-    // Ensure the signer address matches the configured signer
-    if (!signerMatches) {
+    if (!isSignerCorrect) {
       console.error('⚠️ WARNING: Signer private key does not match SIGNER_ADDRESS in config!');
       console.error('Current address:', signerAccount.address);
       console.error('Expected address:', SIGNER_ADDRESS);
-      // Continue anyway for debugging
     }
 
-    if (!isSignatureValid) {
-      console.error('❌ Signature verification failed');
+    if (!isValid) {
+      console.error('❌ Contract signature verification failed');
       return NextResponse.json(
         { success: false, error: "Failed to generate valid signature" } as ApiResponse,
         { status: 500 }
       );
     }
 
-    console.log('✅ Signature generated and verified successfully');
+    console.log('✅ Signature generated and verified successfully by contract');
 
     // Return the signature and all required parameters
     const claimSignature = {
@@ -177,7 +179,7 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    // update prisma
+    // Update prisma
     await prisma.card.update({
       where: {
         token_id: validation.data.tokenId
@@ -222,6 +224,7 @@ export async function GET() {
   return NextResponse.json({
     status: "ok",
     timestamp: new Date().toISOString(),
-    endpoint: "/api/cards/generate-claim-signature"
+    endpoint: "/api/cards/generate-claim-signature-v2",
+    usingContractHash: true
   });
 }

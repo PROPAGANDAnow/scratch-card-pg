@@ -98,37 +98,7 @@ export const useWallet = (): UseWeb3WalletReturn => {
       setState('disconnected');
       setError(null);
     }
-
-    if (state !== 'connecting' && !isConnected && !isSwitchingChain) {
-      connect()
-    }
   }, [isConnected, isConnecting, isDisconnected, isCorrectNetwork, isSwitchingChain]);
-
-  // Connect wallet function
-  const connect = useCallback(async () => {
-    try {
-      setState('connecting');
-      setError(null);
-
-      await switchToBase();
-
-      // Try to connect with available connectors
-      // Prefer injected connectors (MetaMask, etc.)
-      const farcasterConnector = connectors.find(c => c.id === 'farcaster');
-
-      if (!farcasterConnector) {
-        throw new Error('Farcaster connector not found');
-      }
-
-      await wagmiConnect({ connector: connectors[0] });
-
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to connect wallet';
-      setError(errorMessage);
-      setState('error');
-      console.error('Wallet connection error:', err);
-    }
-  }, [wagmiConnect, connectors]);
 
   // Disconnect wallet function
   const disconnect = useCallback(() => {
@@ -154,6 +124,39 @@ export const useWallet = (): UseWeb3WalletReturn => {
       console.error('Network switch error:', err);
     }
   }, [switchChain]);
+
+  // Connect wallet function
+  const connect = useCallback(async () => {
+    try {
+      setState('connecting');
+      setError(null);
+
+      await switchToBase();
+
+      // Try to connect with available connectors
+      // Prefer injected connectors (MetaMask, etc.)
+      const farcasterConnector = connectors.find(c => c.id === 'farcaster');
+
+      if (!farcasterConnector) {
+        throw new Error('Farcaster connector not found');
+      }
+
+      await wagmiConnect({ connector: connectors[0] });
+
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to connect wallet';
+      setError(errorMessage);
+      setState('error');
+      console.error('Wallet connection error:', err);
+    }
+  }, [wagmiConnect, connectors, switchToBase]);
+
+  // Auto-connect when not connected and not on wrong network
+  useEffect(() => {
+    if (state !== 'connecting' && !isConnected && !isSwitchingChain) {
+      connect()
+    }
+  }, [isConnected, isSwitchingChain, connect, state]);
 
   // Format address for display
   const displayAddress = useMemo(() => {

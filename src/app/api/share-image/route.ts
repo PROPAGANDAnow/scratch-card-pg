@@ -3,7 +3,7 @@ import React from "react";
 import { readFileSync } from "fs";
 import path from "path";
 import { formatCell } from "~/lib/formatCell";
-import { USDC_ADDRESS } from "~/lib/blockchain";
+import { PAYMENT_TOKEN } from "~/lib/blockchain";
 
 export const runtime = "nodejs";
 
@@ -131,7 +131,7 @@ export async function GET(request: Request) {
                             color: "#FFFFFF",
                           },
                         },
-                        formatCell(Number(prizeAmount), USDC_ADDRESS)
+                        formatCell(Number(prizeAmount), PAYMENT_TOKEN.ADDRESS)
                       ),
                     ]
                   : [

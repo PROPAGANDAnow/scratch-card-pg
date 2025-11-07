@@ -7,43 +7,36 @@
 
 'use client';
 
-import {
-  useRef,
-  useEffect,
-  useState,
-  useCallback,
-  useMemo,
-  memo,
-
-} from "react";
+import { useMiniApp } from "@neynar/react";
 import { motion } from "framer-motion";
 import Image from "next/image";
+import {
+  memo,
+  useCallback,
+  useEffect,
+  useRef,
+  useState
+} from "react";
 import { Address } from "viem";
-import { useAppStore } from "~/stores/app-store";
+import { BestFriend } from "~/app/interface/bestFriends";
+import { Card, CardCell } from "~/app/interface/card";
+import ModalPortal from "~/components/ModalPortal";
+
+import { useClaimSignature, useContractClaiming } from "~/hooks/useContractClaiming";
+import { useDebouncedScratchDetection } from "~/hooks/useDebouncedScratchDetection";
 import { useUIActions } from "~/hooks/useUIActions";
-import { useUserStore } from "~/stores/user-store";
+import { useWallet } from "~/hooks/useWeb3Wallet";
+import { ClaimSignature, PAYMENT_TOKEN } from "~/lib/blockchain";
 import {
   APP_COLORS,
   CANVAS_HEIGHT,
   CANVAS_WIDTH,
   SCRATCH_RADIUS,
 } from "~/lib/constants";
-import { USDC_ADDRESS } from "~/lib/blockchain";
-import { useMiniApp } from "@neynar/react";
-import { Card, CardCell } from "~/app/interface/card";
 import { formatCell } from "~/lib/formatCell";
 import { chunk3, findWinningRow } from "~/lib/winningRow";
-import { BestFriend } from "~/app/interface/bestFriends";
-import { useDebouncedScratchDetection } from "~/hooks/useDebouncedScratchDetection";
-import { useBatchedUpdates } from "~/hooks/useBatchedUpdates";
-import { useContractClaiming, useTokenClaimability, useClaimSignature, ClaimingState } from "~/hooks/useContractClaiming";
-import { useWallet } from "~/hooks/useWeb3Wallet";
-import { isMobile } from "~/lib/devices";
-import {
-  ClaimSignature,
-  createClaimSignature
-} from "~/lib/blockchain";
-import ModalPortal from "~/components/ModalPortal";
+import { useAppStore } from "~/stores/app-store";
+import { useUserStore } from "~/stores/user-store";
 
 interface NftScratchOffProps {
   cardData: Card | null;
@@ -56,16 +49,13 @@ interface NftScratchOffProps {
 
 const NftScratchOff = ({
   cardData,
-  tokenId,
-  onPrizeRevealed,
   hasNext,
   onNext,
 }: NftScratchOffProps) => {
   const setAppColor = useAppStore((s) => s.setAppColor);
   const setAppBackground = useAppStore((s) => s.setAppBackground);
-  const { getWinnerGif, playWinSound } = useUIActions();
+  const { getWinnerGif } = useUIActions();
   const user = useUserStore((s) => s.user);
-  const bestFriends = useUserStore((s) => s.bestFriends);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
 
@@ -79,8 +69,6 @@ const NftScratchOff = ({
   const linkCopyTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const { actions, haptics } = useMiniApp();
-
-  const { batchUpdate } = useBatchedUpdates(() => { });
   const { address } = useWallet();
 
   // Web3 claiming hooks
@@ -132,49 +120,36 @@ const NftScratchOff = ({
     const tokenId = cardData.token_id
 
     try {
-      const deadline = Math.floor(Date.now() / 1000) + 3600; // 1 hour from now
-      const { signature } = await createSignature(tokenId);
-
-      return createClaimSignature(
-        cardData.prize_amount,
-        USDC_ADDRESS as Address,
-        deadline,
-        signature
-      );
+      // createSignature already returns the full ClaimSignature object
+      const claimSignature = await createSignature(tokenId);
+      return claimSignature;
     } catch (error) {
       console.error('Failed to generate claim signature:', error);
       return null;
     }
-  }, [tokenId, cardData, createSignature]);
+  }, [createSignature]);
 
   // Handle prize claiming on-chain
   const handleClaimPrize = useCallback(async (tokenId: number, claimSignature: ClaimSignature) => {
-    try {
-      if (bestFriend && cardData?.prize_amount === -1) {
-        // Claim with bonus for friend
-        await claimPrizeWithBonus(
-          tokenId,
-          claimSignature,
-          address || undefined,
-          bestFriend.wallet as Address
-        );
-      } else {
-        // Standard claim
-        await claimPrize(
-          tokenId,
-          claimSignature,
-          address || undefined
-        );
-      }
-
-      haptics.notificationOccurred('success');
-
-    } catch (error) {
-      console.error('Claiming failed:', error);
-      haptics.notificationOccurred('error');
+    if (bestFriend && cardData?.prize_amount === -1) {
+      // Claim with bonus for friend
+      await claimPrizeWithBonus(
+        tokenId,
+        claimSignature,
+        address || undefined,
+        bestFriend.wallet as Address
+      );
+    } else {
+      // Standard claim
+      await claimPrize(
+        tokenId,
+        claimSignature,
+        address || undefined
+      );
     }
+
+    haptics.notificationOccurred('success');
   }, [
-    tokenId,
     bestFriend,
     cardData,
     claimPrize,
@@ -200,7 +175,7 @@ const NftScratchOff = ({
       await actions.composeCast({
         text:
           prizeAmount > 0
-            ? `I just won ${formatCell(prizeAmount, USDC_ADDRESS)}!`
+            ? `I just won ${formatCell(prizeAmount, PAYMENT_TOKEN.ADDRESS)}!`
             : `I just won a free card for @${bestFriend?.username}!`,
         embeds: [frameUrl],
       });
@@ -212,61 +187,64 @@ const NftScratchOff = ({
 
   // Scratch detection handler
   const handleScratchDetection = useCallback(async () => {
-    if (!cardData || isProcessing) return;
+    try {
+      if (!cardData || isProcessing) return;
 
-    const prizeAmount = cardData?.prize_amount || 0;
-    const tokenId = cardData.token_id;
-    setIsProcessing(true);
+      const tokenId = cardData.token_id;
+      setIsProcessing(true);
 
-    // Generate claim signature for on-chain claiming
-    const signature = await generateClaimSignature(cardData);
+      // Generate claim signature for on-chain claiming
+      const signature = await generateClaimSignature(cardData);
 
-    if (!signature) {
-      throw new Error("signature not found")
+      if (!signature) {
+        throw new Error("signature not found")
+      }
+
+      await handleClaimPrize(tokenId, signature)
+
+      // Update local state (optimistic updates)
+      // no-op batching retained; state updates handled elsewhere
+      // batchUpdate([]);
+
+      // if (tokenId && onPrizeRevealed) {
+      //   onPrizeRevealed(tokenId, prizeAmount);
+      // }
+
+      // // Handle UI updates
+      // if (prizeAmount > 0 || prizeAmount === -1) {
+      //   setAppColor(APP_COLORS.WON);
+      //   setAppBackground(`linear-gradient(to bottom, #090210, ${APP_COLORS.WON})`);
+      //   haptics.impactOccurred("heavy");
+      //   haptics.notificationOccurred("success");
+      //   playWinSound();
+      // } else {
+      //   setAppColor(APP_COLORS.LOST);
+      //   setAppBackground(`linear-gradient(to bottom, #090210, ${APP_COLORS.LOST})`);
+      // }
+
+      // // Send notification (maintains existing social features)
+      // // TODO: make this quick auth as well 
+      // fetch("/api/neynar/send-notification", {
+      //   method: "POST",
+      //   headers: { "Content-Type": "application/json" },
+      //   body: JSON.stringify({
+      //     fid: user?.fid,
+      //     username: user?.address,
+      //     amount: prizeAmount,
+      //     friend_fid: bestFriend?.fid,
+      //     bestFriends,
+      //   }),
+      // }).catch((error) => {
+      //   console.error("Failed to send notification:", error);
+      // });
+
+      // setPrizeAmount(prizeAmount);
+      // setShowBlurOverlay(prizeAmount > 0 || prizeAmount === -1);
+      // setScratched(true);
+    } catch (error) {
+      console.error(error)
     }
-
-    await handleClaimPrize(tokenId, signature)
-
-    // Update local state (optimistic updates)
-    // no-op batching retained; state updates handled elsewhere
-    // batchUpdate([]);
-    setScratched(true);
-
-    if (tokenId && onPrizeRevealed) {
-      onPrizeRevealed(tokenId, prizeAmount);
-    }
-
-    // Handle UI updates
-    if (prizeAmount > 0 || prizeAmount === -1) {
-      setAppColor(APP_COLORS.WON);
-      setAppBackground(`linear-gradient(to bottom, #090210, ${APP_COLORS.WON})`);
-      haptics.impactOccurred("heavy");
-      haptics.notificationOccurred("success");
-      playWinSound();
-    } else {
-      setAppColor(APP_COLORS.LOST);
-      setAppBackground(`linear-gradient(to bottom, #090210, ${APP_COLORS.LOST})`);
-    }
-
-    // Send notification (maintains existing social features)
-    // TODO: make this quick auth as well 
-    fetch("/api/neynar/send-notification", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        fid: user?.fid,
-        username: user?.address,
-        amount: prizeAmount,
-        friend_fid: bestFriend?.fid,
-        bestFriends,
-      }),
-    }).catch((error) => {
-      console.error("Failed to send notification:", error);
-    });
-
-    setPrizeAmount(prizeAmount);
-    setShowBlurOverlay(prizeAmount > 0 || prizeAmount === -1);
-  }, [cardData, isProcessing, generateClaimSignature, batchUpdate, tokenId, onPrizeRevealed, setAppColor, setAppBackground, haptics, playWinSound, user, bestFriends, bestFriend?.fid]);
+  }, [cardData, isProcessing, generateClaimSignature, handleClaimPrize]);
 
   // Debounced scratch detection with Web3 integration
   const {
@@ -459,7 +437,7 @@ const NftScratchOff = ({
       document.removeEventListener("mousemove", mouseMove);
       document.removeEventListener("mouseup", mouseUp);
     };
-  }, [cardData, isProcessing, debouncedScratchDetection, scratched]);
+  }, [cardData, isProcessing, debouncedScratchDetection, cancelScratchDetection, scratched]);
 
   // Populate best friend state
   // useEffect(() => {
@@ -501,8 +479,9 @@ const NftScratchOff = ({
       setCoverImageLoaded(false);
       resetClaiming();
 
-      if (linkCopyTimeoutRef.current) {
-        clearTimeout(linkCopyTimeoutRef.current);
+      const currentTimeout = linkCopyTimeoutRef.current;
+      if (currentTimeout) {
+        clearTimeout(currentTimeout);
       }
 
       setAppColor(APP_COLORS.DEFAULT);
@@ -538,7 +517,7 @@ const NftScratchOff = ({
             ) : (
               `Won ${formatCell(
                 cardData?.prize_amount || prizeAmount,
-                USDC_ADDRESS
+                PAYMENT_TOKEN.ADDRESS
               )}!`
             )
           ) : (
@@ -597,12 +576,12 @@ const NftScratchOff = ({
               }}
               className="flex items-center justify-center"
             >
-              <img
+              <Image
                 src="/assets/scratched-card-image.png"
                 alt="Revealed"
+                width={CANVAS_WIDTH}
+                height={CANVAS_HEIGHT}
                 style={{
-                  width: CANVAS_WIDTH,
-                  height: CANVAS_HEIGHT,
                   objectFit: "cover",
                   borderRadius: 4,
                   display: "block",
@@ -675,7 +654,7 @@ const NftScratchOff = ({
                                   ) : (
                                     formatCell(
                                       cell.amount,
-                                      cell.asset_contract || USDC_ADDRESS
+                                      cell.asset_contract || PAYMENT_TOKEN.ADDRESS
                                     )
                                   )}
                                 </div>
@@ -845,10 +824,11 @@ const NftScratchOff = ({
             </button>
 
             {getWinnerGif() ? (
-              <img
+              <Image
                 src={getWinnerGif()?.src || "/assets/winner.gif"}
                 alt="winner"
-                className="absolute inset-0 w-full h-full object-cover"
+                fill
+                className="object-cover"
               />
             ) : (
               <Image
@@ -873,7 +853,7 @@ const NftScratchOff = ({
                 <>
                   <br />
                   <span className="font-[ABCGaisyr] font-bold text-white text-[94px] leading-[92%] italic">
-                    {formatCell(prizeAmount, USDC_ADDRESS)}!
+                    {formatCell(prizeAmount, PAYMENT_TOKEN.ADDRESS)}!
                   </span>
                 </>
               ) : null}

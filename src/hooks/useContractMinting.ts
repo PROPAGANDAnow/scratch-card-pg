@@ -299,7 +299,7 @@ export const useContractMinting = (userAddress: Address | null): UseContractMint
         simulationError: error instanceof Error ? error.message : 'Simulation failed'
       };
     }
-  }, [publicClient, userAddress]);
+  }, [publicClient, userAddress, SKIP_SIMULATION]);
 
   // Simulation function for batch card minting
   const simulateMintCardsBatch = useCallback(async (quantity: number, recipient?: Address): Promise<SimulationResult> => {
@@ -362,7 +362,7 @@ export const useContractMinting = (userAddress: Address | null): UseContractMint
         simulationError: error instanceof Error ? error.message : 'Simulation failed'
       };
     }
-  }, [publicClient, userAddress, maxBatchSize]);
+  }, [publicClient, userAddress, maxBatchSize, SKIP_SIMULATION]);
 
   // Update state based on transaction status
   useEffect(() => {
@@ -426,15 +426,20 @@ export const useContractMinting = (userAddress: Address | null): UseContractMint
       setEnhancedReceipt(null);
       console.error('Minting error:', err);
     }
-  }, [writeContract, publicClient, approvalHook.allowance, approvalHook.approve, approvalHook.checkAllowance, calculateCostBigInt, simulateMintCard]);
+  }, [writeContract, publicClient, approvalHook, calculateCostBigInt]);
 
   // Mint multiple cards with simulation
-  const mintCardsBatch = useCallback(async (quantity: number, recipient: Address) => {
+  const mintCardsBatch = useCallback(async (quantity: number, recipient?: Address) => {
     console.log("🚀 ~ useContractMinting ~ recipient:", recipient)
     try {
       // Validate quantity
       if (quantity <= 0) {
         throw new Error('Quantity must be greater than 0');
+      }
+
+      // Validate recipient
+      if (!recipient) {
+        throw new Error('Recipient address is required for batch minting');
       }
 
       if (quantity > maxBatchSize) {
@@ -479,7 +484,7 @@ export const useContractMinting = (userAddress: Address | null): UseContractMint
       setEnhancedReceipt(null);
       console.error('Batch minting error:', err);
     }
-  }, [writeContract, maxBatchSize, publicClient, approvalHook.allowance, approvalHook.approve, approvalHook.checkAllowance, calculateCostBigInt, simulateMintCardsBatch]);
+  }, [writeContract, maxBatchSize, publicClient, approvalHook, simulateMintCardsBatch]);
 
   // Reset state
   const reset = useCallback(() => {

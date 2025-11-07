@@ -3,7 +3,7 @@ import { prisma } from "~/lib/prisma";
 import { drawPrize } from "~/lib/drawPrize";
 import { generateNumbers } from "~/lib/generateNumbers";
 import { PRIZE_ASSETS } from "~/lib/constants";
-import { USDC_ADDRESS } from "~/lib/blockchain";
+import { PAYMENT_TOKEN } from "~/lib/blockchain";
 import { Prisma } from "@prisma/client";
 
 const BATCH_SIZE = 50; // Process 50 users at a time to avoid timeouts
@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
 
           // Generate a random prize for the free card
           const prize = drawPrize(false); // No friends available for pro users
-          const prizeAsset = PRIZE_ASSETS[Math.floor(Math.random() * PRIZE_ASSETS.length)] || USDC_ADDRESS;
+          const prizeAsset = PRIZE_ASSETS[Math.floor(Math.random() * PRIZE_ASSETS.length)] || PAYMENT_TOKEN.ADDRESS;
 
           // Generate card numbers
           const numbers = generateNumbers({

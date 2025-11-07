@@ -211,7 +211,7 @@ const ProfilePage = () => {
               transition={{ delay: 1.8, duration: 0.8 }}
             >
               <CardGrid
-                cards={cards || []}
+                cards={cards?.map(token => token.state) || []}
                 showViewAll={true}
                 onCardSelect={() => { }}
                 onViewAll={handleViewAll}
