@@ -3,9 +3,11 @@ import { AnimatePresence, motion } from "framer-motion";
 import { usePathname, useRouter } from "next/navigation";
 import { FC, useEffect, useRef, useState } from "react";
 import { useUserTokens } from "~/hooks";
+import { useClaimSignature } from "~/hooks/useContractClaiming";
 import { useDetectClickOutside } from "~/hooks/useDetectClickOutside";
 import { useAppStore } from "~/stores/app-store";
 import { useCardStore } from "~/stores/card-store";
+import ClaimPrizeButton from "./claim-button";
 import { MintCardForm } from "./mint-card-form";
 
 const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
@@ -18,10 +20,13 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
   const setDirection = useCardStore((s) => s.setCardDirection);
   const showBuyModal = useCardStore((s) => s.showBuyModal);
   const setShowBuyModal = useCardStore((s) => s.setShowBuyModal);
+  const { scratched, setScratched } = useCardStore()
+
 
   const [showBigBuy, setShowBigBuy] = useState(false);
 
   const { availableCards, loading: isFetchingCards } = useUserTokens();
+  console.log("🚀 ~ Bottom ~ availableCards:", availableCards)
   const unscratchedCardsCount = availableCards.filter(card => !card.state.scratched).length
 
   const { push } = useRouter();
@@ -51,6 +56,7 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
     }
   }
 
+
   useEffect(() => {
     if (mode === "swipeable") {
       // In swipeable mode, show big buy when no unscratched cards left
@@ -78,7 +84,7 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
           delay: 0.4,
         }}
       >
-        <motion.div
+        {!scratched && <motion.div
           className="flex items-center justify-center gap-3"
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{
@@ -147,11 +153,53 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
               {showBigBuy && pathname === "/" ? "View Leaderboard" : "Buy"}
             </p>
           </motion.button>
-        </motion.div>
+        </motion.div>}
+
+        <AnimatePresence>
+          {scratched && <motion.div
+            className="flex items-center justify-center gap-3 w-full mt-12"
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{
+              opacity: loading ? 0 : 1,
+              scale: loading ? 0.8 : 1,
+            }}
+            transition={{
+              duration: 0.4,
+              ease: "easeOut",
+              delay: 0.6,
+            }}
+          >
+            <ClaimPrizeButton />
+            <motion.div
+              className="w-full p-1 rounded-[40px] border border-white"
+              initial={{ opacity: 0, y: 20, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 20, scale: 0.9 }}
+              transition={{
+                type: "spring",
+                stiffness: 700,
+                damping: 45,
+                duration: 0.15,
+              }}
+            >
+              <motion.button
+                onClick={() => setScratched(false)}
+                className="w-full py-2 bg-white/80 rounded-[40px] font-semibold text-[14px] hover:bg-white h-11 transition-colors"
+                style={{
+                  color: appColor,
+                }}
+                whileTap={{ scale: 0.98 }}
+                transition={{ duration: 0.1 }}
+              >
+                Go Next
+              </motion.button>
+            </motion.div>
+          </motion.div>}
+        </AnimatePresence>
 
         {/* Next Card Button - Only show on home page when there's a next card */}
         <AnimatePresence>
-          {pathname === "/" &&
+          {!scratched && pathname === "/" &&
             !showBigBuy &&
             mode === "swipeable" && <>
               {currentCardIndex < availableCards.length - 1 ? (

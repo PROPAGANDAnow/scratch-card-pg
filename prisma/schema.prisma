@@ -36,6 +36,7 @@ model Card {
   payout_tx            String?
   created_at           DateTime  @default(now()) @db.Timestamp(6)
   scratched            Boolean   @default(false)
+  scratched_hash       String?
   prize_won            Boolean   @default(false) // New field to track if prize was won
   token_id             Int
   contract_address     String

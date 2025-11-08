@@ -36,6 +36,9 @@ export interface CardStore {
   updateCard: (cardId: string, updates: Partial<TokenWithState>) => void;
   updateCardMeta: (cardId: string, metaUpdates: Partial<TokenWithState['state']>) => void;
   refetchCards: (address?: string) => Promise<void>;
+
+  scratched: boolean;
+  setScratched: (scratched: boolean) => void
 }
 
 export const useCardStore = create<CardStore>()(
@@ -52,6 +55,9 @@ export const useCardStore = create<CardStore>()(
       totalCount: 0,
       cardDirection: 1,
       showBuyModal: false,
+
+      scratched: false,
+      setScratched: (scratched) => set({ scratched }),
 
       setCardDirection: (cardDirection) => set({ cardDirection }),
       setShowBuyModal: (showBuyModal) => set({ showBuyModal }),

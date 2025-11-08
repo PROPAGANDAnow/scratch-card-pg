@@ -22,7 +22,7 @@ import { BestFriend } from "~/app/interface/bestFriends";
 import { Card, CardCell } from "~/app/interface/card";
 import ModalPortal from "~/components/ModalPortal";
 
-import { useClaimSignature, useContractClaiming } from "~/hooks/useContractClaiming";
+import { useContractClaiming } from "~/hooks/useContractClaiming";
 import { useDebouncedScratchDetection } from "~/hooks/useDebouncedScratchDetection";
 import { useUIActions } from "~/hooks/useUIActions";
 import { useWallet } from "~/hooks/useWeb3Wallet";
@@ -35,6 +35,7 @@ import {
 } from "~/lib/constants";
 import { formatCell } from "~/lib/formatCell";
 import { chunk3, findWinningRow } from "~/lib/winningRow";
+import { useCardStore } from "~/stores";
 import { useAppStore } from "~/stores/app-store";
 import { useUserStore } from "~/stores/user-store";
 
@@ -51,7 +52,9 @@ const NftScratchOff = ({
   cardData,
   hasNext,
   onNext,
+  onPrizeRevealed
 }: NftScratchOffProps) => {
+  console.log("🚀 ~ NftScratchOff ~ cardData:", cardData)
   const setAppColor = useAppStore((s) => s.setAppColor);
   const setAppBackground = useAppStore((s) => s.setAppBackground);
   const { getWinnerGif } = useUIActions();
@@ -59,7 +62,8 @@ const NftScratchOff = ({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
 
-  const [scratched, setScratched] = useState(false);
+  // const [scratched, setScratched] = useState(false);
+  const { scratched, setScratched } = useCardStore()
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
   const [prizeAmount, setPrizeAmount] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -70,6 +74,7 @@ const NftScratchOff = ({
 
   const { actions, haptics } = useMiniApp();
   const { address } = useWallet();
+  const { playWinSound } = useUIActions()
 
   // Web3 claiming hooks
   const {
@@ -83,7 +88,6 @@ const NftScratchOff = ({
   //   address || null
   // );
 
-  const { createSignature } = useClaimSignature();
 
   // Lock body scroll when modal is open
   useEffect(() => {
@@ -112,22 +116,6 @@ const NftScratchOff = ({
   const handleMouseLeave = useCallback(() => {
     setTilt({ x: 0, y: 0 });
   }, []);
-
-  // Generate claim signature when card is scratched
-  const generateClaimSignature = useCallback(async (cardData: Card) => {
-    if (!cardData) return null;
-
-    const tokenId = cardData.token_id
-
-    try {
-      // createSignature already returns the full ClaimSignature object
-      const claimSignature = await createSignature(tokenId);
-      return claimSignature;
-    } catch (error) {
-      console.error('Failed to generate claim signature:', error);
-      return null;
-    }
-  }, [createSignature]);
 
   // Handle prize claiming on-chain
   const handleClaimPrize = useCallback(async (tokenId: number, claimSignature: ClaimSignature) => {
@@ -193,58 +181,45 @@ const NftScratchOff = ({
       const tokenId = cardData.token_id;
       setIsProcessing(true);
 
-      // Generate claim signature for on-chain claiming
-      const signature = await generateClaimSignature(cardData);
-
-      if (!signature) {
-        throw new Error("signature not found")
+      if (tokenId && onPrizeRevealed) {
+        onPrizeRevealed(tokenId, prizeAmount);
       }
 
-      await handleClaimPrize(tokenId, signature)
-
-      // Update local state (optimistic updates)
-      // no-op batching retained; state updates handled elsewhere
-      // batchUpdate([]);
-
-      // if (tokenId && onPrizeRevealed) {
-      //   onPrizeRevealed(tokenId, prizeAmount);
-      // }
-
       // // Handle UI updates
-      // if (prizeAmount > 0 || prizeAmount === -1) {
-      //   setAppColor(APP_COLORS.WON);
-      //   setAppBackground(`linear-gradient(to bottom, #090210, ${APP_COLORS.WON})`);
-      //   haptics.impactOccurred("heavy");
-      //   haptics.notificationOccurred("success");
-      //   playWinSound();
-      // } else {
-      //   setAppColor(APP_COLORS.LOST);
-      //   setAppBackground(`linear-gradient(to bottom, #090210, ${APP_COLORS.LOST})`);
-      // }
+      if (prizeAmount > 0 || prizeAmount === -1) {
+        setAppColor(APP_COLORS.WON);
+        setAppBackground(`linear-gradient(to bottom, #090210, ${APP_COLORS.WON})`);
+        haptics.impactOccurred("heavy");
+        haptics.notificationOccurred("success");
+        playWinSound();
+      } else {
+        setAppColor(APP_COLORS.LOST);
+        setAppBackground(`linear-gradient(to bottom, #090210, ${APP_COLORS.LOST})`);
+      }
 
-      // // Send notification (maintains existing social features)
-      // // TODO: make this quick auth as well 
-      // fetch("/api/neynar/send-notification", {
-      //   method: "POST",
-      //   headers: { "Content-Type": "application/json" },
-      //   body: JSON.stringify({
-      //     fid: user?.fid,
-      //     username: user?.address,
-      //     amount: prizeAmount,
-      //     friend_fid: bestFriend?.fid,
-      //     bestFriends,
-      //   }),
-      // }).catch((error) => {
-      //   console.error("Failed to send notification:", error);
-      // });
+      // Send notification (maintains existing social features)
+      // TODO: make this quick auth as well 
+      fetch("/api/neynar/send-notification", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fid: user?.fid,
+          username: user?.address,
+          amount: prizeAmount,
+          friend_fid: bestFriend?.fid,
+          // bestFriends,
+        }),
+      }).catch((error) => {
+        console.error("Failed to send notification:", error);
+      });
 
-      // setPrizeAmount(prizeAmount);
-      // setShowBlurOverlay(prizeAmount > 0 || prizeAmount === -1);
-      // setScratched(true);
+      setPrizeAmount(prizeAmount);
+      setShowBlurOverlay(prizeAmount > 0 || prizeAmount === -1);
+      setScratched(true);
     } catch (error) {
       console.error(error)
     }
-  }, [cardData, isProcessing, generateClaimSignature, handleClaimPrize]);
+  }, [cardData, isProcessing, handleClaimPrize]);
 
   // Debounced scratch detection with Web3 integration
   const {
@@ -694,98 +669,30 @@ const NftScratchOff = ({
               {/* Quick reveal buttons - show when card is not scratched */}
               {!scratched && (
                 <motion.div
-                  className="absolute bottom-[120px] left-0 transform -translate-x-1/2 z-30 flex gap-3"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
+                  className="absolute left-0 transform -translate-x-1/2 z-50 gap-3 w-full justify-center top-0 md:flex hidden"
+                  initial={{ opacity: 0, y: -60 }}
+                  animate={{ opacity: 1, y: -40 }}
                   transition={{ delay: 0.5, duration: 0.3 }}
                 >
-                  <button
-                    onClick={() => {
-                      // Clear the canvas to reveal the card
-                      const canvas = canvasRef.current;
-                      if (canvas) {
-                        const ctx = canvas.getContext("2d");
-                        if (ctx) {
-                          ctx.clearRect(0, 0, canvas.width, canvas.height);
+                  <div className="w-fit p-1 rounded-[40px] border border-white/50 backdrop-blur-3xl bg-white/10">
+                    <button
+                      onClick={() => {
+                        // Clear the canvas to reveal the card
+                        const canvas = canvasRef.current;
+                        if (canvas) {
+                          const ctx = canvas.getContext("2d");
+                          if (ctx) {
+                            ctx.clearRect(0, 0, canvas.width, canvas.height);
+                          }
                         }
-                      }
-                      // Trigger scratch detection
-                      handleScratchDetection();
-                    }}
-                  >
-                    <div className="px-8 py-4 bg-white/90 backdrop-blur-sm rounded-full shadow-lg hover:bg-white transition-colors">
-                      <span className="font-[ABCGaisyr] font-bold text-[20px] italic" style={{ color: APP_COLORS.WON }}>
-                        Quick Reveal
-                      </span>
-                    </div>
-                  </button>
-
-                  <button
-                    onClick={() => {
-                      // Create scratch animation effect
-                      const canvas = canvasRef.current;
-                      if (canvas) {
-                        const ctx = canvas.getContext("2d");
-                        if (ctx) {
-                          // Create a scratch pattern to simulate scratching
-                          ctx.globalCompositeOperation = "destination-out";
-
-                          // Create multiple scratch lines for a realistic effect
-                          const scratchPattern = () => {
-                            for (let i = 0; i < 20; i++) {
-                              const startX = Math.random() * CANVAS_WIDTH;
-                              const startY = Math.random() * CANVAS_HEIGHT;
-                              const endX = Math.random() * CANVAS_WIDTH;
-                              const endY = Math.random() * CANVAS_HEIGHT;
-
-                              ctx.beginPath();
-                              ctx.moveTo(startX, startY);
-                              ctx.lineTo(endX, endY);
-                              ctx.lineWidth = SCRATCH_RADIUS * 2;
-                              ctx.lineCap = "round";
-                              ctx.stroke();
-                            }
-
-                            // Add some circular scratches
-                            for (let i = 0; i < 30; i++) {
-                              const x = Math.random() * CANVAS_WIDTH;
-                              const y = Math.random() * CANVAS_HEIGHT;
-
-                              ctx.beginPath();
-                              ctx.arc(x, y, SCRATCH_RADIUS, 0, 2 * Math.PI);
-                              ctx.fill();
-                            }
-                          };
-
-                          // Animate the scratching
-                          let scratches = 0;
-                          const animateScratch = () => {
-                            if (scratches < 5) {
-                              scratchPattern();
-                              scratches++;
-                              requestAnimationFrame(animateScratch);
-                            } else {
-                              // Final clear to ensure full reveal
-                              ctx.clearRect(0, 0, canvas.width, canvas.height);
-                              // Trigger scratch detection
-                              handleScratchDetection();
-                            }
-                          };
-                          animateScratch();
-                        }
-                      }
-                    }}
-                  >
-                    <div className="px-8 py-4 bg-gradient-to-r from-purple-500/90 to-pink-500/90 backdrop-blur-sm rounded-full shadow-lg hover:from-purple-500 hover:to-pink-500 transition-all">
-                      <span className="font-[ABCGaisyr] font-bold text-[20px] italic text-white flex items-center gap-2">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="animate-pulse">
-                          <path d="M9 3L15 12L9 21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                          <path d="M15 3L21 12L15 21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                        Scratch All
-                      </span>
-                    </div>
-                  </button>
+                        // Trigger scratch detection
+                        handleScratchDetection();
+                      }}
+                      className="w-full py-1 px-4 rounded-[40px] font-semibold text-[14px] transition-colors text-white/80"
+                    >
+                      Quick Reveal
+                    </button>
+                  </div>
                 </motion.div>
               )}
             </div>
