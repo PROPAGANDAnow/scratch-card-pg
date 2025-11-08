@@ -2,6 +2,7 @@ import { useMiniApp } from "@neynar/react";
 import { motion } from "framer-motion";
 import { useCallback } from "react";
 import { useClaimSignature, useContractClaiming } from "~/hooks/useContractClaiming";
+import { useUpdateCardClaimStatus } from "~/hooks/useUpdateCardClaimStatus";
 import { useWallet } from "~/hooks/useWeb3Wallet";
 import { ClaimSignature } from "~/lib/blockchain";
 import { useAppStore, useCardStore } from "~/stores";
@@ -14,24 +15,30 @@ const ClaimPrizeButton = () => {
     const { haptics } = useMiniApp();
     const {
         claimPrize,
-        // claimPrizeWithBonus,
+        state: claimState,
+        claimPrizeWithBonus,
         // reset: resetClaiming
     } = useContractClaiming();
     const { createSignature } = useClaimSignature();
+    const { mutateAsync: updateCardClaimStatus, isPending: isUpdatingClaimStatus } = useUpdateCardClaimStatus();
 
-    // Handle prize claiming on-chain
     const handleClaimPrize = useCallback(async (tokenId: number, claimSignature: ClaimSignature) => {
+
+        let transactionHash: string;
         if (cardData?.prize_amount === -1) {
+            if (!address) {
+                throw new Error("address is not there")
+            }
+
             // Claim with bonus for friend
-            // await claimPrizeWithBonus(
-            //     tokenId,
-            //     claimSignature,
-            //     address || undefined,
-            //     bestFriend.wallet as Address
-            // );
+            transactionHash = await claimPrizeWithBonus(
+                tokenId,
+                claimSignature,
+                address || undefined,
+                address
+            );
         } else {
-            // Standard claim
-            await claimPrize(
+            transactionHash = await claimPrize(
                 tokenId,
                 claimSignature,
                 address || undefined
@@ -39,21 +46,47 @@ const ClaimPrizeButton = () => {
         }
 
         haptics.notificationOccurred('success');
-    }, []);
+
+        return transactionHash;
+    }, [address, cardData?.prize_amount, claimPrize, haptics]);
 
     const handleClaimBtnClick = async () => {
         if (!cardData) return;
-        const tokenId = cardData.token_id;
-
-        // Generate claim signature for on - chain claiming
-        const signature = await createSignature(tokenId);
-
-        if (!signature) {
-            throw new Error("signature not found")
+        if (!address) {
+            console.error("Wallet address is required to update claim status");
+            return;
         }
 
-        await handleClaimPrize(tokenId, signature)
+        const tokenId = cardData.token_id;
+
+        try {
+            const signature = await createSignature(tokenId);
+
+            if (!signature) {
+                throw new Error("signature not found");
+            }
+
+            const transactionHash = await handleClaimPrize(tokenId, signature);
+
+            if (!transactionHash) {
+                throw new Error("Transaction hash unavailable after claim");
+            }
+
+            await updateCardClaimStatus({
+                tokenId,
+                claimed: true,
+                claimHash: transactionHash,
+                claimedBy: address,
+            });
+        } catch (error) {
+            console.error("Failed to process claim", error);
+        }
     }
+
+    const isClaimProcessing = claimState === 'pending' || claimState === 'confirming';
+    const isButtonDisabled = isClaimProcessing || isUpdatingClaimStatus;
+    const claimButtonLabel = isButtonDisabled ? 'Processing…' : 'Claim Prize';
+
     return (
         <motion.div
             className="w-full p-1 rounded-[40px] border border-white"
@@ -69,14 +102,16 @@ const ClaimPrizeButton = () => {
         >
             <motion.button
                 onClick={handleClaimBtnClick}
-                className="w-full py-2 bg-white/80 rounded-[40px] font-semibold text-[14px] hover:bg-white h-11 transition-colors"
+                className="w-full py-2 bg-white/80 rounded-[40px] font-semibold text-[14px] hover:bg-white disabled:hover:bg-white/80 disabled:opacity-75 disabled:cursor-not-allowed h-11 transition-colors"
                 style={{
                     color: appColor,
                 }}
-                whileTap={{ scale: 0.98 }}
+                whileTap={isButtonDisabled ? undefined : { scale: 0.98 }}
                 transition={{ duration: 0.1 }}
+                disabled={isButtonDisabled}
+                aria-busy={isButtonDisabled}
             >
-                Claim Prize
+                {claimButtonLabel}
             </motion.button>
         </motion.div>
     )

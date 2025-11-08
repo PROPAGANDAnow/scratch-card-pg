@@ -14,6 +14,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useMiniApp } from '@neynar/react';
 import { useContractMinting, useMintingCost } from '~/hooks/useContractMinting';
 import { useWallet, useWalletAction } from '~/hooks/useWeb3Wallet';
+import { useCardStore } from '~/stores';
 
 
 interface MintingProps {
@@ -49,6 +50,7 @@ export const MintCardForm = ({
   console.log("🚀 ~ MintButton ~ isConnected:", isConnected)
   const { ensureWalletReady } = useWalletAction();
   const { haptics } = useMiniApp();
+  const { refetchCards } = useCardStore()
 
   // Minting hooks
   const {
@@ -104,6 +106,9 @@ export const MintCardForm = ({
 
       // Haptic feedback
       haptics.impactOccurred('medium');
+
+      // refetch the user cards
+      await refetchCards()
 
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Minting failed';
@@ -320,76 +325,6 @@ export const MintCardForm = ({
           </span>
         </div>
       </div>
-
-
-
-      {/* Minting Status */}
-      <AnimatePresence>
-        {mintingState !== 'idle' && (
-          <motion.div
-            className={`rounded-xl p-4 mb-6 ${mintingState === 'success'
-              ? 'bg-green-500/20 text-green-400'
-              : mintingState === 'error'
-                ? 'bg-red-500/20 text-red-400'
-                : 'bg-yellow-500/20 text-yellow-400'
-              }`}
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-          >
-            <div className="flex items-center gap-3">
-              {mintingState === 'pending' && (
-                <motion.div
-                  className="w-5 h-5 border-2 border-current border-t-transparent rounded-full"
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                />
-              )}
-
-              {mintingState === 'success' && (
-                <Image
-                  src="/assets/win-icon.svg"
-                  alt="Success"
-                  width={20}
-                  height={20}
-                />
-              )}
-
-              {mintingState === 'error' && (
-                <Image
-                  src="/assets/cross-icon.svg"
-                  alt="Error"
-                  width={20}
-                  height={20}
-                />
-              )}
-
-              <div>
-                <div className="font-medium">
-                  {mintingState === 'pending' && 'Minting...'}
-                  {mintingState === 'confirming' && 'Confirming...'}
-                  {mintingState === 'success' && 'Minting Successful!'}
-                  {mintingState === 'error' && 'Minting Failed'}
-                </div>
-
-                {mintingState === 'success' && (
-                  <div className="text-sm opacity-80">
-                    Your scratch cards are ready!
-                  </div>
-                )}
-
-                {mintingError && (
-                  <div className="text-sm opacity-80">
-                    {mintingError}
-                  </div>
-                )}
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-
 
       {/* Mint Button */}
       <motion.button

@@ -32,6 +32,7 @@ Serverless API routes for backend functionality.
 **Key Routes**:
 - `/api/cards/buy` - Batch card creation (accepts array of tokenIds)
 - `/api/cards/batch-check` - Check which cards already exist for given tokenIds
+- `/api/cards/[tokenId]/claim` - Update on-chain claim metadata after successful transaction
 - `/api/cards/generate-claim-signature` - Claim signature generation
 - `/api/cards/process-prize` - Prize processing
 - `/api/cron/pro-users-free-cards` - Cron job for pro users

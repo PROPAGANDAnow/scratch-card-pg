@@ -40,7 +40,7 @@ export interface UseContractClaimingReturn {
     tokenId: number,
     claimSig: ClaimSignature,
     recipient?: Address
-  ) => Promise<void>;
+  ) => Promise<`0x${string}`>;
 
   /** Claim prize with bonus for friend */
   claimPrizeWithBonus: (
@@ -48,7 +48,7 @@ export interface UseContractClaimingReturn {
     claimSig: ClaimSignature,
     recipient?: Address,
     bonusRecipient?: Address
-  ) => Promise<void>;
+  ) => Promise<`0x${string}`>;
 
   /** Reset state */
   reset: () => void;
@@ -110,17 +110,14 @@ export const useContractClaiming = (): UseContractClaimingReturn => {
     tokenId: number,
     claimSig: ClaimSignature,
     recipient?: Address
-  ) => {
+  ): Promise<`0x${string}`> => {
     try {
-
-
       console.log("🚀 ~ useContractClaiming", [
         BigInt(tokenId),
         claimSig,
         AddressPatterns.safeRecipient(recipient) // Use zero address for self
-      ])
+      ]);
 
-      // Validate inputs
       if (!validateClaimSignature(claimSig)) {
         throw new Error('Invalid claim signature format');
       }
@@ -141,17 +138,17 @@ export const useContractClaiming = (): UseContractClaimingReturn => {
           claimSig,
           AddressPatterns.safeRecipient(recipient) // Use zero address for self
         ],
-
       });
 
-      await publicClient?.waitForTransactionReceipt({ hash })
+      await publicClient?.waitForTransactionReceipt({ hash });
 
+      return hash;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to claim prize';
       setError(errorMessage);
       setState('error');
       console.error('Claiming error:', err);
-      throw err
+      throw err;
     }
   }, [writeContractAsync, publicClient]);
 
@@ -161,9 +158,8 @@ export const useContractClaiming = (): UseContractClaimingReturn => {
     claimSig: ClaimSignature,
     recipient?: Address,
     bonusRecipient?: Address
-  ) => {
+  ): Promise<`0x${string}`> => {
     try {
-      // Validate inputs
       if (!validateClaimSignature(claimSig)) {
         throw new Error('Invalid claim signature format');
       }
@@ -184,7 +180,7 @@ export const useContractClaiming = (): UseContractClaimingReturn => {
         claimSig,
         AddressPatterns.safeRecipient(recipient), // Use zero address for self
         bonusRecipient
-      ])
+      ]);
 
       const hash = await writeContractAsync({
         address: SCRATCH_CARD_NFT_ADDRESS,
@@ -198,14 +194,15 @@ export const useContractClaiming = (): UseContractClaimingReturn => {
         ],
       });
 
-      await publicClient?.waitForTransactionReceipt({ hash })
+      await publicClient?.waitForTransactionReceipt({ hash });
 
+      return hash;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to claim prize with bonus';
       setError(errorMessage);
       setState('error');
       console.error('Bonus claiming error:', err);
-      throw err
+      throw err;
     }
   }, [writeContractAsync, publicClient]);
 

@@ -416,7 +416,8 @@ export const useContractMinting = (userAddress: Address | null): UseContractMint
       console.log('Transaction submitted:', txHash);
 
       if (publicClient && txHash) {
-        console.log('Waiting for transaction receipt using publicClient...');
+        console.log('Waiting for batch transaction receipt using publicClient...');
+        await publicClient?.waitForTransactionReceipt({ hash: txHash })
       }
 
     } catch (err) {
@@ -475,8 +476,8 @@ export const useContractMinting = (userAddress: Address | null): UseContractMint
 
       if (publicClient && txHash) {
         console.log('Waiting for batch transaction receipt using publicClient...');
+        await publicClient?.waitForTransactionReceipt({ hash: txHash })
       }
-
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to mint cards';
       setError(errorMessage);

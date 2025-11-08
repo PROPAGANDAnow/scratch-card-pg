@@ -6,14 +6,15 @@ This document provides a comprehensive overview of the `src/hooks/` directory, d
 
 ```
 src/hooks/
-├── useBatchedUpdates.ts        # Batched state updates for performance optimization
-├── useContractClaiming.ts      # Web3 contract claiming functionality
-├── useContractMinting.ts       # Web3 contract minting functionality
-├── useDebouncedScratchDetection.ts  # Scratch detection with debouncing
-├── useDetectClickOutside.ts    # Click outside detection for modals/popups
-├── useNeynarUser.ts            # Neynar user authentication and data
-├── useVirtualizedCards.ts      # Virtualized card rendering for performance
-└── useWeb3Wallet.ts            # Web3 wallet connection and management
+├── useBatchedUpdates.ts              # Batched state updates for performance optimization
+├── useContractClaiming.ts            # Web3 contract claiming functionality
+├── useContractMinting.ts             # Web3 contract minting functionality
+├── useDebouncedScratchDetection.ts   # Scratch detection with debouncing
+├── useDetectClickOutside.ts          # Click outside detection for modals/popups
+├── useNeynarUser.ts                  # Neynar user authentication and data
+├── useUpdateCardClaimStatus.ts       # TanStack mutation for persisting claim metadata
+├── useVirtualizedCards.ts            # Virtualized card rendering for performance
+└── useWeb3Wallet.ts                  # Web3 wallet connection and management
 ```
 
 ## Hook Descriptions
@@ -43,6 +44,17 @@ batchUpdate([
 - `useClaimSignature`: Generates claim signatures for secure transactions
 
 **Dependencies**: Web3 wallet connection, contract addresses, blockchain constants
+
+### useUpdateCardClaimStatus.ts
+**Purpose**: Persists on-chain claim results to the database via a TanStack mutation.
+
+**Key Functions**:
+- `useUpdateCardClaimStatus`: Provides a mutation for updating claim metadata (claimed flag, transaction hash, claimer address)
+- `ClaimStatusMutationError`: Normalizes mutation errors for UI consumption
+
+**Dependencies**: TanStack Query client, claim status API route, validation schemas
+
+**Usage**: Triggered after a successful on-chain claim (e.g. in `ClaimPrizeButton`) to keep Prisma records consistent with blockchain state.
 
 ### useContractMinting.ts
 **Purpose**: Handles Web3 contract interactions for minting new scratch cards as NFTs.

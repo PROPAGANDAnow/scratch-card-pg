@@ -3,7 +3,6 @@ import { AnimatePresence, motion } from "framer-motion";
 import { usePathname, useRouter } from "next/navigation";
 import { FC, useEffect, useRef, useState } from "react";
 import { useUserTokens } from "~/hooks";
-import { useClaimSignature } from "~/hooks/useContractClaiming";
 import { useDetectClickOutside } from "~/hooks/useDetectClickOutside";
 import { useAppStore } from "~/stores/app-store";
 import { useCardStore } from "~/stores/card-store";
@@ -256,7 +255,7 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
         </AnimatePresence>
 
         <AnimatePresence>
-          {showBigBuy && pathname === "/" && (
+          {showBigBuy && !scratched && pathname === "/" && (
             <motion.div
               className="w-full p-1 rounded-[40px] border border-white"
               initial={{ opacity: 0, y: 20, scale: 0.9 }}

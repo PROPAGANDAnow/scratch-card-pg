@@ -11,6 +11,7 @@ export { useERC20Approval, useUSDCBalance } from './useERC20Approval'
 
 // Export UI actions hook
 export { useUIActions } from './useUIActions'
+export { useUpdateCardClaimStatus } from './useUpdateCardClaimStatus'
 
 // Export types
 export type { MintingState, TransactionReceipt, UseContractMintingReturn } from './useContractMinting'
@@ -20,3 +21,8 @@ export type { FormattedRecentClaim, FormattedRecentMint, RecentClaim, RecentMint
 export type { MintOperation, PrizeClaim, UserActivity } from './useUserActivity'
 export type { UserStats } from './useUserStats'
 export type { Token, TokenWithState, UseUserTokensReturn } from './useUserTokens'
+export type {
+  UpdateCardClaimStatusPayload,
+  UpdateCardClaimStatusResult,
+  ClaimStatusMutationError,
+} from './useUpdateCardClaimStatus'

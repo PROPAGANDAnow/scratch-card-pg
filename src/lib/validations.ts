@@ -8,6 +8,18 @@ export const FidSchema = z.number().int().positive('FID must be a positive integ
 export const UsernameSchema = z.string().min(1, 'Username cannot be empty').max(100, 'Username too long');
 
 export const TokenIdSchema = z.coerce.number().int().positive('Token ID must be a positive integer');
+export const TRANSACTION_HASH_REGEX = /^0x[a-fA-F0-9]{64}$/;
+export const TransactionHashSchema = z.string().regex(TRANSACTION_HASH_REGEX, 'Invalid transaction hash format');
+
+export const UpdateCardClaimStatusSchema = z.object({
+  claimed: z.boolean({ required_error: 'Claimed status is required' }),
+  claimHash: TransactionHashSchema,
+  claimedBy: WalletAddressSchema,
+});
+
+export const UpdateCardClaimStatusPayloadSchema = UpdateCardClaimStatusSchema.extend({
+  tokenId: TokenIdSchema,
+});
 
 // Card validation schemas
 export const BuyCardSchema = z.object({

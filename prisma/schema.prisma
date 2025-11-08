@@ -34,6 +34,8 @@ model Card {
   numbers_json         Json // Array of CardCell objects
   claimed              Boolean   @default(false)
   payout_tx            String?
+  claim_hash           String?
+  claimed_at           DateTime? @db.Timestamp(6)
   created_at           DateTime  @default(now()) @db.Timestamp(6)
   scratched            Boolean   @default(false)
   scratched_hash       String?
