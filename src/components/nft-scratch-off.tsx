@@ -54,7 +54,6 @@ const NftScratchOff = ({
   onNext,
   onPrizeRevealed
 }: NftScratchOffProps) => {
-  console.log("🚀 ~ NftScratchOff ~ cardData:", cardData)
   const setAppColor = useAppStore((s) => s.setAppColor);
   const setAppBackground = useAppStore((s) => s.setAppBackground);
   const { getWinnerGif } = useUIActions();

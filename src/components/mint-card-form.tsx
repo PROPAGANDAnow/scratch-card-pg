@@ -110,6 +110,8 @@ export const MintCardForm = ({
       // refetch the user cards
       await refetchCards()
 
+      onSuccess?.([])
+
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Minting failed';
       console.error('Minting error:', error);

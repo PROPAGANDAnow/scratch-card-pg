@@ -328,7 +328,7 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
               duration: 0.15,
             }}
           >
-            <MintCardForm />
+            <MintCardForm onSuccess={() => setShowBuyModal(false)} />
           </motion.div>
         )}
       </AnimatePresence>
