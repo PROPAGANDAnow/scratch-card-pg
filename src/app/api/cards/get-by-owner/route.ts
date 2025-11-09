@@ -93,7 +93,7 @@ export async function GET(request: NextRequest) {
 
     // Check for test mode (force friends to appear)
     const forceFriends = url.searchParams.get('forceFriends') === 'true' ||
-                        process.env.NODE_ENV === 'development'; // Auto-enable in dev
+      process.env.NODE_ENV === 'development'; // Auto-enable in dev
 
     const newlyCreatedTokens = await getTokensInBatch({
       tokenIds,
@@ -109,7 +109,7 @@ export async function GET(request: NextRequest) {
 
       // Debug: Log friend data for newly created cards
       if (dbCard && newlyCreatedTokens.includes(dbCard)) {
-        const friendCells = (dbCard.numbers_json as Array<{friend_fid?: number; friend_username?: string; friend_pfp?: string}>).filter(cell => cell.friend_fid && cell.friend_fid > 0);
+        const friendCells = (dbCard.numbers_json as Array<{ friend_fid?: number; friend_username?: string; friend_pfp?: string }>).filter(cell => cell.friend_fid && cell.friend_fid > 0);
         console.log(`🆕 New card ${dbCard.token_id} has ${friendCells.length} friend cells:`,
           friendCells.map(cell => ({ fid: cell.friend_fid, username: cell.friend_username, hasPfp: !!cell.friend_pfp })));
       }
@@ -122,7 +122,7 @@ export async function GET(request: NextRequest) {
     });
 
     // Filter available cards (unscratched)
-    const availableCards = tokens.filter(a => !a.state?.scratched);
+    const availableCards = tokens.filter(a => !a.state?.claimed);
 
     return NextResponse.json({
       success: true,

@@ -17,7 +17,7 @@ import {
   fetchUserInfo,
 } from "~/lib/userapis";
 import { useUserStore } from "~/stores/user-store";
-import { getUnscratchedCards, useCardStore } from "~/stores/card-store";
+import { getUnclaimedCards, useCardStore } from "~/stores/card-store";
 import { useAppStore } from "~/stores/app-store";
 import Bottom from "./bottom";
 import { getFromLocalStorage } from "~/lib/utils";
@@ -40,7 +40,7 @@ const Wrapper: FC<{ children: React.ReactNode }> = ({ children }) => {
   const setActivity = useAppStore((s) => s.setActivity);
 
   const cards = useCardStore((s) => s.cards);
-  const unscratchedCards = getUnscratchedCards(cards)
+  const unscratchedCards = getUnclaimedCards(cards)
 
   const refetchCards = useCardStore((s) => s.refetchCards);
   const scratched = useCardStore((s) => s.scratched);

@@ -16,7 +16,6 @@ interface CardGridProps {
 
 export default function CardGrid({
   cards,
-  onCardSelect,
   showViewAll = false,
   onViewAll,
 }: CardGridProps) {
@@ -34,11 +33,7 @@ export default function CardGrid({
 
   // Helper function to handle card clicks
   const handleCardClick = (card: Card & { cardState?: 'unscratched' | 'scratched' | 'claimed' }) => {
-    if (showViewAll && card.cardState === 'unscratched') {
-      push("/");
-    } else {
-      onCardSelect(card);
-    }
+    push(`/?defaultCardId=${card.token_id}`);
   };
 
   return (
@@ -79,8 +74,8 @@ export default function CardGrid({
                   <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" title="Unscratched" />
                 )}
                 {card.cardState === 'scratched' && (
-                  <div className={`w-2 h-2 rounded-full ${card.prize_amount > 0 ? 'bg-yellow-400' : 'bg-gray-400'}`} 
-                       title={card.prize_amount > 0 ? "Scratched - Prize Available" : "Scratched - No Prize"} />
+                  <div className={`w-2 h-2 rounded-full ${card.prize_amount > 0 ? 'bg-yellow-400' : 'bg-gray-400'}`}
+                    title={card.prize_amount > 0 ? "Scratched - Prize Available" : "Scratched - No Prize"} />
                 )}
                 {card.cardState === 'claimed' && (
                   <div className="w-2 h-2 bg-blue-400 rounded-full" title="Claimed" />
@@ -110,8 +105,8 @@ export default function CardGrid({
                                 <div
                                   key={`${cell.amount}-${cellIndex}`}
                                   className={`w-[17.5px] h-[17.5px] rounded-[3px] font-[ABCGaisyr] font-bold text-[8px] leading-[90%] italic flex items-center justify-center ${isWinning
-                                      ? "!text-[#00A151]/20 !bg-[#00A151]/10"
-                                      : "!text-[#000]/10 !bg-[#000]/5"
+                                    ? "!text-[#00A151]/20 !bg-[#00A151]/10"
+                                    : "!text-[#000]/10 !bg-[#000]/5"
                                     }`}
                                   style={{
                                     filter:

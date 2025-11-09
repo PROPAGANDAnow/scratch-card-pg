@@ -187,7 +187,7 @@ const ProfilePage = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 1.4, duration: 0.6 }}
-          className={clsx("flex-1 h-full overflow-scroll px-4", showAllCards && "border-b border-white/20")}
+          className={clsx("flex-1 px-4", showAllCards && "border-b border-white/20 overflow-scroll h-full")}
         >
           {/* Cards Header (hidden in full view) */}
           <div
@@ -222,7 +222,6 @@ const ProfilePage = () => {
             >
               <CardGrid
                 cards={userCards}
-                onCardSelect={() => push("/")}
                 showViewAll={!showAllCards}
                 onViewAll={() => setShowAllCards(true)}
               />

@@ -5,12 +5,18 @@ import { useCardStore } from "~/stores/card-store";
 import { useUserStore } from "~/stores/user-store";
 import SwipeableCardStack from "~/components/swipeable-card-stack";
 import { useContractStats } from "~/hooks";
+import { useRouter, useSearchParams } from "next/navigation";
 
 export default function Home() {
   const setSwipableMode = useAppStore((s) => s.setSwipableMode);
   // const localCards = useCardStore((s) => s.localCards);
   const userWallet = useUserStore((s) => s.user?.address || "");
+  const setActiveTokenId = useCardStore((s) => s.setActiveTokenId);
+  const cards = useCardStore((s) => s.cards);
   const { isPaused, formattedStats } = useContractStats();
+  const router = useRouter()
+  const searchParams = useSearchParams()
+
   // const { availableCards } = useUserTokens();
 
   // Stable list of unclaimed token IDs from subgraph to prevent refetch loops
@@ -23,6 +29,25 @@ export default function Home() {
       setSwipableMode(false);
     };
   }, [setSwipableMode]);
+
+  const checkForDefaultCardId = () => {
+    const urlSearchParams = new URLSearchParams(searchParams.toString())
+    const defaultCardId = urlSearchParams.get("defaultCardId")
+    if (!defaultCardId) { return }
+
+    if (cards.find(c => String(c.state.token_id) === defaultCardId)) {
+      setActiveTokenId(defaultCardId.toString())
+    }
+
+    urlSearchParams.set('defaultCardId', "")
+    window.history.pushState(null, '', `?${urlSearchParams.toString()}`)
+  }
+
+  useEffect(() => {
+    if (router && !!cards.length) {
+      checkForDefaultCardId()
+    }
+  }, [router, cards])
 
 
   // Show contract pause overlay if contract is paused
