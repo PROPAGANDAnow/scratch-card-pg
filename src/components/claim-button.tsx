@@ -8,9 +8,11 @@ import { ClaimSignature } from "~/lib/blockchain";
 import { useAppStore, useCardStore } from "~/stores";
 
 const ClaimPrizeButton = () => {
-    const { cards, currentCardIndex, setScratched } = useCardStore()
+    const { cards, activeTokenId, setScratched } = useCardStore()
     const { address } = useWallet();
-    const cardData = cards[currentCardIndex]?.state
+    // Find the current card based on activeTokenId
+    const currentCard = activeTokenId ? cards.find(card => card.id === activeTokenId) : null;
+    const cardData = currentCard?.state
     const appColor = useAppStore((s) => s.appColor);
     const { haptics } = useMiniApp();
     const {

@@ -80,7 +80,6 @@ const MotionButton: FC<{
 const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
   mode = "normal",
 }) => {
-  const currentCardIndex = useCardStore((s) => s.currentCardIndex);
   const showBuyModal = useCardStore((s) => s.showBuyModal);
   const setShowBuyModal = useCardStore((s) => s.setShowBuyModal);
   const {
@@ -117,6 +116,9 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
   }, [unscratchedCardsCount, mode]);
 
   const loading = isFetchingCards;
+
+  // Calculate current index based on activeTokenId
+  const currentCardIndex = activeTokenId ? availableCards.findIndex(card => card.id === activeTokenId) : -1;
 
   return (
     <>

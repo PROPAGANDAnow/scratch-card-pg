@@ -24,7 +24,6 @@ export const tokenToCard = (nftToken: TokenWithState): Card => {
 export default function SwipeableCardStack({
   initialIndex = 0,
 }: SwipeableCardStackProps) {
-  const currentCardNo = useCardStore((s) => s.currentCardIndex);
   const scratched = useCardStore((s) => s.scratched)
   const direction = useCardStore((s) => s.cardDirection)
   const {
@@ -51,10 +50,9 @@ export default function SwipeableCardStack({
       if (!activeTokenId) {
         const initialCard = filteredCards[initialIndex] || filteredCards[0];
         if (initialCard) {
-          // Update store's activeTokenId and currentCardIndex
+          // Update store's activeTokenId
           const store = useCardStore.getState();
           store.setActiveTokenId(initialCard.id);
-          store.setCurrentCardIndex(filteredCards.indexOf(initialCard));
         }
       }
     }
@@ -64,20 +62,7 @@ export default function SwipeableCardStack({
   const current = getCurrentCard();
   const currentIndex = current ? filteredCards.findIndex(card => card.id === activeTokenId) : -1;
 
-  // Set up next card function and update current card index
-  // useEffect(() => {
-  //   const nextCardFunction = () => {
-  //     if (canGoNext) {
-  //       setDirection(1);
-  //       const nextCard = filteredCards[currentIndex + 1];
-  //       if (nextCard) setCurrentCardNo(parseInt(nextCard.metadata?.metadata?.tokenId || nextCard.id));
-  //     }
-  //   };
-
-  //   setNextCardFn(nextCardFunction);
-  //   setCurrentCardIndex(currentIndex);
-  // }, [canGoNext, filteredCards, setNextCardFn]);
-
+  
   // Mouse handlers for card tilt - memoized for performance
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
     const rect = cardRef.current?.getBoundingClientRect();
@@ -179,7 +164,7 @@ export default function SwipeableCardStack({
         {/* Active card */}
         <AnimatePresence initial={false} mode="wait">
           <motion.div
-            key={activeTokenId || currentCardNo}
+            key={activeTokenId}
             className="relative z-10 w-full"
             initial={{
               opacity: 0,

@@ -11,7 +11,6 @@ export interface CardStore {
   unscratchedCards: TokenWithState[];
   localCards: TokenWithState[];
   activeTokenId: string | null;
-  currentCardIndex: number; // Keep for backward compatibility, but computed
   loading: boolean;
   error: Error | null;
   totalCount: number;
@@ -25,7 +24,6 @@ export interface CardStore {
   setUnscratchedCards: (unscratchedCards: TokenWithState[]) => void;
   setLocalCards: (localCards: TokenWithState[]) => void;
   setActiveTokenId: (activeTokenId: string | null) => void;
-  setCurrentCardIndex: (currentCardIndex: number) => void; // Keep for backward compatibility
   setLoading: (loading: boolean) => void;
   setError: (error: Error | null) => void;
   setTotalCount: (totalCount: number) => void;
@@ -59,12 +57,12 @@ export const useCardStore = create<CardStore>()(
       unscratchedCards: [],
       localCards: [],
       activeTokenId: null,
-      currentCardIndex: 0,
       loading: false,
       error: null,
       totalCount: 0,
       cardDirection: 1,
       showBuyModal: false,
+      initialFetch: false,
 
       scratched: false,
       setScratched: (scratched) => set({ scratched }),
@@ -86,14 +84,6 @@ export const useCardStore = create<CardStore>()(
       setUnscratchedCards: (unscratchedCards) => set({ unscratchedCards }),
       setLocalCards: (localCards) => set({ localCards }),
       setActiveTokenId: (activeTokenId) => set({ activeTokenId }),
-      setCurrentCardIndex: (currentCardIndex) => {
-        const { cards } = get();
-        set({ currentCardIndex });
-        // Also update activeTokenId to match
-        if (cards[currentCardIndex]) {
-          set({ activeTokenId: cards[currentCardIndex].id });
-        }
-      },
       setLoading: (loading) => set({ loading }),
       setError: (error) => set({ error }),
       setTotalCount: (totalCount) => set({ totalCount }),
@@ -199,16 +189,13 @@ export const useCardStore = create<CardStore>()(
 
           // Restore activeTokenId if it exists in the new cards
           if (activeTokenId && newCards.some((card: TokenWithState) => card.id === activeTokenId)) {
-            const activeIndex = newCards.findIndex((card: TokenWithState) => card.id === activeTokenId);
             set({
-              activeTokenId,
-              currentCardIndex: activeIndex
+              activeTokenId
             });
           } else if (newCards.length > 0) {
             // Set to first card if active card no longer exists
             set({
-              activeTokenId: newCards[0].id,
-              currentCardIndex: 0
+              activeTokenId: newCards[0].id
             });
           }
         } catch (error) {
@@ -225,7 +212,7 @@ export const useCardStore = create<CardStore>()(
         const { cards, activeTokenId } = get();
         if (!activeTokenId) {
           if (cards.length > 0) {
-            set({ activeTokenId: cards[0].id, currentCardIndex: 0 });
+            set({ activeTokenId: cards[0].id });
           }
           return;
         }
@@ -235,7 +222,6 @@ export const useCardStore = create<CardStore>()(
           const nextIndex = currentIndex + 1;
           set({
             activeTokenId: cards[nextIndex].id,
-            currentCardIndex: nextIndex,
             cardDirection: 1
           });
         }
@@ -245,7 +231,7 @@ export const useCardStore = create<CardStore>()(
         const { cards, activeTokenId } = get();
         if (!activeTokenId) {
           if (cards.length > 0) {
-            set({ activeTokenId: cards[0].id, currentCardIndex: 0 });
+            set({ activeTokenId: cards[0].id });
           }
           return;
         }
@@ -255,7 +241,6 @@ export const useCardStore = create<CardStore>()(
           const prevIndex = currentIndex - 1;
           set({
             activeTokenId: cards[prevIndex].id,
-            currentCardIndex: prevIndex,
             cardDirection: -1
           });
         }
