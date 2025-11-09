@@ -82,6 +82,7 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
 }) => {
   const showBuyModal = useCardStore((s) => s.showBuyModal);
   const setShowBuyModal = useCardStore((s) => s.setShowBuyModal);
+  const totalCount = useCardStore((s) => s.totalCount);
   const {
     scratched,
     setScratched,
@@ -91,8 +92,7 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
   } = useCardStore()
 
   const [showBigBuy, setShowBigBuy] = useState(false);
-  const { availableCards, totalCount } = useUserTokens();
-  const initialFetch = useCardStore(s => s.initialFetch)
+  const { availableCards, loading: isFetchingCards } = useUserTokens();
   const unscratchedCardsCount = availableCards.filter(card => !card.state.scratched).length
 
   const { push } = useRouter();
@@ -116,7 +116,7 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
     }
   }, [unscratchedCardsCount, mode]);
 
-  const loading = initialFetch;
+  const loading = isFetchingCards;
 
   // Calculate current index based on activeTokenId
   const currentCardIndex = activeTokenId ? availableCards.findIndex(card => card.id === activeTokenId) : -1;
@@ -193,7 +193,7 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={scratched ? "claim-container" : "nav-container"}
-            className="relative w-full mt-2 overflow-hidden"
+            className="relative w-full mt-4 overflow-hidden"
             initial={{ height: scratched ? 72 : 64 }}
             animate={{ height: scratched ? 72 : 64 }}
             exit={{ height: scratched ? 64 : 72 }}
