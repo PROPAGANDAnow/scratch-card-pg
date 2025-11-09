@@ -22,6 +22,8 @@ model User {
   scratchedCards Card[] @relation("CardScratched")
   mintedCards    Card[] @relation("CardMinted")
 
+  @@index([fid]) // For fast user lookup by FID
+  @@index([address]) // For fast user lookup by wallet address
   @@map("wallets")
 }
 
@@ -51,6 +53,10 @@ model Card {
   minter               User      @relation("CardMinted", fields: [minter_user_id], references: [id])
 
   @@unique([token_id]) // Assuming card_no should be unique
+  @@index([scratched_by_user_id]) // For fast user scratch lookup
+  @@index([scratched]) // For filtering scratched cards
+  @@index([scratched_at]) // For time-based queries
+  @@index([prize_won]) // For filtering prize winners
   @@map("cards")
 }
 

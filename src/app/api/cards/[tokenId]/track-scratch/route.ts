@@ -4,6 +4,7 @@ import { prisma } from "~/lib/prisma";
 import { withDatabaseRetry } from "~/lib/db-utils";
 import { UpdateCardScratchStatusSchema } from "~/lib/validations";
 import { ZodIssue } from "zod";
+import { cache } from "react";
 
 const DEFAULT_VALIDATION_FIELD = "body" as const;
 
@@ -22,56 +23,54 @@ function getValidationDetails(issue: ZodIssue): ValidationErrorDetails {
   };
 }
 
+// Cache user lookups to reduce database queries
+const getUserByAddress = cache(async (address: string) => {
+  if (!address) return null;
+
+  return prisma.user.findUnique({
+    where: { address: address.toLowerCase() },
+    select: { id: true }
+  });
+});
+
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ tokenId: string }> }
 ) {
+  // Start performance timer
+  const startTime = Date.now();
+
   try {
+    // Parse and validate token ID
     const { tokenId } = await params;
 
     if (!tokenId) {
       return NextResponse.json(
-        {
-          success: false,
-          error: "Token ID is required",
-          field: "tokenId",
-        },
+        { success: false, error: "Token ID is required", field: "tokenId" },
         { status: 400 }
       );
     }
 
     const parsedTokenId = Number(tokenId);
-
     if (!Number.isInteger(parsedTokenId) || parsedTokenId < 0) {
       return NextResponse.json(
-        {
-          success: false,
-          error: "Token ID must be a positive integer",
-          field: "tokenId",
-        },
+        { success: false, error: "Token ID must be a positive integer", field: "tokenId" },
         { status: 400 }
       );
     }
 
+    // Parse and validate request body
     let payload: unknown;
-
     try {
       payload = await request.json();
-    } catch (parseError) {
-      console.error("Failed to parse claim update payload", parseError);
-
+    } catch {
       return NextResponse.json(
-        {
-          success: false,
-          error: "Invalid JSON body",
-          field: "body",
-        },
+        { success: false, error: "Invalid JSON body", field: "body" },
         { status: 400 }
       );
     }
 
     const validationResult = UpdateCardScratchStatusSchema.safeParse(payload);
-
     if (!validationResult.success) {
       const [issue] = validationResult.error.issues;
       const { field, message } = issue ? getValidationDetails(issue) : {
@@ -80,45 +79,46 @@ export async function PATCH(
       };
 
       return NextResponse.json(
-        {
-          success: false,
-          error: message,
-          field,
-        },
+        { success: false, error: message, field },
         { status: 400 }
       );
     }
 
     const { scratched, scratchedBy, prizeWon } = validationResult.data;
-    const normalizedScratcher = scratchedBy?.trim().toLowerCase();
 
-    // Fetch user ID from database if scratchedBy is provided
-    const user = await withDatabaseRetry(() =>
-      prisma.user.findUnique({
-        where: { address: normalizedScratcher },
-        select: { id: true }
-      })
-    );
-    const userId = user?.id || null;
+    // Prepare update data
+    const updateData: Prisma.CardUpdateInput = {
+      scratched,
+      scratched_at: scratched ? new Date() : null,
+      prize_won: prizeWon,
+    };
 
+    // Only fetch user ID if scratchedBy is provided
+    if (scratchedBy) {
+      const normalizedAddress = scratchedBy.trim().toLowerCase();
+      const user = await getUserByAddress(normalizedAddress);
+      updateData.scratched_by_user_id = user?.id;
+    }
+
+    // Update the card with minimal select fields for performance
     const updatedCard = await withDatabaseRetry(() =>
       prisma.card.update({
         where: { token_id: parsedTokenId },
-        data: {
-          scratched,
-          scratched_at: scratched ? new Date() : null,
-          scratched_by_user_id: userId,
-          prize_won: prizeWon,
-        },
+        data: updateData,
         select: {
           token_id: true,
           scratched: true,
           scratched_at: true,
-          scratched_by_user_id: true,
           prize_won: true,
         },
       })
     );
+
+    // Log performance metric in development
+    if (process.env.NODE_ENV === 'development') {
+      const duration = Date.now() - startTime;
+      console.log(`[track-scratch] Token ${parsedTokenId} updated in ${duration}ms`);
+    }
 
     return NextResponse.json(
       {
@@ -127,31 +127,33 @@ export async function PATCH(
           tokenId: updatedCard.token_id,
           scratched: updatedCard.scratched,
           scratchedAt: updatedCard.scratched_at,
-          scratchedBy: updatedCard.scratched_by_user_id,
           prizeWon: updatedCard.prize_won,
         },
       },
       { status: 200 }
     );
+
   } catch (error) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Card not found",
-          field: "tokenId",
-        },
-        { status: 404 }
-      );
+    // Handle specific database errors
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (error.code === "P2025") {
+        return NextResponse.json(
+          { success: false, error: "Card not found", field: "tokenId" },
+          { status: 404 }
+        );
+      }
+      if (error.code === "P2002") {
+        return NextResponse.json(
+          { success: false, error: "Card already updated", field: "tokenId" },
+          { status: 409 }
+        );
+      }
     }
 
-    console.error("Failed to update card claim status", error);
+    console.error("Failed to update card scratch status:", error);
 
     return NextResponse.json(
-      {
-        success: false,
-        error: "Internal server error",
-      },
+      { success: false, error: "Internal server error" },
       { status: 500 }
     );
   }

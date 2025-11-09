@@ -64,7 +64,7 @@ const NftScratchOff = ({
   const cardRef = useRef<HTMLDivElement>(null);
 
   // const [scratched, setScratched] = useState(false);
-  const { scratched, setScratched } = useCardStore()
+  const { scratched, setScratched, refetchCards } = useCardStore()
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
   const [prizeAmount, setPrizeAmount] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -180,7 +180,7 @@ const NftScratchOff = ({
   // Scratch detection handler
   const handleScratchDetection = useCallback(async () => {
     try {
-      if (!cardData || isProcessing) return;
+      if (!cardData || isProcessing || !address) return;
 
       const tokenId = cardData.token_id;
       setIsProcessing(true);
@@ -190,12 +190,14 @@ const NftScratchOff = ({
       }
 
       // Track scratch status in database
-      trackScratch.mutate({
+      await trackScratch.mutateAsync({
         tokenId,
         scratched: true,
-        scratchedBy: user?.address || address || undefined,
+        scratchedBy: address,
         prizeWon: prizeAmount > 0 || prizeAmount === -1
       });
+
+      await refetchCards(address)
 
       // Handle UI updates
       if (prizeAmount > 0 || prizeAmount === -1) {
