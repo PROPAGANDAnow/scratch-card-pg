@@ -23,6 +23,7 @@ export function generateNumbers(params: {
     decoyAssets = [PAYMENT_TOKEN.ADDRESS],
     friends = [], // Default to empty array
   } = params;
+  console.log("🚀 ~ generateNumbers ~ friends:", friends)
 
   const total = 12; // 3 cols x 4 rows
   const cells: CardCell[] = new Array(total);
@@ -65,7 +66,7 @@ export function generateNumbers(params: {
 
     for (let i = rowStart; i < rowEnd; i++) {
       // Randomly decide if this cell should be a friend or amount
-      let shouldBeFriend = Math.random() < 0.3 && friends.length > 0; // 30% chance of friend PFP
+      let shouldBeFriend = Math.random() < 0.6 && friends.length > 0; // 30% chance of friend PFP
 
       if (shouldBeFriend) {
         // This cell will be a friend PFP

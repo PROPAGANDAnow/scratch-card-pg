@@ -229,7 +229,6 @@ const NftScratchOff = ({
           username: user?.address,
           amount: prizeAmount,
           friend_fid: bestFriend?.fid,
-          // bestFriends,
         }),
       }).catch((error) => {
         console.error("Failed to send notification:", error);

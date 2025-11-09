@@ -328,8 +328,7 @@ export const useClaimSignature = () => {
       }
 
       // Call the server endpoint to generate signature
-      // Using the new v2 endpoint that uses contract-generated hashes
-      const response = await fetch('/api/cards/generate-claim-signature-v2', {
+      const response = await fetch('/api/cards/generate-claim-signature', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
