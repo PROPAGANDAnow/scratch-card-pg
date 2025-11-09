@@ -14,7 +14,7 @@ const ClaimStatusResponseSchema = z.object({
       tokenId: z.number(),
       claimed: z.boolean(),
       claimHash: z.string(),
-      claimedBy: z.string(),
+      claimedAt: z.string(),
     })
     .optional(),
   error: z.string().optional(),
@@ -29,7 +29,7 @@ export interface UpdateCardClaimStatusResult {
   tokenId: number;
   claimed: boolean;
   claimHash: string;
-  claimedBy: string;
+  claimedAt: string;
 }
 
 export class ClaimStatusMutationError extends Error {
