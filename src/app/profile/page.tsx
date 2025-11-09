@@ -7,6 +7,7 @@ import { CircularProgress } from "~/components/circular-progress";
 import { useUserStats, useUserActivity } from "~/hooks";
 import { useUserStore } from "~/stores";
 import { useInfiniteCards } from "~/hooks/useInfiniteCards";
+import clsx from "clsx";
 
 // Level calculation function
 function getLevelRequirement(level: number): number {
@@ -20,6 +21,7 @@ const ProfilePage = () => {
   const controls = useAnimation();
   const userStats = useUserStats();
   const { } = useUserActivity();
+  const [showAllCards, setShowAllCards] = useState(false);
 
   // Infinite scroll for user cards
   const {
@@ -28,14 +30,12 @@ const ProfilePage = () => {
     error: cardsError,
     hasMore,
     totalCount,
-    loadMoreRef
+    loadMoreRef,
   } = useInfiniteCards({
-    userWallet: user?.address || '',
-    stateFilter: 'all',
-    initialLimit: 12
+    userWallet: user?.address || "",
+    stateFilter: "all",
+    initialLimit: 40,
   });
-
-
 
   // Animate the total winnings number
   useEffect(() => {
@@ -66,132 +66,137 @@ const ProfilePage = () => {
   return (
     <>
       <motion.div
-        className="px-4 h-full"
+        className="h-full"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.5 }}
       >
-        {/* Total Winnings Section */}
-        <motion.div
-          className="flex flex-col items-center justify-center gap-5 mb-8"
-          initial={{ opacity: 0, y: -50 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, ease: "easeOut" }}
-        >
-          <motion.p
-            className="text-white/60 text-[16px] font-medium leading-[90%]"
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.3, duration: 0.6 }}
-          >
-            Total Winnings
-          </motion.p>
-
-          <motion.div
-            initial={{ scale: 0.5, rotateY: -90 }}
-            animate={{ scale: 1, rotateY: 0 }}
-            transition={{
-              delay: 0.5,
-              duration: 1.2,
-              ease: [0.25, 0.46, 0.45, 0.94],
-              type: "spring",
-              stiffness: 100,
-              damping: 15,
-            }}
-          >
-            <motion.p
-              className="text-[64px] font-medium leading-[90%] text-white font-[ABCGaisyr]"
-              style={{
-                textShadow: "0px 0px 20px rgba(255, 255, 255, 0.3)",
-              }}
-              animate={{
-                textShadow: [
-                  "0px 0px 20px rgba(255, 255, 255, 0.3)",
-                  "0px 0px 30px rgba(255, 255, 255, 0.5)",
-                  "0px 0px 20px rgba(255, 255, 255, 0.3)",
-                ],
-              }}
-              transition={{
-                duration: 2,
-                repeat: Infinity,
-                ease: "easeInOut",
-              }}
+        {!showAllCards && (
+          <>
+            {/* Total Winnings Section */}
+            <motion.div
+              className="flex flex-col items-center justify-center gap-5 mb-8 px-4"
+              initial={{ opacity: 0, y: -50 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, ease: "easeOut" }}
             >
-              {(displayAmount || 0).toLocaleString("en-US", {
-                style: "currency",
-                currency: "USD",
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              })}
-            </motion.p>
-          </motion.div>
-        </motion.div>
+              <motion.p
+                className="text-white/60 text-[16px] font-medium leading-[90%]"
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.3, duration: 0.6 }}
+              >
+                Total Winnings
+              </motion.p>
 
-        <motion.div className="mb-10 flex items-center justify-center gap-2">
-          <motion.p className="text-white text-[16px] font-medium leading-[90%]">
-            Level 1 {/* TODO: Add current_level to User schema when needed */}
-          </motion.p>
-          <motion.div
-            className="bg-white/20 rounded-full"
-            style={{ width: "3px", height: "3px" }}
-          />
+              <motion.div
+                initial={{ scale: 0.5, rotateY: -90 }}
+                animate={{ scale: 1, rotateY: 0 }}
+                transition={{
+                  delay: 0.5,
+                  duration: 1.2,
+                  ease: [0.25, 0.46, 0.45, 0.94],
+                  type: "spring",
+                  stiffness: 100,
+                  damping: 15,
+                }}
+              >
+                <motion.p
+                  className="text-[64px] font-medium leading-[90%] text-white font-[ABCGaisyr]"
+                  style={{
+                    textShadow: "0px 0px 20px rgba(255, 255, 255, 0.3)",
+                  }}
+                  animate={{
+                    textShadow: [
+                      "0px 0px 20px rgba(255, 255, 255, 0.3)",
+                      "0px 0px 30px rgba(255, 255, 255, 0.5)",
+                      "0px 0px 20px rgba(255, 255, 255, 0.3)",
+                    ],
+                  }}
+                  transition={{
+                    duration: 2,
+                    repeat: Infinity,
+                    ease: "easeInOut",
+                  }}
+                >
+                  {(displayAmount || 0).toLocaleString("en-US", {
+                    style: "currency",
+                    currency: "USD",
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+                </motion.p>
+              </motion.div>
+            </motion.div>
 
-          {/* Circular Progress */}
-          <motion.div
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: 0.8, duration: 0.6, ease: "easeOut" }}
-          >
-            <CircularProgress
-              revealsToNextLevel={25}
-              totalRevealsForLevel={getLevelRequirement(
-                2
-              )}
-            />
-          </motion.div>
+            <motion.div className="mb-10 flex items-center justify-center gap-2 px-4">
+              <motion.p className="text-white text-[16px] font-medium leading-[90%]">
+                Level 1 {/* TODO: Add current_level to User schema when needed */}
+              </motion.p>
+              <motion.div
+                className="bg-white/20 rounded-full"
+                style={{ width: "3px", height: "3px" }}
+              />
 
-          <motion.p className="text-white text-[14px] font-medium leading-[90%] text-center">
-            25 wins away from level 2
-          </motion.p>
-        </motion.div>
+              {/* Circular Progress */}
+              <motion.div
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ delay: 0.8, duration: 0.6, ease: "easeOut" }}
+              >
+                <CircularProgress
+                  revealsToNextLevel={25}
+                  totalRevealsForLevel={getLevelRequirement(2)}
+                />
+              </motion.div>
 
-        {/* Scratch Offs Count Section */}
-        <motion.div
-          className="flex items-center w-full mb-6"
-          initial={{ opacity: 0, x: -30 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 1.2, duration: 0.6 }}
-        >
-          <motion.p
-            className="text-white/60 text-[12px] font-medium leading-[90%]"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 1.4, duration: 0.8 }}
-          >
-            {userStats.totalMinted || 0} SCRATCH OFFS
-          </motion.p>
+              <motion.p className="text-white text-[14px] font-medium leading-[90%] text-center">
+                25 wins away from level 2
+              </motion.p>
+            </motion.div>
 
-          {/* Animated underline */}
-          <motion.div
-            className="ml-2 h-[1px] bg-white/20"
-            initial={{ width: 0 }}
-            animate={{ width: "100px" }}
-            transition={{ delay: 1.6, duration: 0.8, ease: "easeOut" }}
-          />
-        </motion.div>
+            {/* Scratch Offs Count Section */}
+            <motion.div
+              className="flex items-center w-full mb-6 px-4"
+              initial={{ opacity: 0, x: -30 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 1.2, duration: 0.6 }}
+            >
+              <motion.p
+                className="text-white/60 text-[12px] font-medium leading-[90%]"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 1.4, duration: 0.8 }}
+              >
+                {userStats.totalMinted || 0} SCRATCH OFFS
+              </motion.p>
+
+              {/* Animated underline */}
+              <motion.div
+                className="ml-2 h-[1px] bg-white/20"
+                initial={{ width: 0 }}
+                animate={{ width: "100px" }}
+                transition={{ delay: 1.6, duration: 0.8, ease: "easeOut" }}
+              />
+            </motion.div>
+          </>
+        )}
 
         {/* Cards Section */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 1.4, duration: 0.6 }}
-          className="flex-1"
+          className={clsx("flex-1 h-full overflow-scroll px-4", showAllCards && "border-b border-white/20")}
         >
-          {/* Cards Header */}
-          <div className="flex justify-between items-center mb-4">
+          {/* Cards Header (hidden in full view) */}
+          <div
+            className={`flex justify-between items-center mb-4 ${showAllCards ? "hidden" : ""
+              }`}
+          >
             <h3 className="text-white text-lg font-semibold">My Cards</h3>
             <span className="text-white/60 text-sm">
-              {totalCount} card{totalCount !== 1 ? 's' : ''}
+              {totalCount} card{totalCount !== 1 ? "s" : ""}
             </span>
           </div>
 
@@ -217,8 +222,9 @@ const ProfilePage = () => {
             >
               <CardGrid
                 cards={userCards}
-                onCardSelect={() => push('/')}
-                showViewAll={false}
+                onCardSelect={() => push("/")}
+                showViewAll={!showAllCards}
+                onViewAll={() => setShowAllCards(true)}
               />
             </motion.div>
           ) : !cardsLoading && !cardsError ? (
@@ -235,7 +241,7 @@ const ProfilePage = () => {
                 You haven&apos;t purchased any scratch cards yet.
               </p>
               <button
-                onClick={() => push('/')}
+                onClick={() => push("/")}
                 className="bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg text-sm transition-colors"
               >
                 Buy Cards
@@ -250,17 +256,17 @@ const ProfilePage = () => {
                 <div
                   key={i}
                   className="bg-white/10 rounded-lg animate-pulse"
-                  style={{ height: '102px' }}
+                  style={{ height: "102px" }}
                 />
               ))}
             </div>
           )}
 
           {/* Load More Trigger */}
-          <div ref={loadMoreRef} className="h-4" />
+          {showAllCards && <div ref={loadMoreRef} className="h-4" />}
 
           {/* Loading More Indicator */}
-          {cardsLoading && userCards.length > 0 && (
+          {showAllCards && cardsLoading && userCards.length > 0 && (
             <div className="text-center py-4">
               <div className="inline-flex items-center space-x-2 text-white/60">
                 <div className="w-4 h-4 border-2 border-white/20 border-t-white/60 rounded-full animate-spin" />
@@ -270,15 +276,9 @@ const ProfilePage = () => {
           )}
 
           {/* End of Cards Indicator */}
-          {!hasMore && userCards.length > 0 && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="text-center py-6"
-            >
-              <p className="text-white/40 text-sm">
-                You&apos;ve reached the end of your cards
-              </p>
+          {showAllCards && !hasMore && userCards.length > 0 && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-6">
+              <p className="text-white/40 text-sm">You&apos;ve reached the end of your cards</p>
             </motion.div>
           )}
         </motion.div>
