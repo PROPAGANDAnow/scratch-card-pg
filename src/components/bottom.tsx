@@ -83,12 +83,12 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
   const showBuyModal = useCardStore((s) => s.showBuyModal);
   const setShowBuyModal = useCardStore((s) => s.setShowBuyModal);
   const totalCount = useCardStore((s) => s.totalCount);
+  const initialFetch = useCardStore((s) => s.initialFetch);
   const {
     scratched,
     setScratched,
     goNext,
     goPrev,
-    activeTokenId
   } = useCardStore()
 
   const [showBigBuy, setShowBigBuy] = useState(false);
@@ -102,12 +102,15 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
 
   const canGoPrev = useCardStore((s) => s.canGoPrev());
   const canGoNext = useCardStore((s) => s.canGoNext());
+  const updateCardMeta = useCardStore((s) => s.updateCardMeta);
+  const activeTokenId = useCardStore((s) => s.activeTokenId);
 
   const handleNextClick = () => goNext();
   const handlePrevClick = () => goPrev();
   const handleNextButtonClickAfterClaim = () => {
     setScratched(false);
     handleNextClick();
+    updateCardMeta(String(activeTokenId), { scratched: true })
   };
 
   useEffect(() => {
@@ -116,7 +119,7 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
     }
   }, [unscratchedCardsCount, mode]);
 
-  const loading = isFetchingCards;
+  const loading = initialFetch;
 
   // Calculate current index based on activeTokenId
   const currentCardIndex = activeTokenId ? availableCards.findIndex(card => card.id === activeTokenId) : -1;
@@ -132,12 +135,12 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
         }}
       >
         {/* Top row with card count and buy button */}
-        <div className="relative h-[50px] w-full">
+        <div className="relative w-full">
           <AnimatePresence mode="wait" initial={false}>
             {!scratched && (
               <motion.div
                 key="top-row"
-                className="absolute inset-0 flex items-center justify-center gap-3 w-full"
+                className="flex items-center justify-center gap-3 w-full"
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.8 }}
@@ -193,32 +196,25 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={scratched ? "claim-container" : "nav-container"}
-            className="relative w-full mt-4 overflow-hidden"
-            initial={{ height: scratched ? 72 : 64 }}
-            animate={{ height: scratched ? 72 : 64 }}
-            exit={{ height: scratched ? 64 : 72 }}
+            className="relative w-full mt-2 overflow-hidden"
+            // initial={{ height: scratched ? 72 : 64 }}
+            // animate={{ height: scratched ? 72 : 64 }}
+            // exit={{ height: scratched ? 64 : 72 }}
             transition={{ duration: 0.4, ease: "easeInOut" }}
           >
-            <div className="absolute inset-0">
+            <div className="inset-0">
               <AnimatePresence mode="wait" initial={false}>
                 {/* Claim section - shown when card is scratched */}
                 {scratched && (
                   <motion.div
                     key="claim-section"
-                    className="absolute inset-0 flex items-center justify-center gap-3 w-full"
+                    className="grid gap-3 grid-cols-2 w-full"
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -20 }}
                     transition={{ duration: 0.3 }}
                   >
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.8 }}
-                      transition={{ duration: 0.3, delay: 0.1 }}
-                    >
-                      <ClaimPrizeButton />
-                    </motion.div>
+                    <ClaimPrizeButton />
                     <MotionButton
                       onClick={handleNextButtonClickAfterClaim}
                       delay={0.2}
@@ -232,7 +228,7 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
                 {!scratched && pathname === "/" && !showBigBuy && mode === "swipeable" && availableCards.length > 1 && (
                   <motion.div
                     key="nav-buttons"
-                    className="absolute inset-0 flex gap-3 w-full"
+                    className="flex gap-3 w-full"
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: 20 }}

@@ -46,6 +46,9 @@ export interface CardStore {
 
   scratched: boolean;
   setScratched: (scratched: boolean) => void
+
+  initialFetch: boolean;
+  setInitialFetch: (initialFetch: boolean) => void
 }
 
 export const useCardStore = create<CardStore>()(
@@ -62,7 +65,8 @@ export const useCardStore = create<CardStore>()(
       totalCount: 0,
       cardDirection: 1,
       showBuyModal: false,
-      initialFetch: false,
+      initialFetch: true,
+      setInitialFetch: (initialFetch) => set({ initialFetch }),
 
       scratched: false,
       setScratched: (scratched) => set({ scratched }),
@@ -164,7 +168,6 @@ export const useCardStore = create<CardStore>()(
 
         set({ loading: true, error: null });
 
-
         try {
           const response = await fetch(`/api/cards/get-by-owner?userWallet=${userAddress}`);
           if (!response.ok) {
@@ -177,7 +180,8 @@ export const useCardStore = create<CardStore>()(
           set({
             cards: newCards,
             totalCount,
-            loading: false
+            loading: false,
+            initialFetch: false
           });
 
           // Update selected card if it exists
