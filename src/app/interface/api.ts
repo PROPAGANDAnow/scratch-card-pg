@@ -120,21 +120,23 @@ export interface UserStats {
 // Activity Feed Response
 export interface ActivityEntry {
   id: string;
-  type: 'scratch' | 'win' | 'claim' | 'buy';
-  user: {
-    fid: number;
-    username: string;
-    pfp: string;
-    wallet: string;
-  };
-  tokenId?: number;
-  amount?: number;
-  timestamp: Date;
-  metadata?: Record<string, unknown>;
+  type: 'mint' | 'scratch' | 'win';
+  title: string;
+  subtitle: string;
+  amount: string;
+  timestamp: string;
+  transactionHash: string;
+  color: string;
+  userAddress: string;
+  username: string;
+  pfp: string;
+  cardId: number;
+  prizeAmount: number;
 }
 
 export interface ActivityResponse {
   activities: ActivityEntry[];
-  total: number;
-  hasMore: boolean;
+  totalEntries: number;
+  type: 'all' | 'mint' | 'scratch' | 'win';
+  lastUpdated: Date;
 }

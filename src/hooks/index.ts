@@ -5,6 +5,8 @@ export { useUserActivity } from './useUserActivity'
 export { useUserStats } from './useUserStats'
 export { useUserTokens } from './useUserTokens'
 export { useLeaderboard } from './useLeaderboard'
+export { useActivity } from './useActivity'
+export { useInfiniteScroll } from './useInfiniteScroll'
 
 // Export contract and blockchain hooks
 export { useContractMinting, useMintingCost, useMintingEvents, useUserCards } from './useContractMinting'
@@ -34,3 +36,4 @@ export type {
   ScratchStatusMutationError,
 } from './useTrackScratch'
 export type { UseLeaderboardOptions, UseLeaderboardReturn } from './useLeaderboard'
+export type { UseActivityOptions, UseActivityReturn } from './useActivity'

@@ -1,42 +1,16 @@
 "use client";
 import Image from "next/image";
 import { motion } from "framer-motion";
-import { useRecentActivity } from "~/hooks";
+import { useInfiniteScroll } from "~/hooks";
 import { formatDistanceToNow } from "date-fns";
 
 const SubgraphActivity = () => {
-  const { recentMints, recentClaims, loading, error } = useRecentActivity(20);
+  const { activities, loading, error, hasMore, loadMoreRef } = useInfiniteScroll({
+    limit: 20,
+    threshold: 200
+  });
 
-  // Helper function to truncate address
-  const truncateAddress = (address: string) => {
-    return `${address.slice(0, 6)}...${address.slice(-4)}`;
-  };
-
-  // Combine and sort all activities
-  const allActivities = [
-    ...recentMints.map(mint => ({
-      ...mint,
-      type: 'mint' as const,
-      title: `Minted ${mint.quantity} card${mint.quantity !== '1' ? 's' : ''}`,
-      subtitle: truncateAddress(mint.buyer),
-      amount: mint.formattedPrice,
-      timestamp: mint.timestamp,
-      transactionHash: mint.transactionHash,
-      color: 'text-blue-400',
-    })),
-    ...recentClaims.map(claim => ({
-      ...claim,
-      type: 'claim' as const,
-      title: `Won ${claim.formattedPrize}!`,
-      subtitle: truncateAddress(claim.winner),
-      amount: claim.formattedPrize,
-      timestamp: claim.claimedAt,
-      transactionHash: claim.transactionHash,
-      color: 'text-green-400',
-    }))
-  ].sort((a, b) => Number(b.timestamp) - Number(a.timestamp));
-
-  if (loading) {
+  if (loading && activities.length === 0) {
     return (
       <div className="w-full pt-8 h-full overflow-y-auto">
         <div className="flex items-center justify-center h-64">
@@ -49,7 +23,7 @@ const SubgraphActivity = () => {
     );
   }
 
-  if (error) {
+  if (error && activities.length === 0) {
     return (
       <div className="w-full pt-8 h-full overflow-y-auto">
         <div className="flex items-center justify-center h-64">
@@ -62,7 +36,7 @@ const SubgraphActivity = () => {
     );
   }
 
-  if (allActivities.length === 0) {
+  if (activities.length === 0) {
     return (
       <div className="w-full pt-8 h-full overflow-y-auto">
         <div className="flex items-center justify-center h-64">
@@ -83,9 +57,9 @@ const SubgraphActivity = () => {
         animate={{ opacity: 1 }}
         transition={{ duration: 0.5 }}
       >
-        {allActivities.map((activity, index) => (
+        {activities.map((activity, index) => (
           <motion.div
-            key={`${activity.type}-${activity.id}-${index}`}
+            key={activity.id}
             className="flex items-center justify-between w-full"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -93,20 +67,29 @@ const SubgraphActivity = () => {
           >
             <div className="flex items-center gap-3">
               <div className="relative">
-                <Image
-                  src="/assets/splash-image.png"
-                  alt="User"
-                  width={48}
-                  height={48}
-                  loading="lazy"
-                  className="rounded-full !w-[48px] !h-[48px] object-cover"
-                />
+                {activity.pfp ? (
+                  <Image
+                    src={activity.pfp}
+                    alt="User"
+                    width={48}
+                    height={48}
+                    loading="lazy"
+                    className="rounded-full !w-[48px] !h-[48px] object-cover"
+                  />
+                ) : (
+                  <div className="rounded-full !w-[48px] !h-[48px] bg-white/20"></div>
+                )}
                 {activity.type === 'mint' && (
                   <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
                     <span className="text-white text-xs">M</span>
                   </div>
                 )}
-                {activity.type === 'claim' && (
+                {activity.type === 'scratch' && (
+                  <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-yellow-500 rounded-full flex items-center justify-center">
+                    <span className="text-white text-xs">S</span>
+                  </div>
+                )}
+                {activity.type === 'win' && (
                   <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
                     <span className="text-white text-xs">W</span>
                   </div>
@@ -125,16 +108,36 @@ const SubgraphActivity = () => {
             </div>
             <div className="text-right">
               <p className="text-[12px] font-medium leading-[90%] text-white/60">
-                {formatDistanceToNow(new Date(Number(activity.timestamp) * 1000), { addSuffix: true })}
+                {formatDistanceToNow(new Date(activity.timestamp), { addSuffix: true })}
               </p>
-              {activity.amount && (
-                <p className={`text-[11px] font-medium leading-[90%] ${activity.color}`}>
-                  {activity.amount}
-                </p>
-              )}
             </div>
           </motion.div>
         ))}
+
+        {/* Infinite scroll trigger */}
+        <div ref={loadMoreRef} className="w-full h-4" />
+
+        {/* Loading indicator for more items */}
+        {loading && activities.length > 0 && (
+          <motion.div
+            className="flex justify-center py-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+          >
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white/60"></div>
+          </motion.div>
+        )}
+
+        {/* End of activities indicator */}
+        {!hasMore && activities.length > 0 && (
+          <motion.p
+            className="w-full text-center font-medium text-[12px] leading-[90%] text-white/40 py-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+          >
+            No more activity
+          </motion.p>
+        )}
       </motion.div>
     </div>
   );
