@@ -7,8 +7,7 @@
 
 'use client';
 
-import { AnimatePresence, motion } from 'framer-motion';
-import Image from 'next/image';
+import { motion } from 'framer-motion';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { useMiniApp } from '@neynar/react';
@@ -32,6 +31,9 @@ interface MintingProps {
 
   /** Additional CSS classes */
   className?: string;
+
+  /** Auto-close modal after success (default: true) */
+  autoClose?: boolean;
 }
 
 /**
@@ -44,6 +46,7 @@ export const MintCardForm = ({
   showQuantitySelector = true,
   defaultQuantity = 1,
   className = '',
+  autoClose = true,
 }: MintingProps) => {
   // Web3 hooks
   const { isConnected, isCorrectNetwork, address } = useWallet();
@@ -58,7 +61,6 @@ export const MintCardForm = ({
     mintCardsBatch,
     canMint,
     error: mintingError,
-    reset: resetMinting,
     approval,
   } = useContractMinting(address);
 
@@ -66,6 +68,7 @@ export const MintCardForm = ({
 
   // Local state
   const [quantity, setQuantity] = useState(defaultQuantity);
+  const [mintingStatus, setMintingStatus] = useState<string | null>(null);
 
   // Calculate total cost
   const totalCost = useMemo(() => {
@@ -77,7 +80,23 @@ export const MintCardForm = ({
     return isConnected && isCorrectNetwork && canMint && quantity > 0;
   }, [isConnected, isCorrectNetwork, canMint, quantity]);
 
+  // Update status based on approval state
+  useEffect(() => {
+    if (approval.state === 'pending') {
+      setMintingStatus('Approving USDC...');
+    } else if (approval.state === 'confirming') {
+      setMintingStatus('Confirming approval...');
+    }
+  }, [approval.state]);
 
+  // Update status based on minting state
+  useEffect(() => {
+    if (mintingState === 'pending') {
+      setMintingStatus('Minting cards...');
+    } else if (mintingState === 'confirming') {
+      setMintingStatus('Checking onchain...');
+    }
+  }, [mintingState]);
 
   // Handle batched approval + minting
   const handleMint = useCallback(async () => {
@@ -98,28 +117,64 @@ export const MintCardForm = ({
 
       console.log("🚀 ~ MintCardForm ~ address:", address)
       setMinting(true)
-      // Mint cards
+      
+      // The approval and minting status will be automatically updated by useEffect hooks above
+      // Mint cards (this includes approval inside)
       await mintCardsBatch(
         quantity,
         address
       );
 
-      await new Promise(res => setTimeout(res, 3000))
+      // After minting completes, show adding cards status
+      setMintingStatus('Adding cards...')
+      
+      // Retry logic for fetching cards (Alchemy may take a few seconds to index)
+      const retries = 3;
+      let lastCardCount = 0;
+      
+      for (let i = 0; i < retries; i++) {
+        // Wait before each attempt (first attempt after 2s, then 2s between retries)
+        await new Promise(res => setTimeout(res, 2000))
+        
+        // Get current card count before refetch
+        const currentCards = useCardStore.getState().cards;
+        lastCardCount = currentCards.length;
+        
+        // Refetch cards from API
+        await refetchCards()
+        
+        // Check if new cards were added
+        const newCards = useCardStore.getState().cards;
+        if (newCards.length > lastCardCount) {
+          console.log(`✅ Successfully fetched ${newCards.length - lastCardCount} new cards`);
+          break;
+        }
+        
+        if (i < retries - 1) {
+          console.log(`⏳ Retrying card fetch (${i + 1}/${retries})...`);
+        }
+      }
 
-      // refetch the user cards
-      await refetchCards()
-
+      setMintingStatus('Complete!')
       // Haptic feedback
       haptics.impactOccurred('medium');
 
-      onSuccess?.([])
+      // Wait a bit before calling onSuccess to show the "Complete!" message
+      await new Promise(res => setTimeout(res, 1500))
+
+      // Only call onSuccess if autoClose is enabled
+      if (autoClose) {
+        onSuccess?.([])
+      }
 
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Minting failed';
       console.error('Minting error:', error);
+      setMintingStatus(null)
       onError?.(errorMessage);
     } finally {
       setMinting(false)
+      setMintingStatus(null)
     }
   }, [
     ensureWalletReady,
@@ -130,23 +185,12 @@ export const MintCardForm = ({
     onError,
     approval,
     address,
+    refetchCards,
+    onSuccess,
+    autoClose,
+    setMinting,
   ]);
 
-
-
-  // Handle success
-  useEffect(() => {
-    if (mintingState === 'success') {
-      haptics.notificationOccurred('success');
-      onSuccess?.([]); // TODO: Get actual token IDs from events
-
-      // Reset after delay
-      setTimeout(() => {
-        resetMinting();
-        setQuantity(defaultQuantity);
-      }, 2000);
-    }
-  }, [mintingState, haptics, onSuccess, resetMinting, defaultQuantity]);
 
   // Handle errors
   useEffect(() => {
@@ -337,25 +381,29 @@ export const MintCardForm = ({
         className={`
             w-full py-2 rounded-[40px] font-semibold text-[14px] h-11 transition-colors
              border border-white
-            ${canProceed
+            ${canProceed && !mintingStatus
             ? 'bg-white/80 hover:bg-white text-black'
             : 'bg-white/20 text-white/60 cursor-not-allowed'
           }
           `}
         onClick={handleMint}
-        disabled={!canProceed || mintingState === 'pending' || mintingState === 'confirming'}
-        whileHover={canProceed ? { scale: 1.02 } : {}}
-        whileTap={canProceed ? { scale: 0.98 } : {}}
+        disabled={!canProceed || !!mintingStatus || mintingState === 'pending' || mintingState === 'confirming'}
+        whileHover={canProceed && !mintingStatus ? { scale: 1.02 } : {}}
+        whileTap={canProceed && !mintingStatus ? { scale: 0.98 } : {}}
       >
 
-        {mintingState === 'pending' && 'Minting...'}
-        {mintingState === 'confirming' && 'Confirming...'}
-        {mintingState === 'success' && 'Minted Successfully!'}
-        {mintingState === 'error' && 'Try Again'}
-        {mintingState === 'idle' && (
-          !isConnected ? 'Connect Wallet' :
-            !isCorrectNetwork ? 'Switch to Base' :
-              `Mint ${quantity} Card${quantity > 1 ? 's' : ''}`
+        {mintingStatus ? mintingStatus : (
+          <>
+            {mintingState === 'pending' && 'Minting...'}
+            {mintingState === 'confirming' && 'Confirming...'}
+            {mintingState === 'success' && 'Minted Successfully!'}
+            {mintingState === 'error' && 'Try Again'}
+            {mintingState === 'idle' && (
+              !isConnected ? 'Connect Wallet' :
+                !isCorrectNetwork ? 'Switch to Base' :
+                  `Mint ${quantity} Card${quantity > 1 ? 's' : ''}`
+            )}
+          </>
         )}
       </motion.button>
 
