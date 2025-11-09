@@ -51,7 +51,7 @@ interface NftScratchOffProps {
 }
 
 const NftScratchOff = ({
-  cardData,
+  cardData: currCardData,
   hasNext,
   onNext,
   onPrizeRevealed
@@ -83,6 +83,7 @@ const NftScratchOff = ({
   const { actions, haptics } = useMiniApp();
   const { address } = useWallet();
   const { playWinSound } = useUIActions()
+  const { activeTokenId } = useCardStore()
 
   // Web3 claiming hooks
   const {
@@ -131,7 +132,7 @@ const NftScratchOff = ({
   // Handle prize claiming on-chain
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleClaimPrize = useCallback(async (tokenId: number, claimSignature: ClaimSignature) => {
-    if (bestFriend && cardData?.prize_amount === -1) {
+    if (bestFriend && currCardData?.prize_amount === -1) {
       // Claim with bonus for friend
       await claimPrizeWithBonus(
         tokenId,
@@ -151,7 +152,7 @@ const NftScratchOff = ({
     haptics.notificationOccurred('success');
   }, [
     bestFriend,
-    cardData,
+    currCardData,
     claimPrize,
     claimPrizeWithBonus,
     address,
@@ -188,9 +189,9 @@ const NftScratchOff = ({
   // Scratch detection handler
   const handleScratchDetection = useCallback(async () => {
     try {
-      if (!cardData || isProcessing || !address) return;
+      if (!currCardData || isProcessing || !address) return;
 
-      const tokenId = cardData.token_id;
+      const tokenId = currCardData.token_id;
       setIsProcessing(true);
 
       if (tokenId && onPrizeRevealed) {
@@ -241,7 +242,7 @@ const NftScratchOff = ({
     } catch (error) {
       console.error(error)
     }
-  }, [cardData, isProcessing, address, bestFriend?.fid, haptics, onPrizeRevealed, playWinSound, prizeAmount, setAppBackground, setAppColor, setScratched, trackScratch, updateCardMeta, user?.address, user?.fid]);
+  }, [currCardData, isProcessing, address, bestFriend?.fid, haptics, onPrizeRevealed, playWinSound, prizeAmount, setAppBackground, setAppColor, setScratched, trackScratch, updateCardMeta, user?.address, user?.fid]);
 
   // Debounced scratch detection with Web3 integration
   const {
@@ -341,7 +342,7 @@ const NftScratchOff = ({
     };
 
     const touchStart = (e: TouchEvent) => {
-      if (!cardData || isProcessing) return;
+      if (!currCardData || isProcessing) return;
       e.preventDefault();
       const point = getEventPoint(e);
       if (!point) return;
@@ -373,7 +374,7 @@ const NftScratchOff = ({
     };
 
     const mouseDown = (e: MouseEvent) => {
-      if (!cardData || isProcessing) return;
+      if (!currCardData || isProcessing) return;
       e.preventDefault();
       const point = getEventPoint(e);
       if (!point) return;
@@ -434,7 +435,7 @@ const NftScratchOff = ({
       document.removeEventListener("mousemove", mouseMove);
       document.removeEventListener("mouseup", mouseUp);
     };
-  }, [cardData, isProcessing, debouncedScratchDetection, cancelScratchDetection, scratched]);
+  }, [currCardData, isProcessing, debouncedScratchDetection, cancelScratchDetection, scratched]);
 
   // Populate best friend state
   // useEffect(() => {
@@ -509,6 +510,8 @@ const NftScratchOff = ({
     }
   }, [activeCard?.state.scratched])
 
+  const showCongratsMessage = scratched && currCardData && activeTokenId && String(activeTokenId) === String(currCardData.token_id)
+
   return (
     <>
       <div
@@ -520,23 +523,23 @@ const NftScratchOff = ({
         <p
           className={`font-[ABCGaisyr] text-center mb-1 font-bold italic rotate-[-4deg] text-[30px]`}
           style={{
-            visibility: scratched
+            visibility: showCongratsMessage
               ? "visible"
               : "hidden",
-            color: cardData?.prize_amount || prizeAmount
+            color: currCardData?.prize_amount || prizeAmount
               ? "#fff"
               : "rgba(255, 255, 255, 0.4)",
-            textShadow: cardData?.prize_amount || prizeAmount
+            textShadow: currCardData?.prize_amount || prizeAmount
               ? "0px 0px 1px #00A34F, 0px 0px 2px #00A34F, 0px 0px 6px #00A34F, 0px 0px 12px #00A34F"
               : "none",
           }}
         >
-          {cardData?.prize_amount || prizeAmount ? (
-            prizeAmount === -1 || cardData?.prize_amount === -1 ? (
+          {currCardData?.prize_amount || prizeAmount ? (
+            prizeAmount === -1 || currCardData?.prize_amount === -1 ? (
               `Won free card!`
             ) : (
               `Won ${formatCell(
-                cardData?.prize_amount || prizeAmount,
+                currCardData?.prize_amount || prizeAmount,
                 PAYMENT_TOKEN.ADDRESS
               )}!`
             )
@@ -547,7 +550,7 @@ const NftScratchOff = ({
         <div className="flex-1 grow">
           <motion.div
             ref={cardRef}
-            layoutId={cardData ? `card-${cardData.id}` : undefined}
+            layoutId={currCardData ? `card-${currCardData.id}` : undefined}
             className="w-full relative"
             animate={{
               rotateX: tilt.x,
@@ -609,16 +612,16 @@ const NftScratchOff = ({
                   pointerEvents: "none",
                 }}
               />
-              {cardData?.numbers_json &&
+              {currCardData?.numbers_json &&
                 (scratched || coverImageLoaded) ? (
                 <div className="absolute inset-0 z-10 flex flex-col items-center justify-center text-center rotate-[-4deg]">
                   {(() => {
-                    const numbersJson = cardData.numbers_json as unknown as CardCell[];
+                    const numbersJson = currCardData.numbers_json as unknown as CardCell[];
                     const rows = chunk3(numbersJson);
                     const winningRowIdx = findWinningRow(
                       numbersJson,
-                      cardData.prize_amount,
-                      cardData.prize_asset_contract
+                      currCardData.prize_amount,
+                      currCardData.prize_asset_contract
                     );
 
                     return (
@@ -694,7 +697,7 @@ const NftScratchOff = ({
               ) : null}
 
               {/* Scratch cover */}
-              {(!cardData || (!scratched)) && (
+              {(!currCardData || (!scratched)) && (
                 <canvas
                   ref={canvasRef}
                   style={{
@@ -706,7 +709,7 @@ const NftScratchOff = ({
                     width: CANVAS_WIDTH,
                     height: CANVAS_HEIGHT,
                     borderRadius: 4,
-                    cursor: cardData ? "grab" : "default",
+                    cursor: currCardData ? "grab" : "default",
                     touchAction: "manipulation",
                     WebkitTouchCallout: "none",
                     WebkitUserSelect: "none",
