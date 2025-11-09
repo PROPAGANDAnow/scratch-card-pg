@@ -91,7 +91,7 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
   } = useCardStore()
 
   const [showBigBuy, setShowBigBuy] = useState(false);
-  const { availableCards } = useUserTokens();
+  const { availableCards, totalCount } = useUserTokens();
   const initialFetch = useCardStore(s => s.initialFetch)
   const unscratchedCardsCount = availableCards.filter(card => !card.state.scratched).length
 
@@ -156,17 +156,12 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
                       `${unscratchedCardsCount} card${unscratchedCardsCount !== 1 ? "s" : ""} left`
                     ) : (
                       <>
-                        Cards{" "}
-                        {activeTokenId ? (
-                          <>
-                            {currentCardIndex + 1}
-                            <span className="text-[#fff]/40">
-                              /{availableCards.length}
-                            </span>
-                          </>
-                        ) : (
-                          availableCards.length
-                        )}
+                        <>
+                          {availableCards.length}
+                          <span className="text-[#fff]/40">
+                            /{totalCount}
+                          </span>
+                        </>
                       </>
                     )}
                   </p>

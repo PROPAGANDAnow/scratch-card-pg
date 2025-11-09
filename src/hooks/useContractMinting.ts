@@ -130,7 +130,7 @@ export const useContractMinting = (userAddress: Address | null): UseContractMint
 
   // Contract write hooks
   const {
-    writeContract,
+    writeContractAsync,
     data: hash,
     isPending: isWritePending,
     error: writeError
@@ -406,19 +406,23 @@ export const useContractMinting = (userAddress: Address | null): UseContractMint
       // Approve exact required amount first
       await approvalHook.approve(requiredApproval);
 
-      const txHash = await writeContract({
+      const txHash = await writeContractAsync({
         address: SCRATCH_CARD_NFT_ADDRESS,
         abi: SCRATCH_CARD_NFT_ABI,
         functionName: 'mintCard',
         args: [AddressPatterns.safeRecipient(recipient)],
       });
 
-      console.log('Transaction submitted:', txHash);
-
-      if (publicClient && txHash) {
-        console.log('Waiting for batch transaction receipt using publicClient...');
-        await publicClient?.waitForTransactionReceipt({ hash: txHash })
+      if (!publicClient) {
+        throw new Error("public client is not available")
       }
+
+      if (!txHash) {
+        throw new Error('transaction hash not available')
+      }
+
+      console.log('Waiting for batch transaction receipt using publicClient...');
+      await publicClient?.waitForTransactionReceipt({ hash: txHash })
 
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to mint card';
@@ -427,7 +431,7 @@ export const useContractMinting = (userAddress: Address | null): UseContractMint
       setEnhancedReceipt(null);
       console.error('Minting error:', err);
     }
-  }, [writeContract, publicClient, approvalHook, calculateCostBigInt]);
+  }, [writeContractAsync, publicClient, approvalHook, calculateCostBigInt]);
 
   // Mint multiple cards with simulation
   const mintCardsBatch = useCallback(async (quantity: number, recipient?: Address) => {
@@ -465,7 +469,7 @@ export const useContractMinting = (userAddress: Address | null): UseContractMint
       console.log("🚀 ~ useContractMinting ~ SCRATCH_CARD_NFT_ADDRESS:", SCRATCH_CARD_NFT_ADDRESS)
       console.log("🚀 ~ useContractMinting ~ [BigInt(quantity), AddressPatterns.safeRecipient(recipient)]:", [BigInt(quantity), AddressPatterns.safeRecipient(recipient)])
 
-      const txHash = await writeContract({
+      const txHash = await writeContractAsync({
         address: SCRATCH_CARD_NFT_ADDRESS,
         abi: SCRATCH_CARD_NFT_ABI,
         functionName: 'mintCardsBatch',
@@ -474,10 +478,16 @@ export const useContractMinting = (userAddress: Address | null): UseContractMint
 
       console.log('Batch transaction submitted:', txHash);
 
-      if (publicClient && txHash) {
-        console.log('Waiting for batch transaction receipt using publicClient...');
-        await publicClient?.waitForTransactionReceipt({ hash: txHash })
+      if (!publicClient) {
+        throw new Error("public client is not available")
       }
+
+      if (!txHash) {
+        throw new Error('transaction hash not available')
+      }
+
+      console.log('Waiting for batch transaction receipt using publicClient...');
+      await publicClient?.waitForTransactionReceipt({ hash: txHash })
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to mint cards';
       setError(errorMessage);
@@ -485,7 +495,7 @@ export const useContractMinting = (userAddress: Address | null): UseContractMint
       setEnhancedReceipt(null);
       console.error('Batch minting error:', err);
     }
-  }, [writeContract, maxBatchSize, publicClient, approvalHook, simulateMintCardsBatch]);
+  }, [writeContractAsync, maxBatchSize, publicClient, approvalHook, simulateMintCardsBatch]);
 
   // Reset state
   const reset = useCallback(() => {

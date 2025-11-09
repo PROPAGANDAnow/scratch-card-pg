@@ -47,7 +47,6 @@ export const MintCardForm = ({
 }: MintingProps) => {
   // Web3 hooks
   const { isConnected, isCorrectNetwork, address } = useWallet();
-  console.log("🚀 ~ MintButton ~ isConnected:", isConnected)
   const { ensureWalletReady } = useWalletAction();
   const { haptics } = useMiniApp();
   const { refetchCards } = useCardStore()

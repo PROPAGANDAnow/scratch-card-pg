@@ -164,7 +164,10 @@ export const useCardStore = create<CardStore>()(
           return;
         }
 
+        if (!!get().loading) return
+
         set({ loading: true, error: null });
+
 
         try {
           const response = await fetch(`/api/cards/get-by-owner?userWallet=${userAddress}`);
