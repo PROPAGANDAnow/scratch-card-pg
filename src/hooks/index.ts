@@ -12,6 +12,7 @@ export { useERC20Approval, useUSDCBalance } from './useERC20Approval'
 // Export UI actions hook
 export { useUIActions } from './useUIActions'
 export { useUpdateCardClaimStatus } from './useUpdateCardClaimStatus'
+export { useTrackScratch } from './useTrackScratch'
 
 // Export types
 export type { MintingState, TransactionReceipt, UseContractMintingReturn } from './useContractMinting'
@@ -26,3 +27,8 @@ export type {
   UpdateCardClaimStatusResult,
   ClaimStatusMutationError,
 } from './useUpdateCardClaimStatus'
+export type {
+  UpdateCardScratchStatusPayload,
+  UpdateCardScratchStatusResult,
+  ScratchStatusMutationError,
+} from './useTrackScratch'

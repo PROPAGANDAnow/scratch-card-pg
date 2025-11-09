@@ -8,6 +8,7 @@
 'use client';
 
 import { useMiniApp } from "@neynar/react";
+import clsx from "clsx";
 import { motion } from "framer-motion";
 import Image from "next/image";
 import {
@@ -24,6 +25,7 @@ import ModalPortal from "~/components/ModalPortal";
 
 import { useContractClaiming } from "~/hooks/useContractClaiming";
 import { useDebouncedScratchDetection } from "~/hooks/useDebouncedScratchDetection";
+import { useTrackScratch } from "~/hooks/useTrackScratch";
 import { useUIActions } from "~/hooks/useUIActions";
 import { useWallet } from "~/hooks/useWeb3Wallet";
 import { ClaimSignature, PAYMENT_TOKEN } from "~/lib/blockchain";
@@ -81,6 +83,9 @@ const NftScratchOff = ({
     claimPrizeWithBonus,
     reset: resetClaiming
   } = useContractClaiming();
+
+  // Scratch tracking hook
+  const trackScratch = useTrackScratch();
 
   // const { canClaim: canClaimToken, isClaimed: isTokenClaimed } = useTokenClaimability(
   //   tokenId || null,
@@ -184,7 +189,15 @@ const NftScratchOff = ({
         onPrizeRevealed(tokenId, prizeAmount);
       }
 
-      // // Handle UI updates
+      // Track scratch status in database
+      trackScratch.mutate({
+        tokenId,
+        scratched: true,
+        scratchedBy: user?.address || address || undefined,
+        prizeWon: prizeAmount > 0 || prizeAmount === -1
+      });
+
+      // Handle UI updates
       if (prizeAmount > 0 || prizeAmount === -1) {
         setAppColor(APP_COLORS.WON);
         setAppBackground(`linear-gradient(to bottom, #090210, ${APP_COLORS.WON})`);
@@ -587,10 +600,13 @@ const NftScratchOff = ({
                               {row.map((cell, cellIndex) => (
                                 <div
                                   key={`${cell.amount}-${cellIndex}`}
-                                  className={`w-[77px] h-[77px] rounded-[14px] font-[ABCGaisyr] font-bold text-[24px] leading-[90%] italic flex items-center justify-center ${isWinning
-                                    ? "!text-[#00A151]/40 !bg-[#00A151]/15"
-                                    : "!text-[#000]/15 !bg-[#000]/10"
-                                    }`}
+                                  className={clsx(
+                                    `w-[77px] h-[77px] rounded-[14px] font-[ABCGaisyr] font-bold text-[24px] leading-[90%] italic flex items-center justify-center`,
+                                    (isWinning && scratched)
+                                      ? "!text-[#00A151]/40 !bg-[#00A151]/15"
+                                      : "!text-[#000]/15 !bg-[#000]/10"
+
+                                  )}
                                   style={{
                                     filter:
                                       "drop-shadow(0px 0.5px 0.5px rgba(0, 0, 0, 0.15))",
@@ -626,10 +642,12 @@ const NftScratchOff = ({
                                       )}
                                     </div>
                                   ) : (
-                                    formatCell(
-                                      cell.amount,
-                                      cell.asset_contract || PAYMENT_TOKEN.ADDRESS
-                                    )
+                                    cell.amount == -1 ?
+                                      <span className="uppercase">Free Card</span> :
+                                      formatCell(
+                                        cell.amount,
+                                        cell.asset_contract || PAYMENT_TOKEN.ADDRESS
+                                      )
                                   )}
                                 </div>
                               ))}

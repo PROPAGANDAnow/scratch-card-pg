@@ -8,7 +8,7 @@ import { ClaimSignature } from "~/lib/blockchain";
 import { useAppStore, useCardStore } from "~/stores";
 
 const ClaimPrizeButton = () => {
-    const { cards, currentCardIndex } = useCardStore()
+    const { cards, currentCardIndex, setScratched } = useCardStore()
     const { address } = useWallet();
     const cardData = cards[currentCardIndex]?.state
     const appColor = useAppStore((s) => s.appColor);
@@ -78,6 +78,8 @@ const ClaimPrizeButton = () => {
                 claimHash: transactionHash,
                 claimedBy: address,
             });
+
+            setScratched(false)
         } catch (error) {
             console.error("Failed to process claim", error);
         }

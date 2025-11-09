@@ -21,6 +21,16 @@ export const UpdateCardClaimStatusPayloadSchema = UpdateCardClaimStatusSchema.ex
   tokenId: TokenIdSchema,
 });
 
+export const UpdateCardScratchStatusSchema = z.object({
+  scratched: z.boolean({ required_error: 'Scratched status is required' }),
+  scratchedBy: WalletAddressSchema,
+  prizeWon: z.boolean().optional(),
+});
+
+export const UpdateCardScratchStatusPayloadSchema = UpdateCardScratchStatusSchema.extend({
+  tokenId: TokenIdSchema,
+});
+
 // Card validation schemas
 export const BuyCardSchema = z.object({
   tokenIds: z.array(TokenIdSchema).min(1, 'At least one token ID is required'),

@@ -55,6 +55,11 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
     }
   }
 
+  const handleNextButtonClickAfterClaim = () => {
+    setScratched(false)
+    handleNextClick()
+  }
+
 
   useEffect(() => {
     if (mode === "swipeable") {
@@ -182,7 +187,7 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
               }}
             >
               <motion.button
-                onClick={() => setScratched(false)}
+                onClick={handleNextButtonClickAfterClaim}
                 className="w-full py-2 bg-white/80 rounded-[40px] font-semibold text-[14px] hover:bg-white h-11 transition-colors"
                 style={{
                   color: appColor,
@@ -196,38 +201,13 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
           </motion.div>}
         </AnimatePresence>
 
-        {/* Next Card Button - Only show on home page when there's a next card */}
+        {/* Next/Prev Card Buttons - Only show on home page in swipeable mode */}
         <AnimatePresence>
           {!scratched && pathname === "/" &&
             !showBigBuy &&
-            mode === "swipeable" && <>
-              {currentCardIndex < availableCards.length - 1 ? (
-                <motion.div
-                  className="w-full p-1 rounded-[40px] border border-white"
-                  initial={{ opacity: 0, y: 20, scale: 0.9 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: 20, scale: 0.9 }}
-                  transition={{
-                    type: "spring",
-                    stiffness: 700,
-                    damping: 45,
-                    duration: 0.15,
-                  }}
-                >
-                  <motion.button
-                    onClick={handleNextClick}
-                    className="w-full py-2 bg-white/80 rounded-[40px] font-semibold text-[14px] hover:bg-white h-11 transition-colors"
-                    style={{
-                      color: appColor,
-                    }}
-                    whileTap={{ scale: 0.98 }}
-                    transition={{ duration: 0.1 }}
-                  >
-                    Next Card
-                  </motion.button>
-                </motion.div>
-              ) : <motion.div
-                className="w-full p-1 rounded-[40px] border border-white"
+            mode === "swipeable" && availableCards.length > 1 && (
+              <motion.div
+                className="flex gap-3 w-full"
                 initial={{ opacity: 0, y: 20, scale: 0.9 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: 20, scale: 0.9 }}
@@ -238,20 +218,68 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
                   duration: 0.15,
                 }}
               >
-                <motion.button
-                  onClick={handlePrevClick}
-                  className="w-full py-2 bg-white/80 rounded-[40px] font-semibold text-[14px] hover:bg-white h-11 transition-colors"
-                  style={{
-                    color: appColor,
+                {/* Previous Button */}
+                <motion.div
+                  className="flex-1 p-1 rounded-[40px] border border-white"
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  transition={{
+                    type: "spring",
+                    stiffness: 700,
+                    damping: 45,
+                    duration: 0.15,
                   }}
-                  whileTap={{ scale: 0.98 }}
-                  transition={{ duration: 0.1 }}
                 >
-                  Prev Card
-                </motion.button>
-              </motion.div>}
-            </>
-          }
+                  <motion.button
+                    onClick={handlePrevClick}
+                    disabled={!canGoPrev}
+                    className={`w-full py-2 rounded-[40px] font-semibold text-[14px] h-11 transition-all ${canGoPrev
+                      ? "bg-white/80 hover:bg-white text-[var(--app-color)]"
+                      : "bg-white/20 text-white/40 cursor-not-allowed"
+                      }`}
+                    style={{
+                      color: canGoPrev ? appColor : undefined,
+                    }}
+                    whileTap={canGoPrev ? { scale: 0.98 } : {}}
+                    transition={{ duration: 0.1 }}
+                  >
+                    Prev
+                  </motion.button>
+                </motion.div>
+
+                {/* Next Button */}
+                <motion.div
+                  className="flex-1 p-1 rounded-[40px] border border-white"
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  transition={{
+                    type: "spring",
+                    stiffness: 700,
+                    damping: 45,
+                    duration: 0.15,
+                    delay: 0.05,
+                  }}
+                >
+                  <motion.button
+                    onClick={handleNextClick}
+                    disabled={!canGoNext}
+                    className={`w-full py-2 rounded-[40px] font-semibold text-[14px] h-11 transition-all ${canGoNext
+                      ? "bg-white/80 hover:bg-white text-[var(--app-color)]"
+                      : "bg-white/20 text-white/40 cursor-not-allowed"
+                      }`}
+                    style={{
+                      color: canGoNext ? appColor : undefined,
+                    }}
+                    whileTap={canGoNext ? { scale: 0.98 } : {}}
+                    transition={{ duration: 0.1 }}
+                  >
+                    Next
+                  </motion.button>
+                </motion.div>
+              </motion.div>
+            )}
         </AnimatePresence>
 
         <AnimatePresence>

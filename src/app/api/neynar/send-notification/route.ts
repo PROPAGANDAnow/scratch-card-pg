@@ -5,7 +5,7 @@ import { BestFriend } from "~/app/interface/bestFriends";
 
 export async function POST(request: NextRequest) {
   try {
-    const { fid, username, amount, friend_fid, bestFriends } = await request.json();
+    const { fid, username, amount, friend_fid, bestFriends = [] } = await request.json();
 
     if (!fid || !username || amount === undefined) {
       return NextResponse.json(
@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
           select: {
             user_fid: true,
             token: true
-          }
+          },
         });
 
         // Get user details for those with notifications
