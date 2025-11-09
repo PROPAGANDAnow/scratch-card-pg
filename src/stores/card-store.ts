@@ -8,8 +8,6 @@ export interface CardStore {
   // Card State
   // selectedCard: TokenWithState | null;
   cards: TokenWithState[];
-  unscratchedCards: TokenWithState[];
-  localCards: TokenWithState[];
   activeTokenId: string | null;
   loading: boolean;
   error: Error | null;
@@ -21,8 +19,7 @@ export interface CardStore {
   // Actions
   // setSelectedCard: (selectedCard: TokenWithState | null) => void;
   setCards: (cards: TokenWithState[]) => void;
-  setUnscratchedCards: (unscratchedCards: TokenWithState[]) => void;
-  setLocalCards: (localCards: TokenWithState[]) => void;
+  // setLocalCards: (localCards: TokenWithState[]) => void;
   setActiveTokenId: (activeTokenId: string | null) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: Error | null) => void;
@@ -31,13 +28,13 @@ export interface CardStore {
   setShowBuyModal: (showBuyModal: boolean) => void;
 
   // Computed actions
-  updateUnscratchedCards: () => void;
   addCard: (card: TokenWithState) => void;
   updateCard: (cardId: string, updates: Partial<TokenWithState>) => void;
   updateCardMeta: (cardId: string, metaUpdates: Partial<TokenWithState['state']>) => void;
   refetchCards: (address?: string) => Promise<void>;
 
   // Navigation actions
+  goToNextAvailable: () => void;
   goNext: () => void;
   goPrev: () => void;
   canGoNext: () => boolean;
@@ -54,13 +51,14 @@ export interface CardStore {
   setInitialFetch: (initialFetch: boolean) => void
 }
 
+export const getUnscratchedCards = (cards: TokenWithState[]) => cards.filter(c => !c.state.scratched)
+
 export const useCardStore = create<CardStore>()(
   devtools(
     (set, get) => ({
       // Initial state
       selectedCard: null,
       cards: [],
-      unscratchedCards: [],
       localCards: [],
       activeTokenId: null,
       loading: false,
@@ -70,6 +68,18 @@ export const useCardStore = create<CardStore>()(
       showBuyModal: false,
       initialFetch: true,
       setInitialFetch: (initialFetch) => set({ initialFetch }),
+      // unscratchedCards: () => get().cards.filter(c => !c.state.scratched),
+
+      goToNextAvailable: () => {
+        const { canGoNext, goNext, goPrev, setActiveTokenId, canGoPrev } = get()
+        if (canGoNext()) {
+          goNext()
+        } else if (canGoPrev()) {
+          goPrev()
+        } else {
+          setActiveTokenId(null)
+        }
+      },
 
       scratched: false,
       setScratched: (scratched) => set({ scratched }),
@@ -83,32 +93,21 @@ export const useCardStore = create<CardStore>()(
       // Basic actions
       setCards: (cards) => {
         set({ cards });
-        get().updateUnscratchedCards();
         // Set activeTokenId to first card if none is active
         const { activeTokenId } = get();
         if (!activeTokenId && cards.length > 0) {
           set({ activeTokenId: cards[0].id });
         }
       },
-      setUnscratchedCards: (unscratchedCards) => set({ unscratchedCards }),
-      setLocalCards: (localCards) => set({ localCards }),
       setActiveTokenId: (activeTokenId) => set({ activeTokenId }),
       setLoading: (loading) => set({ loading }),
       setError: (error) => set({ error }),
       setTotalCount: (totalCount) => set({ totalCount }),
 
-      // Computed actions
-      updateUnscratchedCards: () => {
-        const { cards } = get();
-        const unscratchedCards = cards.filter((card) => !card.state.scratched);
-        set({ unscratchedCards });
-      },
-
       addCard: (card) => {
         const { cards } = get();
         const newCards = [...cards, card];
         set({ cards: newCards });
-        get().updateUnscratchedCards();
       },
 
       updateCard: (cardId, updates) => {
@@ -118,8 +117,6 @@ export const useCardStore = create<CardStore>()(
         );
 
         set({ cards: updatedCards });
-
-        get().updateUnscratchedCards();
       },
 
       updateCardMeta: (cardId, metaUpdates) => {
@@ -136,8 +133,6 @@ export const useCardStore = create<CardStore>()(
             : card
         );
         set({ cards: updatedCards });
-
-        get().updateUnscratchedCards();
       },
 
       refetchCards: async (userAddress?: string) => {

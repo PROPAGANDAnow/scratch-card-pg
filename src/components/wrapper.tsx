@@ -17,7 +17,7 @@ import {
   fetchUserInfo,
 } from "~/lib/userapis";
 import { useUserStore } from "~/stores/user-store";
-import { useCardStore } from "~/stores/card-store";
+import { getUnscratchedCards, useCardStore } from "~/stores/card-store";
 import { useAppStore } from "~/stores/app-store";
 import Bottom from "./bottom";
 import { getFromLocalStorage } from "~/lib/utils";
@@ -40,12 +40,11 @@ const Wrapper: FC<{ children: React.ReactNode }> = ({ children }) => {
   const setActivity = useAppStore((s) => s.setActivity);
 
   const cards = useCardStore((s) => s.cards);
-  const unscratchedCards = useCardStore((s) => s.unscratchedCards);
-  const setUnscratchedCards = useCardStore((s) => s.setUnscratchedCards);
+  const unscratchedCards = getUnscratchedCards(cards)
+
   const refetchCards = useCardStore((s) => s.refetchCards);
   const scratched = useCardStore((s) => s.scratched);
   const setScratched = useCardStore((s) => s.setScratched);
-  const setActiveTokenId = useCardStore((s) => s.setActiveTokenId);
 
   const [loading, setLoading] = useState(true);
   const [seenInitial, setSeenInitial] = useState(false);
@@ -70,8 +69,7 @@ const Wrapper: FC<{ children: React.ReactNode }> = ({ children }) => {
   // Keep ref updated with current cards
   useEffect(() => {
     currentCardsRef.current = cards;
-    setUnscratchedCards(cards);
-  }, [cards, setUnscratchedCards]);
+  }, [cards]);
 
 
   // Keep ref updated with current activity

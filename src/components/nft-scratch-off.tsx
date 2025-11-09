@@ -67,8 +67,11 @@ const NftScratchOff = ({
   const {
     scratched,
     setScratched,
-    updateCardMeta
+    updateCardMeta,
   } = useCardStore()
+
+  const activeCard = useCardStore(state => state.cards.find(c => String(c.state.token_id) === state.activeTokenId))
+
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
   const [prizeAmount, setPrizeAmount] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -484,6 +487,28 @@ const NftScratchOff = ({
     };
   }, [resetClaiming, setAppBackground, setAppColor, setScratched]);
 
+  const handleQuickReveal = () => {
+    // Clear the canvas to reveal the card
+    const canvas = canvasRef.current;
+    if (canvas) {
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+      }
+    }
+
+    // Trigger scratch detection
+    handleScratchDetection();
+  }
+
+  useEffect(() => {
+    console.log("🚀 ~ NftScratchOff ~ activeCard:", activeCard)
+    console.log("🚀 ~ NftScratchOff ~ activeCard?.state.scratched:", activeCard?.state.scratched)
+    if (activeCard?.state.scratched) {
+      handleQuickReveal()
+    }
+  }, [activeCard?.state.scratched])
+
   return (
     <>
       <div
@@ -701,18 +726,7 @@ const NftScratchOff = ({
                 >
                   <div className="w-fit p-1 rounded-[40px] border border-white/50 backdrop-blur-3xl bg-white/10">
                     <button
-                      onClick={() => {
-                        // Clear the canvas to reveal the card
-                        const canvas = canvasRef.current;
-                        if (canvas) {
-                          const ctx = canvas.getContext("2d");
-                          if (ctx) {
-                            ctx.clearRect(0, 0, canvas.width, canvas.height);
-                          }
-                        }
-                        // Trigger scratch detection
-                        handleScratchDetection();
-                      }}
+                      onClick={handleQuickReveal}
                       className="w-full py-1 px-4 rounded-[40px] font-semibold text-[14px] transition-colors text-white/80"
                     >
                       Quick Reveal
