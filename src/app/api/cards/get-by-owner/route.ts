@@ -3,7 +3,7 @@ import { isAddress } from "viem";
 import { getBestFriends } from "~/lib/best-friends";
 import { SCRATCH_CARD_NFT_ADDRESS, ZERO_ADDRESS } from "~/lib/blockchain";
 import { prisma } from "~/lib/prisma";
-import { getTokensInBatch } from "~/lib/token-batch";
+import { getTokensInBatch, BestFriend } from "~/lib/token-batch";
 import { AlchemyNftResponse, OwnedNft } from "~/types/alchemy";
 
 export async function GET(request: NextRequest) {
@@ -70,28 +70,49 @@ export async function GET(request: NextRequest) {
       select: { fid: true }
     });
 
+    console.log('👤 User lookup result:', {
+      address: userWallet,
+      hasUser: !!user,
+      fid: user?.fid
+    });
+
     // Fetch friends if user has fid
-    let friends: number[] = [];
+    let friends: BestFriend[] = [];
     if (user?.fid) {
       try {
         const bestFriends = await getBestFriends(user.fid);
-        friends = bestFriends.map(friend => friend.fid);
+        console.log('🎯 Fetched best friends:', bestFriends.length, 'friends for FID:', user.fid);
+        friends = bestFriends; // Pass full friend objects
       } catch (error) {
         console.error('Failed to fetch friends:', error);
         // Continue without friends if fetching fails
       }
+    } else {
+      console.log('⚠️ No FID found for user, no friends will be available');
     }
+
+    // Check for test mode (force friends to appear)
+    const forceFriends = url.searchParams.get('forceFriends') === 'true' ||
+                        process.env.NODE_ENV === 'development'; // Auto-enable in dev
 
     const newlyCreatedTokens = await getTokensInBatch({
       tokenIds,
-      friends: friends.map(fid => ({ fid })),
+      friends, // Pass full friend objects
       recipient: userWallet,
-      contractAddress: isAddress(SCRATCH_CARD_NFT_ADDRESS) && SCRATCH_CARD_NFT_ADDRESS || ZERO_ADDRESS
+      contractAddress: isAddress(SCRATCH_CARD_NFT_ADDRESS) && SCRATCH_CARD_NFT_ADDRESS || ZERO_ADDRESS,
+      forceFriends
     })
 
     // Combine Alchemy data with our database data and transform to Token interface
     const tokens = data.ownedNfts.map((nft: OwnedNft) => {
       const dbCard = [...existingCardsInDb, ...newlyCreatedTokens].find(card => card.token_id === parseInt(nft.tokenId));
+
+      // Debug: Log friend data for newly created cards
+      if (dbCard && newlyCreatedTokens.includes(dbCard)) {
+        const friendCells = (dbCard.numbers_json as Array<{friend_fid?: number; friend_username?: string; friend_pfp?: string}>).filter(cell => cell.friend_fid && cell.friend_fid > 0);
+        console.log(`🆕 New card ${dbCard.token_id} has ${friendCells.length} friend cells:`,
+          friendCells.map(cell => ({ fid: cell.friend_fid, username: cell.friend_username, hasPfp: !!cell.friend_pfp })));
+      }
 
       return {
         id: nft.tokenId,

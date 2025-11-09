@@ -3,6 +3,13 @@ import { Address } from 'viem';
 import type { CardCell } from '~/app/interface/cardCell';
 import { PAYMENT_TOKEN } from '~/lib/blockchain';
 
+interface BestFriend {
+  fid: number;
+  username: string;
+  pfp: string;
+  wallet: string;
+}
+
 /**
  * Build a 12-cell flat array for a 3x4 card.
  * - If prizeAmount > 0: choose a random row (0..3), put 3 prize cells in that row.
@@ -14,7 +21,8 @@ export function generateNumbers(params: {
   prizeAsset: Address;           // defaults to USDC (not used for friend wins)
   decoyAmounts: number[];       // defaults [0.5, 1, 2]
   decoyAssets: string[];        // defaults [USDC]
-  friends: { fid: number }[];      // Array of best friends to choose from
+  friends: BestFriend[];         // Array of best friends to choose from
+  forceFriends?: boolean;        // Test mode: force friends to appear
 }): CardCell[] {
   const {
     prizeAmount,
@@ -22,8 +30,14 @@ export function generateNumbers(params: {
     decoyAmounts = [0.5, 1, 2],
     decoyAssets = [PAYMENT_TOKEN.ADDRESS],
     friends = [], // Default to empty array
+    forceFriends = false,
   } = params;
-  console.log("🚀 ~ generateNumbers ~ friends:", friends)
+  console.log("🎲 generateNumbers called with:", {
+    prizeAmount,
+    friendsCount: friends.length,
+    forceFriends,
+    friends: friends.map(f => ({ fid: f.fid, username: f.username }))
+  })
 
   const total = 12; // 3 cols x 4 rows
   const cells: CardCell[] = new Array(total);
@@ -38,19 +52,23 @@ export function generateNumbers(params: {
     for (let i = 0; i < 3; i++) {
       cells[start + i] = { amount: prizeAmount, asset_contract: prizeAsset };
     }
-  } else if (prizeAmount === -1) {
+  } else   if (prizeAmount === -1) {
     // Friend win - pick the winning row randomly (0..3)
     winningRow = Math.floor(Math.random() * 4);
     const start = winningRow * 3; // 3 columns
 
     // Pick random friend
     const randomFriend = friends.length > 0 ? friends[Math.floor(Math.random() * friends.length)] : null;
+    console.log('🎯 Friend win! Selected friend:', randomFriend ? { fid: randomFriend.fid, username: randomFriend.username } : 'No friends available');
 
     for (let i = 0; i < 3; i++) {
       cells[start + i] = {
         amount: -1,
         asset_contract: '', // Empty for friend wins
         friend_fid: randomFriend?.fid || 0,
+        friend_username: randomFriend?.username || '',
+        friend_pfp: randomFriend?.pfp || '',
+        friend_wallet: randomFriend?.wallet || '',
       };
     }
   }
@@ -66,7 +84,7 @@ export function generateNumbers(params: {
 
     for (let i = rowStart; i < rowEnd; i++) {
       // Randomly decide if this cell should be a friend or amount
-      let shouldBeFriend = Math.random() < 0.6 && friends.length > 0; // 30% chance of friend PFP
+      let shouldBeFriend = (forceFriends || Math.random() < 0.6) && friends.length > 0; // 30% chance of friend PFP, or forced
 
       if (shouldBeFriend) {
         // This cell will be a friend PFP
@@ -78,10 +96,14 @@ export function generateNumbers(params: {
           // Fallback to amount if too many of same friend
           shouldBeFriend = false;
         } else {
+          console.log('👥 Placing friend in decoy cell:', { fid: randomFriend.fid, username: randomFriend.username });
           cells[i] = {
             amount: 0,
             asset_contract: '',
             friend_fid: randomFriend.fid,
+            friend_username: randomFriend.username,
+            friend_pfp: randomFriend.pfp,
+            friend_wallet: randomFriend.wallet,
           };
           rowFriendCounts[friendKey] = (rowFriendCounts[friendKey] || 0) + 1;
           continue; // Skip to next cell
@@ -111,6 +133,16 @@ export function generateNumbers(params: {
       rowAmountCounts[amt] = (rowAmountCounts[amt] || 0) + 1;
     }
   }
+
+  // Count friends in final grid for debugging
+  const friendCells = cells.filter(cell => cell.friend_fid && cell.friend_fid > 0);
+  console.log('🎲 Final grid generated:', {
+    totalCells: cells.length,
+    friendCells: friendCells.length,
+    winningRow,
+    prizeAmount,
+    friendsInGrid: friendCells.map(cell => ({ fid: cell.friend_fid, username: cell.friend_username }))
+  });
 
   return cells;
 }

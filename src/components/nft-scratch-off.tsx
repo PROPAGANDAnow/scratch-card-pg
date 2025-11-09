@@ -126,6 +126,7 @@ const NftScratchOff = ({
   }, []);
 
   // Handle prize claiming on-chain
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleClaimPrize = useCallback(async (tokenId: number, claimSignature: ClaimSignature) => {
     if (bestFriend && cardData?.prize_amount === -1) {
       // Claim with bonus for friend
@@ -237,7 +238,7 @@ const NftScratchOff = ({
     } catch (error) {
       console.error(error)
     }
-  }, [cardData, isProcessing, handleClaimPrize]);
+  }, [cardData, isProcessing, address, bestFriend?.fid, haptics, onPrizeRevealed, playWinSound, prizeAmount, setAppBackground, setAppColor, setScratched, trackScratch, updateCardMeta, user?.address, user?.fid]);
 
   // Debounced scratch detection with Web3 integration
   const {
@@ -475,6 +476,7 @@ const NftScratchOff = ({
       const currentTimeout = linkCopyTimeoutRef.current;
       if (currentTimeout) {
         clearTimeout(currentTimeout);
+        linkCopyTimeoutRef.current = null;
       }
 
       setAppColor(APP_COLORS.DEFAULT);

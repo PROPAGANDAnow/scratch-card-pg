@@ -1,4 +1,5 @@
-import { Card, Prisma } from "@prisma/client";
+import { Card } from "~/app/interface/card";
+import { Prisma } from "@prisma/client";
 import { Address, createPublicClient, http, isAddress } from "viem";
 import { base } from "viem/chains";
 import { SCRATCH_CARD_NFT_ABI, ZERO_ADDRESS } from "~/lib/blockchain";
@@ -8,15 +9,23 @@ import { generateNumbers } from "~/lib/generateNumbers";
 import { prisma } from "~/lib/prisma";
 import { getOrCreateUserByAddress } from "./neynar-users";
 
+export interface BestFriend {
+  fid: number;
+  username: string;
+  pfp: string;
+  wallet: string;
+}
+
 // Configuration constants
 const DECOY_AMOUNTS: number[] = [0.5, 0.75, 1, 1.5, 2, 5, 10];
 const DATABASE_RETRY_CODE = 'P2002';
 
 interface GetTokensInBatchArgs {
   tokenIds: number[];
-  friends: { fid: number }[];
+  friends: BestFriend[];
   recipient: string;
   contractAddress: string;
+  forceFriends?: boolean; // Test mode: force friends to appear
 }
 
 interface CardDataInput {
@@ -85,18 +94,19 @@ async function findExistingCards(
 }
 
 /**
- * Generates card data for new tokens
+ * Generates card data for new tokens that don't exist in the database
  * @param newTokenIds - Token IDs that don't exist in the database
- * @param friends - Array of friends' FIDs
+ * @param friends - Array of full friend objects
  * @param paymentToken - Payment token address
  * @param contractAddress - Contract address
  * @returns Array of card data ready for creation
  */
 function generateCardsData(
   newTokenIds: number[],
-  friends: { fid: number }[],
+  friends: BestFriend[],
   paymentToken: Address,
-  contractAddress: string
+  contractAddress: string,
+  forceFriends: boolean = false
 ): CardDataInput[] {
   const hasFriends = friends.length > 0;
 
@@ -109,6 +119,7 @@ function generateCardsData(
       decoyAmounts: DECOY_AMOUNTS,
       decoyAssets: PRIZE_ASSETS as unknown as string[],
       friends,
+      forceFriends,
     });
 
     return {
@@ -143,9 +154,9 @@ async function createCardsWithDuplicateHandling(
         },
       });
       createdCards.push(createdCard);
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Handle unique constraint violation
-      if (error.code === DATABASE_RETRY_CODE) {
+      if (error instanceof Error && 'code' in error && error.code === DATABASE_RETRY_CODE) {
         const existingCard = await findExistingCardForRetry(cardData);
         if (existingCard) {
           createdCards.push(existingCard);
@@ -154,7 +165,7 @@ async function createCardsWithDuplicateHandling(
         }
       } else {
         // Re-throw other errors
-        throw new Error(`Failed to create card with token_id ${cardData.token_id}: ${error.message}`);
+        throw new Error(`Failed to create card with token_id ${cardData.token_id}: ${error instanceof Error ? error.message : 'Unknown error'}`);
       }
     }
   }
@@ -246,7 +257,7 @@ export const getTokensInBatch = async (args: GetTokensInBatchArgs): Promise<Card
 
   // Step 4: Generate data for new cards (skip if no new cards)
   const cardsData = newTokenIds.length > 0
-    ? generateCardsData(newTokenIds, friends, paymentToken, contractAddress)
+    ? generateCardsData(newTokenIds, friends, paymentToken, contractAddress, args.forceFriends)
     : [];
 
   // Step 5: Create new cards with duplicate handling
