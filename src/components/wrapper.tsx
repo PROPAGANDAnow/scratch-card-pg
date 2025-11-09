@@ -2,30 +2,30 @@
 import sdk from "@farcaster/miniapp-sdk";
 import { useMiniApp } from "@neynar/react";
 
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { createRef, FC, useCallback, useEffect, useRef, useState } from "react";
-import { User } from "~/app/interface/user";
 import { AppStats } from "~/app/interface/appStats";
 import { Reveal } from "~/app/interface/reveal";
+import { User } from "~/app/interface/user";
 
+import { useDetectClickOutside } from "~/hooks/useDetectClickOutside";
+import { usePrizePool } from "~/hooks/usePrizePool";
+import { INITIAL_SCREEN_KEY } from "~/lib/constants";
 import {
   fetchActivity,
   fetchAppStats,
   fetchBestFriends,
   fetchUserInfo,
 } from "~/lib/userapis";
-import { useUserStore } from "~/stores/user-store";
-import { getUnclaimedCards, useCardStore } from "~/stores/card-store";
-import { useAppStore } from "~/stores/app-store";
-import Bottom from "./bottom";
 import { getFromLocalStorage } from "~/lib/utils";
+import { useAppStore } from "~/stores/app-store";
+import { getUnclaimedCards, useCardStore } from "~/stores/card-store";
+import { useUserStore } from "~/stores/user-store";
+import Bottom from "./bottom";
 import InitialScreen from "./initial-screen";
-import { INITIAL_SCREEN_KEY } from "~/lib/constants";
 import WinRatePopup from "./win-rate-popup";
-import { useDetectClickOutside } from "~/hooks/useDetectClickOutside";
-import clsx from "clsx";
 
 const Wrapper: FC<{ children: React.ReactNode }> = ({ children }) => {
   const publicKey = useUserStore((s) => s.publicKey);
@@ -33,7 +33,6 @@ const Wrapper: FC<{ children: React.ReactNode }> = ({ children }) => {
   const setUser = useUserStore((s) => s.setUser);
 
   const appBackground = useAppStore((s) => s.appBackground);
-  const appStats = useAppStore((s) => s.appStats);
   const activity = useAppStore((s) => s.activity);
   const swipableMode = useAppStore((s) => s.swipableMode);
   const setAppStats = useAppStore((s) => s.setAppStats);
@@ -57,6 +56,7 @@ const Wrapper: FC<{ children: React.ReactNode }> = ({ children }) => {
   const { push } = useRouter();
   const { context } = useMiniApp();
   const userFid = context?.user.fid;
+  const { data: prizePoolData } = usePrizePool();
 
   useDetectClickOutside(prizePoolRef, () => setShowWinRates(false));
 
@@ -284,7 +284,7 @@ const Wrapper: FC<{ children: React.ReactNode }> = ({ children }) => {
                 Prize Pool
               </span>
               <span className="text-[16px] leading-[90%] font-medium text-white">
-                ${appStats?.winnings || 0}
+                ${prizePoolData?.totalPrizePool || 0}
               </span>
             </motion.button>
             <AnimatePresence>
