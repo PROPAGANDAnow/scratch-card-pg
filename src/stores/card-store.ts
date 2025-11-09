@@ -46,6 +46,9 @@ export interface CardStore {
 
   scratched: boolean;
   setScratched: (scratched: boolean) => void
+
+  initialFetch: boolean;
+  setInitialFetch: (initialFetch: boolean) => void
 }
 
 export const useCardStore = create<CardStore>()(
@@ -62,10 +65,11 @@ export const useCardStore = create<CardStore>()(
       totalCount: 0,
       cardDirection: 1,
       showBuyModal: false,
-      initialFetch: false,
+
+      initialFetch: true,
+      setInitialFetch: (initialFetch) => set({ initialFetch }),
 
       scratched: false,
-      setScratched: (scratched) => set({ scratched }),
 
       setCardDirection: (cardDirection) => set({ cardDirection }),
       setShowBuyModal: (showBuyModal) => set({ showBuyModal }),
@@ -174,7 +178,8 @@ export const useCardStore = create<CardStore>()(
           set({
             cards: newCards,
             totalCount,
-            loading: false
+            loading: false,
+            initialFetch: false,
           });
 
           // Update selected card if it exists
