@@ -83,6 +83,7 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
   const showBuyModal = useCardStore((s) => s.showBuyModal);
   const setShowBuyModal = useCardStore((s) => s.setShowBuyModal);
   const totalCount = useCardStore((s) => s.totalCount);
+  const isMinting = useCardStore((s) => s.isMinting);
   const initialFetch = useCardStore((s) => s.initialFetch);
   const {
     scratched,
@@ -92,13 +93,18 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
   } = useCardStore()
 
   const [showBigBuy, setShowBigBuy] = useState(false);
-  const { availableCards, loading: isFetchingCards } = useUserTokens();
+  const { availableCards, refetch: refetchCards } = useUserTokens();
+  console.log("🚀 ~ Bottom ~ availableCards:", availableCards)
   const unscratchedCardsCount = availableCards.filter(card => !card.state.scratched).length
+  console.log("🚀 ~ Bottom ~ unscratchedCardsCount:", unscratchedCardsCount)
 
   const { push } = useRouter();
   const pathname = usePathname();
   const buyModalRef = useRef<HTMLDivElement | null>(null);
-  useDetectClickOutside(buyModalRef, () => setShowBuyModal(false));
+  useDetectClickOutside(buyModalRef, () => {
+    if (isMinting) return;
+    setShowBuyModal(false)
+  });
 
   const canGoPrev = useCardStore((s) => s.canGoPrev());
   const canGoNext = useCardStore((s) => s.canGoNext());
@@ -109,8 +115,18 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
   const handlePrevClick = () => goPrev();
   const handleNextButtonClickAfterClaim = () => {
     setScratched(false);
-    handleNextClick();
     updateCardMeta(String(activeTokenId), { scratched: true })
+
+    if (canGoNext) {
+      handleNextClick();
+    } else {
+      if (canGoPrev) {
+        handlePrevClick()
+      } else {
+        refetchCards()
+      }
+    }
+
   };
 
   useEffect(() => {
@@ -215,12 +231,19 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
                     transition={{ duration: 0.3 }}
                   >
                     <ClaimPrizeButton />
-                    <MotionButton
+                    {unscratchedCardsCount > 1 && <MotionButton
                       onClick={handleNextButtonClickAfterClaim}
                       delay={0.2}
                     >
                       Go Next
-                    </MotionButton>
+                    </MotionButton>}
+                    {unscratchedCardsCount <= 1 &&
+                      <MotionButton
+                        onClick={() => setShowBuyModal(true)}
+                        delay={0.2}
+                      >
+                        Buy More
+                      </MotionButton>}
                   </motion.div>
                 )}
 

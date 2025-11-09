@@ -6,7 +6,7 @@ import { useUserStore } from '~/stores/user-store';
 
 export interface CardStore {
   // Card State
-  selectedCard: TokenWithState | null;
+  // selectedCard: TokenWithState | null;
   cards: TokenWithState[];
   unscratchedCards: TokenWithState[];
   localCards: TokenWithState[];
@@ -19,7 +19,7 @@ export interface CardStore {
 
 
   // Actions
-  setSelectedCard: (selectedCard: TokenWithState | null) => void;
+  // setSelectedCard: (selectedCard: TokenWithState | null) => void;
   setCards: (cards: TokenWithState[]) => void;
   setUnscratchedCards: (unscratchedCards: TokenWithState[]) => void;
   setLocalCards: (localCards: TokenWithState[]) => void;
@@ -46,6 +46,9 @@ export interface CardStore {
 
   scratched: boolean;
   setScratched: (scratched: boolean) => void
+
+  isMinting: boolean;
+  setMinting: (isMinting: boolean) => void
 
   initialFetch: boolean;
   setInitialFetch: (initialFetch: boolean) => void
@@ -74,8 +77,10 @@ export const useCardStore = create<CardStore>()(
       setCardDirection: (cardDirection) => set({ cardDirection }),
       setShowBuyModal: (showBuyModal) => set({ showBuyModal }),
 
+      isMinting: false,
+      setMinting: (isMinting) => set({ isMinting }),
+
       // Basic actions
-      setSelectedCard: (selectedCard) => set({ selectedCard }),
       setCards: (cards) => {
         set({ cards });
         get().updateUnscratchedCards();
@@ -107,22 +112,18 @@ export const useCardStore = create<CardStore>()(
       },
 
       updateCard: (cardId, updates) => {
-        const { cards, selectedCard } = get();
+        const { cards } = get();
         const updatedCards = cards.map((card) =>
-          card.id === cardId ? { ...card, ...updates } : card
+          String(card.state.token_id) === cardId ? { ...card, ...updates } : card
         );
-        set({ cards: updatedCards });
 
-        // Update selected card if it's the one being updated
-        if (selectedCard?.id === cardId) {
-          set({ selectedCard: { ...selectedCard, ...updates } });
-        }
+        set({ cards: updatedCards });
 
         get().updateUnscratchedCards();
       },
 
       updateCardMeta: (cardId, metaUpdates) => {
-        const { cards, selectedCard } = get();
+        const { cards } = get();
         const updatedCards = cards.map((card) =>
           card.id === cardId
             ? {
@@ -136,24 +137,11 @@ export const useCardStore = create<CardStore>()(
         );
         set({ cards: updatedCards });
 
-        // Update selected card if it's the one being updated
-        if (selectedCard?.id === cardId) {
-          set({
-            selectedCard: {
-              ...selectedCard,
-              state: {
-                ...selectedCard.state,
-                ...metaUpdates
-              }
-            }
-          });
-        }
-
         get().updateUnscratchedCards();
       },
 
       refetchCards: async (userAddress?: string) => {
-        const { selectedCard, activeTokenId } = get();
+        const { activeTokenId } = get();
         const currUserAddress = useUserStore.getState().user?.address;
 
         userAddress = userAddress || currUserAddress
@@ -183,16 +171,6 @@ export const useCardStore = create<CardStore>()(
             loading: false,
             initialFetch: false
           });
-
-          // Update selected card if it exists
-          if (selectedCard) {
-            const updatedSelectedCard = newCards.find(
-              (item: { metadata: TokenWithState }) => item.metadata.id === selectedCard.id
-            );
-            if (updatedSelectedCard) {
-              set({ selectedCard: updatedSelectedCard.metadata });
-            }
-          }
 
           // Restore activeTokenId if it exists in the new cards
           if (activeTokenId && newCards.some((card: TokenWithState) => card.id === activeTokenId)) {

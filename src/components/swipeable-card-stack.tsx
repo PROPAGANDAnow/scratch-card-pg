@@ -26,6 +26,7 @@ export default function SwipeableCardStack({
 }: SwipeableCardStackProps) {
   const scratched = useCardStore((s) => s.scratched)
   const direction = useCardStore((s) => s.cardDirection)
+  const isMinting = useCardStore((s) => s.isMinting)
   const {
     activeTokenId,
     goNext,
@@ -62,7 +63,7 @@ export default function SwipeableCardStack({
   const current = getCurrentCard();
   const currentIndex = current ? filteredCards.findIndex(card => card.id === activeTokenId) : -1;
 
-  
+
   // Mouse handlers for card tilt - memoized for performance
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
     const rect = cardRef.current?.getBoundingClientRect();

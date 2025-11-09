@@ -49,7 +49,7 @@ export const MintCardForm = ({
   const { isConnected, isCorrectNetwork, address } = useWallet();
   const { ensureWalletReady } = useWalletAction();
   const { haptics } = useMiniApp();
-  const { refetchCards } = useCardStore()
+  const { refetchCards, setMinting } = useCardStore()
 
   // Minting hooks
   const {
@@ -97,17 +97,20 @@ export const MintCardForm = ({
       if (!address) return
 
       console.log("🚀 ~ MintCardForm ~ address:", address)
+      setMinting(true)
       // Mint cards
       await mintCardsBatch(
         quantity,
         address
       );
 
-      // Haptic feedback
-      haptics.impactOccurred('medium');
+      await new Promise(res => setTimeout(res, 3000))
 
       // refetch the user cards
       await refetchCards()
+
+      // Haptic feedback
+      haptics.impactOccurred('medium');
 
       onSuccess?.([])
 
@@ -115,6 +118,8 @@ export const MintCardForm = ({
       const errorMessage = error instanceof Error ? error.message : 'Minting failed';
       console.error('Minting error:', error);
       onError?.(errorMessage);
+    } finally {
+      setMinting(false)
     }
   }, [
     ensureWalletReady,

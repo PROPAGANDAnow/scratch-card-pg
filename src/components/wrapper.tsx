@@ -41,12 +41,12 @@ const Wrapper: FC<{ children: React.ReactNode }> = ({ children }) => {
   const setLeaderboard = useAppStore((s) => s.setLeaderboard);
   const setActivity = useAppStore((s) => s.setActivity);
 
-  const selectedCard = useCardStore((s) => s.selectedCard);
   const cards = useCardStore((s) => s.cards);
   const unscratchedCards = useCardStore((s) => s.unscratchedCards);
-  const setSelectedCard = useCardStore((s) => s.setSelectedCard);
   const setUnscratchedCards = useCardStore((s) => s.setUnscratchedCards);
   const refetchCards = useCardStore((s) => s.refetchCards);
+  const activeTokenId = useCardStore((s) => s.activeTokenId);
+  const setActiveTokenId = useCardStore((s) => s.setActiveTokenId);
 
   const [loading, setLoading] = useState(true);
   const [seenInitial, setSeenInitial] = useState(false);
@@ -161,7 +161,7 @@ const Wrapper: FC<{ children: React.ReactNode }> = ({ children }) => {
   // TODO: Implement real-time updates with database triggers/webhooks if needed
 
   const handleCloseModal = () => {
-    setSelectedCard(null);
+    setActiveTokenId(null);
   };
 
   useEffect(() => {
@@ -220,7 +220,7 @@ const Wrapper: FC<{ children: React.ReactNode }> = ({ children }) => {
             delay: 0.2,
           }}
         >
-          {!selectedCard ? (
+          {!activeTokenId ? (
             <motion.button
               className="p-2 rounded-full bg-white/10 cursor-pointer hover:bg-white/20 transition-colors"
               onClick={() => push("/profile")}

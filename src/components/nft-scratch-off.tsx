@@ -67,7 +67,6 @@ const NftScratchOff = ({
   const {
     scratched,
     setScratched,
-    refetchCards,
     updateCardMeta
   } = useCardStore()
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
@@ -217,6 +216,8 @@ const NftScratchOff = ({
         scratchedBy: address,
         prizeWon: prizeAmount > 0 || prizeAmount === -1
       });
+
+      updateCardMeta(String(tokenId), { scratched: true })
 
       // Send notification (maintains existing social features)
       // TODO: make this quick auth as well 
