@@ -14,7 +14,6 @@ import {
   fetchActivity,
   fetchAppStats,
   fetchBestFriends,
-  fetchLeaderboard,
   fetchUserInfo,
 } from "~/lib/userapis";
 import { useUserStore } from "~/stores/user-store";
@@ -34,11 +33,9 @@ const Wrapper: FC<{ children: React.ReactNode }> = ({ children }) => {
 
   const appBackground = useAppStore((s) => s.appBackground);
   const appStats = useAppStore((s) => s.appStats);
-  const leaderboard = useAppStore((s) => s.leaderboard);
   const activity = useAppStore((s) => s.activity);
   const swipableMode = useAppStore((s) => s.swipableMode);
   const setAppStats = useAppStore((s) => s.setAppStats);
-  const setLeaderboard = useAppStore((s) => s.setLeaderboard);
   const setActivity = useAppStore((s) => s.setActivity);
 
   const cards = useCardStore((s) => s.cards);
@@ -53,7 +50,6 @@ const Wrapper: FC<{ children: React.ReactNode }> = ({ children }) => {
   const [showWinRates, setShowWinRates] = useState(false);
   const readyCalled = useRef(false);
   const currentCardsRef = useRef(cards);
-  const currentLeaderboardRef = useRef(leaderboard);
   const currentActivityRef = useRef(activity);
   const currentUnscratchedCardsRef = useRef(unscratchedCards);
   const prizePoolRef = createRef<HTMLDivElement>();
@@ -75,11 +71,7 @@ const Wrapper: FC<{ children: React.ReactNode }> = ({ children }) => {
     setUnscratchedCards(cards);
   }, [cards, setUnscratchedCards]);
 
-  // Keep ref updated with current leaderboard
-  useEffect(() => {
-    currentLeaderboardRef.current = leaderboard;
-  }, [leaderboard]);
-
+  
   // Keep ref updated with current activity
   useEffect(() => {
     currentActivityRef.current = activity;
@@ -114,11 +106,10 @@ const Wrapper: FC<{ children: React.ReactNode }> = ({ children }) => {
       const promises = [
         fetchUserInfo(userWallet),
         fetchAppStats(),
-        fetchLeaderboard(),
         fetchActivity(),
       ];
 
-      const [userInfo, appStats, leaderboard, activity] =
+      const [userInfo, appStats, activity] =
         await Promise.allSettled(promises);
 
       // Fetch cards separately to use store's refetchCards function
@@ -131,7 +122,6 @@ const Wrapper: FC<{ children: React.ReactNode }> = ({ children }) => {
         useUserStore.getState().setBestFriends(bestFriends);
       }
       if (appStats.status === "fulfilled" && appStats.value && 'id' in appStats.value) setAppStats(appStats.value as AppStats);
-      if (leaderboard.status === "fulfilled" && leaderboard.value && Array.isArray(leaderboard.value)) setLeaderboard(leaderboard.value);
       if (activity.status === "fulfilled" && activity.value && Array.isArray(activity.value)) setActivity(activity.value as Reveal[]);
       callReady();
     } catch (error) {
@@ -141,7 +131,7 @@ const Wrapper: FC<{ children: React.ReactNode }> = ({ children }) => {
       // Set loading state for cards to false
       useCardStore.getState().setLoading(false);
     }
-  }, [refetchCards, setUser, setAppStats, setLeaderboard, setActivity, callReady]);
+  }, [refetchCards, setUser, setAppStats, setActivity, callReady]);
 
   // Fetch all data when wallet connects
   useEffect(() => {

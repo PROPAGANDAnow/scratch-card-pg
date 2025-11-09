@@ -1,10 +1,10 @@
 "use client";
-import { useAppStore } from "~/stores/app-store";
+import { useLeaderboard } from "~/hooks";
 import Image from "next/image";
 import { motion } from "framer-motion";
 
 const Leaderboard = () => {
-  const leaderboard = useAppStore((s) => s.leaderboard);
+  const { entries: leaderboard, loading, error, refetch } = useLeaderboard({ limit: 100 });
 
   const textShadowStyle = {
     textShadow:
@@ -40,11 +40,29 @@ const Leaderboard = () => {
   const { first, second, third } = getTopThree();
   const restOfUsers = getRestOfUsers();
 
-  if (leaderboard.length === 0) {
+  if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-white/60 text-center">
-          <p>Could not load leaderboard</p>
+          <p>Loading leaderboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || leaderboard.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-white/60 text-center">
+          <p>{error ? 'Error loading leaderboard' : 'No leaderboard data available'}</p>
+          {error && (
+            <button
+              onClick={() => refetch()}
+              className="mt-2 px-4 py-2 bg-white/10 rounded-lg hover:bg-white/20 transition-colors"
+            >
+              Try again
+            </button>
+          )}
         </div>
       </div>
     );
@@ -71,15 +89,19 @@ const Leaderboard = () => {
             >
               #2
             </p>
-            <Image
-              src={second?.pfp || "/assets/splash-image.png"}
+            {second?.pfp && <Image
+              src={second?.pfp}
               alt="#2"
               width={80}
               height={80}
               loading="lazy"
               className="rounded-full w-[80px] h-[80px] object-cover"
               style={{ width: "80px", height: "80px" }}
-            />
+            />}
+            {!second?.pfp && <div
+              className="rounded-full w-[80px] h-[80px] object-cover bg-white/20"
+              style={{ width: "80px", height: "80px" }}
+            />}
             <div className="space-y-1 text-center w-full">
               <p
                 className="text-[24px] font-['ABCGaisyr'] text-center text-white font-bold italic leading-[90%]"
@@ -142,15 +164,19 @@ const Leaderboard = () => {
             >
               #3
             </p>
-            <Image
-              src={third?.pfp || "/assets/splash-image.png"}
-              alt="#3"
+            {third?.pfp && <Image
+              src={third?.pfp}
+              alt="#2"
               width={80}
               height={80}
               loading="lazy"
               className="rounded-full w-[80px] h-[80px] object-cover"
               style={{ width: "80px", height: "80px" }}
-            />
+            />}
+            {!third?.pfp && <div
+              className="rounded-full w-[80px] h-[80px] object-cover bg-white/20"
+              style={{ width: "80px", height: "80px" }}
+            />}
             <div className="space-y-1 w-full text-center">
               <p
                 className="text-[24px] font-['ABCGaisyr'] text-center text-white font-bold italic leading-[90%]"
@@ -164,14 +190,14 @@ const Leaderboard = () => {
             </div>
           </motion.div>
         </div>
-        <motion.p
+        {leaderboard.length > 3 && <motion.p
           className="w-full text-center font-medium text-[12px] leading-[90%] text-white/60 mt-4 mb-6"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.4 }}
         >
           TOP 100
-        </motion.p>
+        </motion.p>}
 
         {/* Rest of the leaderboard starting from #4 */}
         <motion.div

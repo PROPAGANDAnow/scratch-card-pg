@@ -58,20 +58,6 @@ export const fetchAppStats = async () => {
   }
 };
 
-export const fetchLeaderboard = async () => {
-  try {
-    // Note: amount_won field removed from User model
-    // Need to update this to calculate from cards
-    const data = await prisma.user.findMany({
-      take: 100
-    });
-
-    return data;
-  } catch (error) {
-    console.error("Failed to fetch leaderboard:", error);
-    return [];
-  }
-};
 
 export const fetchActivity = async () => {
   try {

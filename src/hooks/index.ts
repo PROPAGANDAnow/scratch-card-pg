@@ -4,6 +4,7 @@ export { useRecentActivity } from './useRecentActivity'
 export { useUserActivity } from './useUserActivity'
 export { useUserStats } from './useUserStats'
 export { useUserTokens } from './useUserTokens'
+export { useLeaderboard } from './useLeaderboard'
 
 // Export contract and blockchain hooks
 export { useContractMinting, useMintingCost, useMintingEvents, useUserCards } from './useContractMinting'
@@ -32,3 +33,4 @@ export type {
   UpdateCardScratchStatusResult,
   ScratchStatusMutationError,
 } from './useTrackScratch'
+export type { UseLeaderboardOptions, UseLeaderboardReturn } from './useLeaderboard'

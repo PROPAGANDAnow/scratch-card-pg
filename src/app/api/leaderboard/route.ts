@@ -87,6 +87,47 @@ export async function GET(request: NextRequest) {
     // Apply pagination
     const paginatedUsers = usersWithWinnings.slice(offset!, offset! + limit!);
 
+    // Collect FIDs for Neynar API call
+    const fidsToFetch = paginatedUsers
+      .filter(user => user.fid && user.fid > 0)
+      .map(user => user.fid!);
+
+    // Fetch Farcaster user data from Neynar
+    let farcasterUsers: any[] = [];
+    if (fidsToFetch.length > 0) {
+      try {
+        const neynarApiKey = process.env.NEYNAR_API_KEY;
+        if (neynarApiKey) {
+          const fidParams = fidsToFetch.join(',');
+          const response = await fetch(
+            `https://api.neynar.com/v2/farcaster/user/bulk/?fids=${fidParams}`,
+            {
+              headers: {
+                'x-api-key': neynarApiKey,
+                'x-neynar-experimental': 'false'
+              }
+            }
+          );
+
+          if (response.ok) {
+            const data = await response.json();
+            farcasterUsers = data.users || [];
+          } else {
+            console.error('Neynar API error:', response.status, response.statusText);
+          }
+        } else {
+          console.warn('NEYNAR_API_KEY not configured, skipping Farcaster user data fetch');
+        }
+      } catch (error) {
+        console.error('Error fetching Farcaster user data:', error);
+      }
+    }
+
+    // Create a map for quick lookup
+    const userFarcasterData = new Map(
+      farcasterUsers.map((user: any) => [user.fid, user])
+    );
+
     // Get additional statistics for each user
     const leaderboardEntries: LeaderboardEntry[] = [];
     let rank = offset! + 1; // Start rank from offset
@@ -151,12 +192,15 @@ export async function GET(request: NextRequest) {
           continue;
         }
 
+        // Get Farcaster user data if available
+        const farcasterData = user.fid ? userFarcasterData.get(user.fid) : undefined;
+
         const entry: LeaderboardEntry = {
           rank,
           wallet: user.address,
           fid: user.fid || 0,
-          username: 'Anonymous', // username field removed from schema
-          pfp: '', // pfp field removed from schema
+          username: farcasterData?.username || 'Anonymous',
+          pfp: farcasterData?.pfp_url || '',
           totalWon: filteredAmountWon,
           totalScratched: scratchedCount,
           totalWins: totalWins,
