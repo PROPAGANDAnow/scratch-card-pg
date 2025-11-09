@@ -12,14 +12,17 @@ import { MintCardForm } from "./mint-card-form";
 const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
   mode = "normal",
 }) => {
-  const selectedCard = useCardStore((s) => s.selectedCard);
   const appColor = useAppStore((s) => s.appColor);
   const currentCardIndex = useCardStore((s) => s.currentCardIndex);
-  const setCurrentCardIndex = useCardStore((s) => s.setCurrentCardIndex);
-  const setDirection = useCardStore((s) => s.setCardDirection);
   const showBuyModal = useCardStore((s) => s.showBuyModal);
   const setShowBuyModal = useCardStore((s) => s.setShowBuyModal);
-  const { scratched, setScratched } = useCardStore()
+  const {
+    scratched,
+    setScratched,
+    goNext,
+    goPrev,
+    activeTokenId
+  } = useCardStore()
 
 
   const [showBigBuy, setShowBigBuy] = useState(false);
@@ -35,29 +38,20 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
   const buyModalRef = useRef<HTMLDivElement | null>(null);
   useDetectClickOutside(buyModalRef, () => setShowBuyModal(false));
 
-  const canGoPrev = currentCardIndex > 0;
-  const canGoNext = currentCardIndex < availableCards.length - 1;
-
+  const canGoPrev = useCardStore((s) => s.canGoPrev());
+  const canGoNext = useCardStore((s) => s.canGoNext());
 
   const handleNextClick = () => {
-    if (canGoNext) {
-      setDirection(1);
-      // Set to the next array index, not token ID
-      setCurrentCardIndex(currentCardIndex + 1);
-    }
+    goNext();
   }
 
   const handlePrevClick = () => {
-    if (canGoPrev) {
-      setDirection(-1);
-      // Set to the next array index, not token ID
-      setCurrentCardIndex(currentCardIndex - 1);
-    }
+    goPrev();
   }
 
   const handleNextButtonClickAfterClaim = () => {
-    setScratched(false)
-    handleNextClick()
+    setScratched(false);
+    handleNextClick();
   }
 
 
@@ -121,9 +115,9 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
               ) : (
                 <>
                   Cards{" "}
-                  {selectedCard ? (
+                  {activeTokenId ? (
                     <>
-                      {selectedCard.id}
+                      {currentCardIndex + 1}
                       <span className="text-[#fff]/40">
                         /{availableCards.length}
                       </span>

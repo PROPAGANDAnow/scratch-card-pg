@@ -20,9 +20,9 @@ export function findWinningRow(
         row.length === 3 &&
         row.every(
           (c) =>
-            c.amount === -1 && 
-            c.friend_wallet && 
-            c.friend_wallet === row[0].friend_wallet // All cells have same friend
+            c.amount === -1 &&
+            c.friend_fid &&
+            c.friend_fid === row[0].friend_fid // All cells have same friend
         );
       if (allMatch) return r;
     }

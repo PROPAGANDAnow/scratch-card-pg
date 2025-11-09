@@ -9,7 +9,7 @@ import { prisma } from "~/lib/prisma";
 import { getOrCreateUserByAddress } from "./neynar-users";
 
 // Configuration constants
-const DECOY_AMOUNTS = [0.5, 0.75, 1, 1.5, 2, 5, 10] as const;
+const DECOY_AMOUNTS: number[] = [0.5, 0.75, 1, 1.5, 2, 5, 10];
 const DATABASE_RETRY_CODE = 'P2002';
 
 interface GetTokensInBatchArgs {

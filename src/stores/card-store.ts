@@ -10,7 +10,8 @@ export interface CardStore {
   cards: TokenWithState[];
   unscratchedCards: TokenWithState[];
   localCards: TokenWithState[];
-  currentCardIndex: number;
+  activeTokenId: string | null;
+  currentCardIndex: number; // Keep for backward compatibility, but computed
   loading: boolean;
   error: Error | null;
   totalCount: number;
@@ -23,7 +24,8 @@ export interface CardStore {
   setCards: (cards: TokenWithState[]) => void;
   setUnscratchedCards: (unscratchedCards: TokenWithState[]) => void;
   setLocalCards: (localCards: TokenWithState[]) => void;
-  setCurrentCardIndex: (currentCardIndex: number) => void;
+  setActiveTokenId: (activeTokenId: string | null) => void;
+  setCurrentCardIndex: (currentCardIndex: number) => void; // Keep for backward compatibility
   setLoading: (loading: boolean) => void;
   setError: (error: Error | null) => void;
   setTotalCount: (totalCount: number) => void;
@@ -37,6 +39,13 @@ export interface CardStore {
   updateCardMeta: (cardId: string, metaUpdates: Partial<TokenWithState['state']>) => void;
   refetchCards: (address?: string) => Promise<void>;
 
+  // Navigation actions
+  goNext: () => void;
+  goPrev: () => void;
+  canGoNext: () => boolean;
+  canGoPrev: () => boolean;
+  getCurrentCard: () => TokenWithState | null;
+
   scratched: boolean;
   setScratched: (scratched: boolean) => void
 }
@@ -49,6 +58,7 @@ export const useCardStore = create<CardStore>()(
       cards: [],
       unscratchedCards: [],
       localCards: [],
+      activeTokenId: null,
       currentCardIndex: 0,
       loading: false,
       error: null,
@@ -67,10 +77,23 @@ export const useCardStore = create<CardStore>()(
       setCards: (cards) => {
         set({ cards });
         get().updateUnscratchedCards();
+        // Set activeTokenId to first card if none is active
+        const { activeTokenId } = get();
+        if (!activeTokenId && cards.length > 0) {
+          set({ activeTokenId: cards[0].id });
+        }
       },
       setUnscratchedCards: (unscratchedCards) => set({ unscratchedCards }),
       setLocalCards: (localCards) => set({ localCards }),
-      setCurrentCardIndex: (currentCardIndex) => set({ currentCardIndex }),
+      setActiveTokenId: (activeTokenId) => set({ activeTokenId }),
+      setCurrentCardIndex: (currentCardIndex) => {
+        const { cards } = get();
+        set({ currentCardIndex });
+        // Also update activeTokenId to match
+        if (cards[currentCardIndex]) {
+          set({ activeTokenId: cards[currentCardIndex].id });
+        }
+      },
       setLoading: (loading) => set({ loading }),
       setError: (error) => set({ error }),
       setTotalCount: (totalCount) => set({ totalCount }),
@@ -136,7 +159,7 @@ export const useCardStore = create<CardStore>()(
       },
 
       refetchCards: async (userAddress?: string) => {
-        const { selectedCard } = get();
+        const { selectedCard, activeTokenId } = get();
         const currUserAddress = useUserStore.getState().user?.address;
 
         userAddress = userAddress || currUserAddress
@@ -173,6 +196,21 @@ export const useCardStore = create<CardStore>()(
               set({ selectedCard: updatedSelectedCard.metadata });
             }
           }
+
+          // Restore activeTokenId if it exists in the new cards
+          if (activeTokenId && newCards.some((card: TokenWithState) => card.id === activeTokenId)) {
+            const activeIndex = newCards.findIndex((card: TokenWithState) => card.id === activeTokenId);
+            set({
+              activeTokenId,
+              currentCardIndex: activeIndex
+            });
+          } else if (newCards.length > 0) {
+            // Set to first card if active card no longer exists
+            set({
+              activeTokenId: newCards[0].id,
+              currentCardIndex: 0
+            });
+          }
         } catch (error) {
           console.error('Failed to refetch user cards:', error);
           set({
@@ -180,6 +218,67 @@ export const useCardStore = create<CardStore>()(
             loading: false
           });
         }
+      },
+
+      // Navigation actions
+      goNext: () => {
+        const { cards, activeTokenId } = get();
+        if (!activeTokenId) {
+          if (cards.length > 0) {
+            set({ activeTokenId: cards[0].id, currentCardIndex: 0 });
+          }
+          return;
+        }
+
+        const currentIndex = cards.findIndex((card: TokenWithState) => card.id === activeTokenId);
+        if (currentIndex < cards.length - 1) {
+          const nextIndex = currentIndex + 1;
+          set({
+            activeTokenId: cards[nextIndex].id,
+            currentCardIndex: nextIndex,
+            cardDirection: 1
+          });
+        }
+      },
+
+      goPrev: () => {
+        const { cards, activeTokenId } = get();
+        if (!activeTokenId) {
+          if (cards.length > 0) {
+            set({ activeTokenId: cards[0].id, currentCardIndex: 0 });
+          }
+          return;
+        }
+
+        const currentIndex = cards.findIndex((card: TokenWithState) => card.id === activeTokenId);
+        if (currentIndex > 0) {
+          const prevIndex = currentIndex - 1;
+          set({
+            activeTokenId: cards[prevIndex].id,
+            currentCardIndex: prevIndex,
+            cardDirection: -1
+          });
+        }
+      },
+
+      canGoNext: () => {
+        const { cards, activeTokenId } = get();
+        if (!activeTokenId || cards.length === 0) return false;
+        const currentIndex = cards.findIndex((card: TokenWithState) => card.id === activeTokenId);
+        return currentIndex < cards.length - 1;
+      },
+
+      canGoPrev: () => {
+        const { cards, activeTokenId } = get();
+        if (!activeTokenId || cards.length === 0) return false;
+        const currentIndex = cards.findIndex((card: TokenWithState) => card.id === activeTokenId);
+        return currentIndex > 0;
+      },
+
+      getCurrentCard: () => {
+        const { cards, activeTokenId } = get();
+        if (!activeTokenId) return null;
+        return cards.find((card: TokenWithState) => card.id === activeTokenId) || null;
       },
     }),
     {

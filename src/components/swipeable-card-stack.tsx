@@ -25,11 +25,16 @@ export default function SwipeableCardStack({
   initialIndex = 0,
 }: SwipeableCardStackProps) {
   const currentCardNo = useCardStore((s) => s.currentCardIndex);
-  const setCurrentCardNo = useCardStore((s) => s.setCurrentCardIndex);
-
-  // const [direction, setDirection] = useState<1 | -1>(1);
+  const scratched = useCardStore((s) => s.scratched)
   const direction = useCardStore((s) => s.cardDirection)
-  const setDirection = useCardStore((s) => s.setCardDirection)
+  const {
+    activeTokenId,
+    goNext,
+    goPrev,
+    canGoNext,
+    canGoPrev,
+    getCurrentCard
+  } = useCardStore()
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
   const cardRef = useRef<HTMLDivElement>(null);
 
@@ -42,20 +47,22 @@ export default function SwipeableCardStack({
   // Initialize current card number
   useEffect(() => {
     if (filteredCards.length > 0) {
-      // Ensure currentCardNo is within bounds
-      if (currentCardNo >= filteredCards.length || currentCardNo < 0) {
-        setCurrentCardNo(initialIndex);
+      // If no activeTokenId, set it to the initial index or first card
+      if (!activeTokenId) {
+        const initialCard = filteredCards[initialIndex] || filteredCards[0];
+        if (initialCard) {
+          // Update store's activeTokenId and currentCardIndex
+          const store = useCardStore.getState();
+          store.setActiveTokenId(initialCard.id);
+          store.setCurrentCardIndex(filteredCards.indexOf(initialCard));
+        }
       }
     }
-  }, [filteredCards, currentCardNo, initialIndex, setCurrentCardNo]);
+  }, [filteredCards, initialIndex, activeTokenId]);
 
-  // Find current card and index
-  // currentCardNo is now the array index, not the token ID
-  const currentIndex = Math.min(currentCardNo, filteredCards.length - 1);
-  const current = filteredCards[currentIndex];
-
-  const canGoPrev = currentIndex > 0;
-  const canGoNext = currentIndex < filteredCards.length - 1;
+  // Find current card and index based on activeTokenId
+  const current = getCurrentCard();
+  const currentIndex = current ? filteredCards.findIndex(card => card.id === activeTokenId) : -1;
 
   // Set up next card function and update current card index
   // useEffect(() => {
@@ -92,29 +99,17 @@ export default function SwipeableCardStack({
   // Memoized click handlers for better performance
   const handlePrevClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
-    if (canGoPrev) {
-      setDirection(-1);
-      // Set to the previous array index, not token ID
-      setCurrentCardNo(currentIndex - 1);
-    }
-  }, [canGoPrev, currentIndex, setCurrentCardNo, setDirection]);
+    goPrev();
+  }, [goPrev]);
 
   const handleNextClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
-    if (canGoNext) {
-      setDirection(1);
-      // Set to the next array index, not token ID
-      setCurrentCardNo(currentIndex + 1);
-    }
-  }, [canGoNext, currentIndex, setCurrentCardNo, setDirection]);
+    goNext();
+  }, [goNext]);
 
   const handleNextFromScratch = useCallback(() => {
-    if (canGoNext) {
-      setDirection(1);
-      // Set to the next array index, not token ID
-      setCurrentCardNo(currentIndex + 1);
-    }
-  }, [canGoNext, currentIndex, setCurrentCardNo, setDirection]);
+    goNext();
+  }, [goNext]);
 
   // Handle prize revealed
   const handlePrizeRevealed = useCallback(() => {
@@ -123,8 +118,8 @@ export default function SwipeableCardStack({
 
   // Ensure currentIndex is within bounds
   const safeIndex = Math.max(0, Math.min(currentIndex, filteredCards.length - 1));
-  const prev = canGoPrev ? filteredCards[safeIndex - 1] : null;
-  const next = canGoNext ? filteredCards[safeIndex + 1] : null;
+  const prev = canGoPrev() ? filteredCards[safeIndex - 1] : null;
+  const next = canGoNext() ? filteredCards[safeIndex + 1] : null;
 
   return (
     <div className="h-full relative">
@@ -150,7 +145,7 @@ export default function SwipeableCardStack({
                 isDetailView
                 tokenId={parseInt(prev.id)}
                 onPrizeRevealed={handlePrizeRevealed}
-                hasNext={canGoNext}
+                hasNext={canGoNext()}
               // onNext={handleNextCard}
               />
             </motion.div>
@@ -174,7 +169,7 @@ export default function SwipeableCardStack({
                 isDetailView
                 tokenId={parseInt(next.id)}
                 onPrizeRevealed={handlePrizeRevealed}
-              // hasNext={canGoNext}
+              // hasNext={canGoNext()}
               // onNext={handleNextCard}
               />
             </motion.div>
@@ -184,7 +179,7 @@ export default function SwipeableCardStack({
         {/* Active card */}
         <AnimatePresence initial={false} mode="wait">
           <motion.div
-            key={currentCardNo}
+            key={activeTokenId || currentCardNo}
             className="relative z-10 w-full"
             initial={{
               opacity: 0,
@@ -207,16 +202,22 @@ export default function SwipeableCardStack({
               transform: 'translateZ(0)' // Force GPU acceleration
             }}
           >
-            {/* Click areas - 15% on each side */}
-            <div
-              className="absolute left-0 top-0 w-[20%] h-full z-20 cursor-pointer hover:bg-black/5 transition-colors"
-              onClick={handlePrevClick}
-            />
 
-            <div
-              className="absolute right-0 top-0 w-[20%] h-full z-20 cursor-pointer hover:bg-black/5 transition-colors"
-              onClick={handleNextClick}
-            />
+            {
+              !scratched && activeTokenId && <>
+                {/* Click areas - 15% on each side */}
+                <div
+                  className="absolute left-0 top-0 w-[20%] h-full z-20 cursor-pointer hover:bg-black/5 transition-colors"
+                  onClick={handlePrevClick}
+                />
+
+                <div
+                  className="absolute right-0 top-0 w-[20%] h-full z-20 cursor-pointer hover:bg-black/5 transition-colors"
+                  onClick={handleNextClick}
+                />
+              </>
+            }
+
 
             {/* Center 60% for scratching */}
             <div className="w-full h-[auto]">
@@ -224,7 +225,7 @@ export default function SwipeableCardStack({
                 <NftScratchOff
                   cardData={current ? tokenToCard(current) : null}
                   isDetailView
-                  hasNext={canGoNext}
+                  hasNext={canGoNext()}
                   onNext={handleNextFromScratch}
                 />
               ) : (

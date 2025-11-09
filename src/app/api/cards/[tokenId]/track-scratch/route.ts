@@ -4,7 +4,7 @@ import { prisma } from "~/lib/prisma";
 import { withDatabaseRetry } from "~/lib/db-utils";
 import { UpdateCardScratchStatusSchema } from "~/lib/validations";
 import { ZodIssue } from "zod";
-import { cache } from "react";
+import { getOrCreateUserByAddress } from "~/lib/neynar-users";
 
 const DEFAULT_VALIDATION_FIELD = "body" as const;
 
@@ -22,16 +22,6 @@ function getValidationDetails(issue: ZodIssue): ValidationErrorDetails {
     message: issue.message,
   };
 }
-
-// Cache user lookups to reduce database queries
-const getUserByAddress = cache(async (address: string) => {
-  if (!address) return null;
-
-  return prisma.user.findUnique({
-    where: { address: address.toLowerCase() },
-    select: { id: true }
-  });
-});
 
 export async function PATCH(
   request: NextRequest,
@@ -93,12 +83,7 @@ export async function PATCH(
       prize_won: prizeWon,
     };
 
-    // Only fetch user ID if scratchedBy is provided
-    if (scratchedBy) {
-      const normalizedAddress = scratchedBy.trim().toLowerCase();
-      const user = await getUserByAddress(normalizedAddress);
-      updateData.scratched_by_user_id = user?.id;
-    }
+    const scratchUser = await getOrCreateUserByAddress(scratchedBy.trim().toLowerCase())
 
     // Update the card with minimal select fields for performance
     const updatedCard = await withDatabaseRetry(() =>
@@ -127,6 +112,7 @@ export async function PATCH(
           tokenId: updatedCard.token_id,
           scratched: updatedCard.scratched,
           scratchedAt: updatedCard.scratched_at,
+          scratchedBy: scratchUser.address,
           prizeWon: updatedCard.prize_won,
         },
       },

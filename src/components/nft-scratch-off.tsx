@@ -64,7 +64,11 @@ const NftScratchOff = ({
   const cardRef = useRef<HTMLDivElement>(null);
 
   // const [scratched, setScratched] = useState(false);
-  const { scratched, setScratched, refetchCards } = useCardStore()
+  const {
+    scratched,
+    setScratched,
+    refetchCards
+  } = useCardStore()
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
   const [prizeAmount, setPrizeAmount] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -189,16 +193,6 @@ const NftScratchOff = ({
         onPrizeRevealed(tokenId, prizeAmount);
       }
 
-      // Track scratch status in database
-      await trackScratch.mutateAsync({
-        tokenId,
-        scratched: true,
-        scratchedBy: address,
-        prizeWon: prizeAmount > 0 || prizeAmount === -1
-      });
-
-      await refetchCards(address)
-
       // Handle UI updates
       if (prizeAmount > 0 || prizeAmount === -1) {
         setAppColor(APP_COLORS.WON);
@@ -210,6 +204,20 @@ const NftScratchOff = ({
         setAppColor(APP_COLORS.LOST);
         setAppBackground(`linear-gradient(to bottom, #090210, ${APP_COLORS.LOST})`);
       }
+
+      setPrizeAmount(prizeAmount);
+      setShowBlurOverlay(prizeAmount > 0 || prizeAmount === -1);
+      setScratched(true);
+
+      // Track scratch status in database
+      await trackScratch.mutateAsync({
+        tokenId,
+        scratched: true,
+        scratchedBy: address,
+        prizeWon: prizeAmount > 0 || prizeAmount === -1
+      });
+
+      await refetchCards(address);
 
       // Send notification (maintains existing social features)
       // TODO: make this quick auth as well 
@@ -227,9 +235,6 @@ const NftScratchOff = ({
         console.error("Failed to send notification:", error);
       });
 
-      setPrizeAmount(prizeAmount);
-      setShowBlurOverlay(prizeAmount > 0 || prizeAmount === -1);
-      setScratched(true);
     } catch (error) {
       console.error(error)
     }
@@ -476,7 +481,7 @@ const NftScratchOff = ({
       setAppColor(APP_COLORS.DEFAULT);
       setAppBackground(`linear-gradient(to bottom, #090210, ${APP_COLORS.DEFAULT})`);
     };
-  }, [resetClaiming, setAppBackground, setAppColor]);
+  }, [resetClaiming, setAppBackground, setAppColor, setScratched]);
 
   return (
     <>
@@ -645,7 +650,7 @@ const NftScratchOff = ({
                                     </div>
                                   ) : (
                                     cell.amount == -1 ?
-                                      <span className="uppercase">Free Card</span> :
+                                      <span className="uppercase select-none">Free Card</span> :
                                       formatCell(
                                         cell.amount,
                                         cell.asset_contract || PAYMENT_TOKEN.ADDRESS
