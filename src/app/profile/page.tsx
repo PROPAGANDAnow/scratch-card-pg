@@ -1,13 +1,12 @@
 "use client";
 import { useEffect, useState } from "react";
 import CardGrid from "~/components/card-grid";
-import UserCards from "~/components/user-cards";
-import UserWinnings from "~/components/user-winnings";
 import { useRouter } from "next/navigation";
 import { motion, useAnimation } from "framer-motion";
 import { CircularProgress } from "~/components/circular-progress";
 import { useUserStats, useUserActivity } from "~/hooks";
-import { useCardStore } from "~/stores/card-store";
+import { useUserStore } from "~/stores";
+import { useInfiniteCards } from "~/hooks/useInfiniteCards";
 
 // Level calculation function
 function getLevelRequirement(level: number): number {
@@ -15,18 +14,28 @@ function getLevelRequirement(level: number): number {
 }
 
 const ProfilePage = () => {
-  // const user = useUserStore((s) => s.user); // TODO: Use user when User schema is updated
-  const cards = useCardStore((s) => s.cards);
+  const user = useUserStore((s) => s.user);
   const { push } = useRouter();
   const [displayAmount, setDisplayAmount] = useState(0);
-  const [activeTab, setActiveTab] = useState<'overview' | 'cards' | 'winnings'>('overview');
   const controls = useAnimation();
   const userStats = useUserStats();
   const { } = useUserActivity();
 
-  const handleViewAll = () => {
-    push("/cards");
-  };
+  // Infinite scroll for user cards
+  const {
+    cards: userCards,
+    loading: cardsLoading,
+    error: cardsError,
+    hasMore,
+    totalCount,
+    loadMoreRef
+  } = useInfiniteCards({
+    userWallet: user?.address || '',
+    stateFilter: 'all',
+    initialLimit: 12
+  });
+
+
 
   // Animate the total winnings number
   useEffect(() => {
@@ -57,7 +66,7 @@ const ProfilePage = () => {
   return (
     <>
       <motion.div
-        className="p-4 h-full"
+        className="px-4 h-full"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.5 }}
@@ -118,7 +127,7 @@ const ProfilePage = () => {
           </motion.div>
         </motion.div>
 
-        <motion.div className="mb-16 flex items-center justify-center gap-2">
+        <motion.div className="mb-10 flex items-center justify-center gap-2">
           <motion.p className="text-white text-[16px] font-medium leading-[90%]">
             Level 1 {/* TODO: Add current_level to User schema when needed */}
           </motion.p>
@@ -171,60 +180,106 @@ const ProfilePage = () => {
           />
         </motion.div>
 
-        {/* Tab Navigation */}
+        {/* Cards Section */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 1.4, duration: 0.6 }}
-          className="flex space-x-1 bg-white/10 backdrop-blur-sm rounded-xl p-1 mb-6"
-        >
-          {[
-            { id: 'overview', label: 'Overview' },
-            { id: 'cards', label: 'My Cards' },
-            { id: 'winnings', label: 'Winnings' }
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id as typeof activeTab)}
-              className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all duration-200 ${activeTab === tab.id
-                ? 'bg-white/20 text-white shadow-lg'
-                : 'text-white/60 hover:text-white/80 hover:bg-white/5'
-                }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </motion.div>
-
-        {/* Tab Content */}
-        <motion.div
-          key={activeTab}
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
           className="flex-1"
         >
-          {activeTab === 'overview' && (
+          {/* Cards Header */}
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-white text-lg font-semibold">My Cards</h3>
+            <span className="text-white/60 text-sm">
+              {totalCount} card{totalCount !== 1 ? 's' : ''}
+            </span>
+          </div>
+
+          {/* Error State */}
+          {cardsError && (
             <motion.div
-              initial={{ opacity: 0, y: 50 }}
+              initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 1.8, duration: 0.8 }}
+              className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 mb-4"
             >
-              <CardGrid
-                cards={cards?.map(token => token.state) || []}
-                showViewAll={true}
-                onCardSelect={() => { }}
-                onViewAll={handleViewAll}
-              />
+              <p className="text-red-300 text-sm">
+                Error loading cards: {cardsError.message}
+              </p>
             </motion.div>
           )}
 
-          {activeTab === 'cards' && (
-            <UserCards />
+          {/* Cards Grid */}
+          {userCards.length > 0 ? (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 1.6, duration: 0.8 }}
+            >
+              <CardGrid
+                cards={userCards}
+                onCardSelect={() => push('/')}
+                showViewAll={false}
+              />
+            </motion.div>
+          ) : !cardsLoading && !cardsError ? (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-center py-8"
+            >
+              <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-2xl">🎴</span>
+              </div>
+              <h4 className="text-white font-medium mb-2">No cards yet</h4>
+              <p className="text-white/60 text-sm mb-4">
+                You haven&apos;t purchased any scratch cards yet.
+              </p>
+              <button
+                onClick={() => push('/')}
+                className="bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg text-sm transition-colors"
+              >
+                Buy Cards
+              </button>
+            </motion.div>
+          ) : null}
+
+          {/* Loading State */}
+          {cardsLoading && (
+            <div className="grid grid-cols-4 gap-4">
+              {[...Array(8)].map((_, i) => (
+                <div
+                  key={i}
+                  className="bg-white/10 rounded-lg animate-pulse"
+                  style={{ height: '102px' }}
+                />
+              ))}
+            </div>
           )}
 
-          {activeTab === 'winnings' && (
-            <UserWinnings />
+          {/* Load More Trigger */}
+          <div ref={loadMoreRef} className="h-4" />
+
+          {/* Loading More Indicator */}
+          {cardsLoading && userCards.length > 0 && (
+            <div className="text-center py-4">
+              <div className="inline-flex items-center space-x-2 text-white/60">
+                <div className="w-4 h-4 border-2 border-white/20 border-t-white/60 rounded-full animate-spin" />
+                <span className="text-sm">Loading more cards...</span>
+              </div>
+            </div>
+          )}
+
+          {/* End of Cards Indicator */}
+          {!hasMore && userCards.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="text-center py-6"
+            >
+              <p className="text-white/40 text-sm">
+                You&apos;ve reached the end of your cards
+              </p>
+            </motion.div>
           )}
         </motion.div>
       </motion.div>

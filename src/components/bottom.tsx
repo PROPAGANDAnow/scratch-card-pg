@@ -150,6 +150,7 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
           y: loading ? "100%" : 0,
         }}
       >
+        <div className="absolute top-0 left-0 w-full"></div>
         {/* Top row with card count and buy button */}
         <div className="relative w-full">
           <AnimatePresence mode="wait" initial={false}>

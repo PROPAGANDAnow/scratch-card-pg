@@ -8,8 +8,8 @@ import { PAYMENT_TOKEN } from "~/lib/blockchain";
 import { useRouter } from "next/navigation";
 
 interface CardGridProps {
-  cards: Card[];
-  onCardSelect: (card: Card) => void;
+  cards: (Card & { cardState?: 'unscratched' | 'scratched' | 'claimed' })[];
+  onCardSelect: (card: Card & { cardState?: 'unscratched' | 'scratched' | 'claimed' }) => void;
   showViewAll?: boolean;
   onViewAll?: () => void;
 }
@@ -24,6 +24,23 @@ export default function CardGrid({
   const hasMoreCards = showViewAll && cards.length > 7;
   const { push } = useRouter();
 
+  // Helper function to get card opacity based on state
+  const getCardOpacity = (card: Card & { cardState?: 'unscratched' | 'scratched' | 'claimed' }) => {
+    if (card.cardState === 'unscratched') return 1;
+    if (card.cardState === 'scratched' && card.prize_amount > 0) return 1;
+    if (card.cardState === 'claimed') return 0.6;
+    return 0.35; // Scratched with no prize
+  };
+
+  // Helper function to handle card clicks
+  const handleCardClick = (card: Card & { cardState?: 'unscratched' | 'scratched' | 'claimed' }) => {
+    if (showViewAll && card.cardState === 'unscratched') {
+      push("/");
+    } else {
+      onCardSelect(card);
+    }
+  };
+
   return (
     <div className="w-full">
       <div className="grid grid-cols-4 gap-4 mx-auto">
@@ -36,9 +53,9 @@ export default function CardGrid({
             }}
             className="cursor-pointer h-fit relative"
             style={{
-              opacity: !card.scratched || (card.scratched && card.prize_amount !== 0) ? 1 : 0.35,
+              opacity: getCardOpacity(card),
             }}
-            onClick={showViewAll && !card.scratched ? () => push("/") : () => onCardSelect(card)}
+            onClick={() => handleCardClick(card)}
           >
             <motion.div
               whileHover={{ scale: 1.05 }}
@@ -55,6 +72,20 @@ export default function CardGrid({
                   {card.prize_amount > 0 ? `${formatCell(card.prize_amount, card.prize_asset_contract || PAYMENT_TOKEN.ADDRESS)}` : ""}
                 </div>
               ) : null}
+
+              {/* State Indicator */}
+              <div className="absolute top-1 right-1 z-40">
+                {card.cardState === 'unscratched' && (
+                  <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" title="Unscratched" />
+                )}
+                {card.cardState === 'scratched' && (
+                  <div className={`w-2 h-2 rounded-full ${card.prize_amount > 0 ? 'bg-yellow-400' : 'bg-gray-400'}`} 
+                       title={card.prize_amount > 0 ? "Scratched - Prize Available" : "Scratched - No Prize"} />
+                )}
+                {card.cardState === 'claimed' && (
+                  <div className="w-2 h-2 bg-blue-400 rounded-full" title="Claimed" />
+                )}
+              </div>
               {card.scratched && card.numbers_json ? (
                 <div className="absolute inset-0 z-20 flex flex-col items-center justify-center text-center rotate-[-4deg]">
                   {(() => {

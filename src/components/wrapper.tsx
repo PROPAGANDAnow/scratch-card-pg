@@ -25,6 +25,7 @@ import InitialScreen from "./initial-screen";
 import { INITIAL_SCREEN_KEY } from "~/lib/constants";
 import WinRatePopup from "./win-rate-popup";
 import { useDetectClickOutside } from "~/hooks/useDetectClickOutside";
+import clsx from "clsx";
 
 const Wrapper: FC<{ children: React.ReactNode }> = ({ children }) => {
   const publicKey = useUserStore((s) => s.publicKey);
@@ -42,7 +43,8 @@ const Wrapper: FC<{ children: React.ReactNode }> = ({ children }) => {
   const unscratchedCards = useCardStore((s) => s.unscratchedCards);
   const setUnscratchedCards = useCardStore((s) => s.setUnscratchedCards);
   const refetchCards = useCardStore((s) => s.refetchCards);
-  const activeTokenId = useCardStore((s) => s.activeTokenId);
+  const scratched = useCardStore((s) => s.scratched);
+  const setScratched = useCardStore((s) => s.setScratched);
   const setActiveTokenId = useCardStore((s) => s.setActiveTokenId);
 
   const [loading, setLoading] = useState(true);
@@ -71,7 +73,7 @@ const Wrapper: FC<{ children: React.ReactNode }> = ({ children }) => {
     setUnscratchedCards(cards);
   }, [cards, setUnscratchedCards]);
 
-  
+
   // Keep ref updated with current activity
   useEffect(() => {
     currentActivityRef.current = activity;
@@ -151,7 +153,7 @@ const Wrapper: FC<{ children: React.ReactNode }> = ({ children }) => {
   // TODO: Implement real-time updates with database triggers/webhooks if needed
 
   const handleCloseModal = () => {
-    setActiveTokenId(null);
+    setScratched(false);
   };
 
   useEffect(() => {
@@ -210,7 +212,7 @@ const Wrapper: FC<{ children: React.ReactNode }> = ({ children }) => {
             delay: 0.2,
           }}
         >
-          {!activeTokenId ? (
+          {!scratched ? (
             <motion.button
               className="p-2 rounded-full bg-white/10 cursor-pointer hover:bg-white/20 transition-colors"
               onClick={() => push("/profile")}
@@ -264,6 +266,7 @@ const Wrapper: FC<{ children: React.ReactNode }> = ({ children }) => {
               </svg>
             </motion.button>
           )}
+
           <div className="relative" ref={prizePoolRef}>
             <motion.button
               className="px-6 border border-white/10 rounded-[48px] h-[42px] flex items-center justify-center gap-2"
