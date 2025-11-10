@@ -52,7 +52,7 @@ export function generateNumbers(params: {
     for (let i = 0; i < 3; i++) {
       cells[start + i] = { amount: prizeAmount, asset_contract: prizeAsset };
     }
-  } else   if (prizeAmount === -1) {
+  } else if (prizeAmount === -1) {
     // Friend win - pick the winning row randomly (0..3)
     winningRow = Math.floor(Math.random() * 4);
     const start = winningRow * 3; // 3 columns
@@ -84,7 +84,7 @@ export function generateNumbers(params: {
 
     for (let i = rowStart; i < rowEnd; i++) {
       // Randomly decide if this cell should be a friend or amount
-      let shouldBeFriend = (forceFriends || Math.random() < 0.6) && friends.length > 0; // 30% chance of friend PFP, or forced
+      let shouldBeFriend = (forceFriends || Math.random() < 0.3) && friends.length > 0; // 30% chance of friend PFP, or forced
 
       if (shouldBeFriend) {
         // This cell will be a friend PFP

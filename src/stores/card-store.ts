@@ -197,14 +197,21 @@ export const useCardStore = create<CardStore>()(
           return;
         }
 
-        const currentIndex = cards.findIndex((card: TokenWithState) => card.id === activeTokenId);
-        if (currentIndex < cards.length - 1) {
-          const nextIndex = currentIndex + 1;
+        const unscratchedCards = getUnscratchedCards(cards)
+        const currentIndex = unscratchedCards.findIndex((card: TokenWithState) => card.id === activeTokenId);
+
+        if (!unscratchedCards.length) {
           set({
-            activeTokenId: cards[nextIndex].id,
+            activeTokenId: null,
             cardDirection: 1
           });
         }
+
+        const nextIndex = currentIndex + 1;
+        set({
+          activeTokenId: unscratchedCards[nextIndex].id,
+          cardDirection: 1
+        });
       },
 
       goPrev: () => {
