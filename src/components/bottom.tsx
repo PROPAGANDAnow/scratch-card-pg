@@ -5,7 +5,7 @@ import { FC, useEffect, useRef, useState } from "react";
 import { useUserTokens } from "~/hooks";
 import { useDetectClickOutside } from "~/hooks/useDetectClickOutside";
 import { useAppStore } from "~/stores/app-store";
-import { getUnclaimedCards, useCardStore } from "~/stores/card-store";
+import { getUnscratchedCards, useCardStore } from "~/stores/card-store";
 import ClaimPrizeButton from "./claim-button";
 import { MintCardForm } from "./mint-card-form";
 
@@ -95,7 +95,7 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
   const [showBigBuy, setShowBigBuy] = useState(false);
   const { availableCards, refetch: refetchCards } = useUserTokens();
   const { cards } = useCardStore()
-  const unscratchedCards = getUnclaimedCards(cards)
+  const unscratchedCards = getUnscratchedCards(cards)
   const unscratchedCardsCount = unscratchedCards.length
 
   const { push } = useRouter();

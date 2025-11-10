@@ -10,14 +10,13 @@ export const fetchUserInfo = async (userWallet: string) => {
     });
 
     if (!data) {
-      console.error("User not found");
-      return {};
+      throw new Error('user not found')
     }
 
     return data;
   } catch (error) {
     console.error("Failed to fetch user info:", error);
-    return {}; // Return empty object instead of throwing
+    throw new Error('user not found')
   }
 };
 
@@ -63,7 +62,7 @@ export const fetchActivity = async () => {
   try {
     const data = await prisma.card.findMany({
       where: { scratched: true },
-      include: { 
+      include: {
         scratched_by: { select: { address: true, fid: true } },
         minter: { select: { address: true, fid: true } }
       },

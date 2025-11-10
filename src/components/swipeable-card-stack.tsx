@@ -108,7 +108,7 @@ export default function SwipeableCardStack({
 
   return (
     <div className="h-full relative">
-      {activeTokenId && <div className="absolute top-0 left-0 text-7xl w-full text-center select-none opacity-40 font-['ABCGaisyr']">#{activeTokenId}</div>}
+      {activeTokenId && <div className="absolute top-0 left-0 text-[72px] w-full text-center select-none opacity-40 font-['ABCGaisyr']">#{activeTokenId}</div>}
 
       <div className="h-full flex flex-col items-center justify-between">
         {/* Behind previews: low opacity, non-interactive */}

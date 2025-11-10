@@ -122,7 +122,7 @@ export async function GET(request: NextRequest) {
     });
 
     // Filter available cards (unscratched)
-    const availableCards = tokens.filter(a => !a.state?.claimed);
+    const availableCards = tokens.filter(a => !a.state?.scratched);
 
     return NextResponse.json({
       success: true,

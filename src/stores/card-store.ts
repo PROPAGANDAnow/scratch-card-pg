@@ -51,7 +51,7 @@ export interface CardStore {
   setInitialFetch: (initialFetch: boolean) => void
 }
 
-export const getUnclaimedCards = (cards: TokenWithState[]) => cards.filter(c => !c.state.claimed)
+export const getUnscratchedCards = (cards: TokenWithState[]) => cards.filter(c => !c.state.scratched)
 
 export const useCardStore = create<CardStore>()(
   devtools(

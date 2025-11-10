@@ -1,27 +1,18 @@
 "use client";
 import sdk from "@farcaster/miniapp-sdk";
-import { useMiniApp } from "@neynar/react";
 
 import { AnimatePresence, motion } from "framer-motion";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { createRef, FC, useCallback, useEffect, useRef, useState } from "react";
-import { AppStats } from "~/app/interface/appStats";
-import { Reveal } from "~/app/interface/reveal";
-import { User } from "~/app/interface/user";
 
+import { useMiniApp } from "@neynar/react";
 import { useDetectClickOutside } from "~/hooks/useDetectClickOutside";
 import { usePrizePool } from "~/hooks/usePrizePool";
 import { INITIAL_SCREEN_KEY } from "~/lib/constants";
-import {
-  fetchActivity,
-  fetchAppStats,
-  fetchBestFriends,
-  fetchUserInfo,
-} from "~/lib/userapis";
 import { getFromLocalStorage } from "~/lib/utils";
 import { useAppStore } from "~/stores/app-store";
-import { getUnclaimedCards, useCardStore } from "~/stores/card-store";
+import { getUnscratchedCards, useCardStore } from "~/stores/card-store";
 import { useUserStore } from "~/stores/user-store";
 import Bottom from "./bottom";
 import InitialScreen from "./initial-screen";
@@ -29,19 +20,15 @@ import WinRatePopup from "./win-rate-popup";
 
 const Wrapper: FC<{ children: React.ReactNode }> = ({ children }) => {
   const publicKey = useUserStore((s) => s.publicKey);
-  const user = useUserStore((s) => s.user);
-  const setUser = useUserStore((s) => s.setUser);
 
   const appBackground = useAppStore((s) => s.appBackground);
   const activity = useAppStore((s) => s.activity);
   const swipableMode = useAppStore((s) => s.swipableMode);
-  const setAppStats = useAppStore((s) => s.setAppStats);
-  const setActivity = useAppStore((s) => s.setActivity);
+  // const setActivity = useAppStore((s) => s.setActivity);
 
   const cards = useCardStore((s) => s.cards);
-  const unscratchedCards = getUnclaimedCards(cards)
+  const unscratchedCards = getUnscratchedCards(cards)
 
-  const refetchCards = useCardStore((s) => s.refetchCards);
   const scratched = useCardStore((s) => s.scratched);
   const setScratched = useCardStore((s) => s.setScratched);
 
@@ -54,9 +41,9 @@ const Wrapper: FC<{ children: React.ReactNode }> = ({ children }) => {
   const currentUnscratchedCardsRef = useRef(unscratchedCards);
   const prizePoolRef = createRef<HTMLDivElement>();
   const { push } = useRouter();
-  const { context } = useMiniApp();
-  const userFid = context?.user.fid;
   const { data: prizePoolData } = usePrizePool();
+  const { context } = useMiniApp()
+  const user = context?.user
 
   useDetectClickOutside(prizePoolRef, () => setShowWinRates(false));
 
@@ -83,72 +70,22 @@ const Wrapper: FC<{ children: React.ReactNode }> = ({ children }) => {
   }, [unscratchedCards]);
 
   const callReady = useCallback(async () => {
-    if (publicKey) {
-      try {
-        await sdk.actions.ready();
-        readyCalled.current = true;
-      } catch (error) {
-        console.error("Failed to signal app ready:", error);
-      }
+    try {
+      if (!publicKey) return;
+
+      setLoading(true)
+      await sdk.actions.ready();
+      readyCalled.current = true;
+    } catch (error) {
+      console.error(error)
+    } finally {
+      setLoading(false)
     }
   }, [publicKey]);
 
-  // Fetch all data when wallet connects using Promise.allSettled
-  const fetchAllData = useCallback(async (userWallet: string, userFid: number) => {
-    if (!userWallet) return;
-    if (!userFid) return;
-
-    setLoading(true);
-    // Set loading state for cards
-    useCardStore.getState().setLoading(true);
-
-    try {
-      const promises = [
-        fetchUserInfo(userWallet),
-        fetchAppStats(),
-        fetchActivity(),
-      ];
-
-      const [userInfo, appStats, activity] =
-        await Promise.allSettled(promises);
-
-      // Fetch cards separately to use store's refetchCards function
-      await refetchCards(userWallet);
-
-      if (userInfo.status === "fulfilled" && userInfo.value && 'id' in userInfo.value) {
-        setUser(userInfo.value as User); // Type enforced with Zod schema
-        const bestFriends = await fetchBestFriends(userFid);
-        // store bestFriends into user store
-        useUserStore.getState().setBestFriends(bestFriends);
-      }
-      if (appStats.status === "fulfilled" && appStats.value && 'id' in appStats.value) setAppStats(appStats.value as AppStats);
-      if (activity.status === "fulfilled" && activity.value && Array.isArray(activity.value)) setActivity(activity.value as Reveal[]);
-      callReady();
-    } catch (error) {
-      console.error("Error in fetching user info", error);
-    } finally {
-      setLoading(false);
-      // Set loading state for cards to false
-      useCardStore.getState().setLoading(false);
-    }
-  }, [refetchCards, setUser, setAppStats, setActivity, callReady]);
-
-  // Fetch all data when wallet connects
   useEffect(() => {
-    if (publicKey && userFid) {
-      fetchAllData(publicKey, userFid);
-    }
-  }, [publicKey, userFid, fetchAllData]);
-
-  // Fetch all data when wallet connects
-  // useEffect(() => {
-  //   if (state.publicKey && userFid) {
-  //     fetchAllData(state.publicKey, userFid);
-  //   }
-  // }, [state.publicKey, userFid]);
-
-  // Real-time subscriptions removed - migrated to Prisma
-  // TODO: Implement real-time updates with database triggers/webhooks if needed
+    callReady()
+  }, [])
 
   const handleCloseModal = () => {
     setScratched(false);
@@ -196,6 +133,7 @@ const Wrapper: FC<{ children: React.ReactNode }> = ({ children }) => {
       style={{ background: appBackground }}
     >
       <div className="h-full max-w-[400px] flex flex-col mx-auto items-center justify-between">
+
         {/* Top Section - Header */}
         <motion.div
           className="flex items-center justify-between w-full px-4 pt-4 pb-2"
@@ -315,10 +253,12 @@ const Wrapper: FC<{ children: React.ReactNode }> = ({ children }) => {
             />
           </motion.button>
         </motion.div>
+
         {/* Middle Section - (Scrollable) */}
         <div className="flex flex-col w-full" style={{ height: "68%" }}>
           <div className="flex-1 h-full">{children}</div>
         </div>
+
         {/* Bottom Section - Bottom */}
         <Bottom
           mode={swipableMode ? "swipeable" : "normal"}
