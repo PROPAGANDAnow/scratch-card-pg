@@ -18,8 +18,6 @@ import {
   useRef,
   useState
 } from "react";
-import { Address } from "viem";
-import { BestFriend } from "~/app/interface/bestFriends";
 import { Card, CardCell } from "~/app/interface/card";
 import ModalPortal from "~/components/ModalPortal";
 
@@ -28,7 +26,7 @@ import { useDebouncedScratchDetection } from "~/hooks/useDebouncedScratchDetecti
 import { useTrackScratch } from "~/hooks/useTrackScratch";
 import { useUIActions } from "~/hooks/useUIActions";
 import { useWallet } from "~/hooks/useWeb3Wallet";
-import { ClaimSignature, PAYMENT_TOKEN } from "~/lib/blockchain";
+import { PAYMENT_TOKEN } from "~/lib/blockchain";
 import {
   APP_COLORS,
   CANVAS_HEIGHT,
@@ -36,8 +34,8 @@ import {
   SCRATCH_RADIUS,
 } from "~/lib/constants";
 import { formatCell } from "~/lib/formatCell";
-import { chunk3, findWinningRow } from "~/lib/winningRow";
 import { extractBonusFriendFromNumbers } from "~/lib/token-utils";
+import { chunk3, findWinningRow } from "~/lib/winningRow";
 import { useCardStore } from "~/stores";
 import { useAppStore } from "~/stores/app-store";
 import { useUserStore } from "~/stores/user-store";
@@ -77,7 +75,7 @@ const NftScratchOff = ({
   const [prizeAmount, setPrizeAmount] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
   const [showBlurOverlay, setShowBlurOverlay] = useState(false);
-  const [bestFriend, setBestFriend] = useState<BestFriend | null>(null);
+  // const [bestFriend, setBestFriend] = useState<BestFriend | null>(null);
   const [coverImageLoaded, setCoverImageLoaded] = useState(false);
   const linkCopyTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -86,21 +84,8 @@ const NftScratchOff = ({
   const { playWinSound } = useUIActions()
   const { activeTokenId } = useCardStore()
 
-  // Web3 claiming hooks
-  const {
-    claimPrize,
-    claimPrizeWithBonus,
-    reset: resetClaiming
-  } = useContractClaiming();
-
   // Scratch tracking hook
   const trackScratch = useTrackScratch();
-
-  // const { canClaim: canClaimToken, isClaimed: isTokenClaimed } = useTokenClaimability(
-  //   tokenId || null,
-  //   address || null
-  // );
-
 
   // Lock body scroll when modal is open
   useEffect(() => {
@@ -130,35 +115,7 @@ const NftScratchOff = ({
     setTilt({ x: 0, y: 0 });
   }, []);
 
-  // Handle prize claiming on-chain
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const handleClaimPrize = useCallback(async (tokenId: number, claimSignature: ClaimSignature) => {
-    if (bestFriend && currCardData?.prize_amount === -1) {
-      // Claim with bonus for friend
-      await claimPrizeWithBonus(
-        tokenId,
-        claimSignature,
-        address || undefined,
-        bestFriend.wallet as Address
-      );
-    } else {
-      // Standard claim
-      await claimPrize(
-        tokenId,
-        claimSignature,
-        address || undefined
-      );
-    }
-
-    haptics.notificationOccurred('success');
-  }, [
-    bestFriend,
-    currCardData,
-    claimPrize,
-    claimPrizeWithBonus,
-    address,
-    haptics
-  ]);
+  const bestFriend = currCardData && extractBonusFriendFromNumbers(currCardData?.numbers_json as unknown as CardCell[]);
 
   // Handle sharing (maintains existing social functionality)
   const handleShare = useCallback(async () => {
@@ -192,10 +149,10 @@ const NftScratchOff = ({
     currCardData: null as typeof currCardData,
     isProcessing,
     address,
-    bestFriend,
     onPrizeRevealed,
     playWinSound,
     prizeAmount,
+    bestFriend,
     setAppBackground,
     setAppColor,
     setScratched,
@@ -224,7 +181,7 @@ const NftScratchOff = ({
       haptics,
       setShowBlurOverlay,
     };
-  }, [currCardData, isProcessing, address, bestFriend, onPrizeRevealed, playWinSound, prizeAmount, setAppBackground, setAppColor, setScratched, trackScratch, updateCardMeta, user, haptics, setShowBlurOverlay]);
+  }, [currCardData, isProcessing, address, onPrizeRevealed, playWinSound, prizeAmount, setAppBackground, setAppColor, setScratched, trackScratch, updateCardMeta, user, haptics, setShowBlurOverlay]);
 
   // Scratch detection handler
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -495,45 +452,6 @@ const NftScratchOff = ({
     };
   }, [currCardData, isProcessing, debouncedScratchDetection, cancelScratchDetection, scratched]);
 
-  // Populate best friend state
-  // useEffect(() => {
-  //   // Note: shared_to field removed from Card model, replaced with gifted_to_user_id relation
-  //   const sharedTo = null; // Disabled until proper relation is implemented
-  //   if (false && cardData?.numbers_json && sharedTo?.wallet) { // Disabled since sharedTo is always null
-  //     const numbersJson = cardData.numbers_json as unknown as CardCell[];
-  //     const friendCell = numbersJson.find(
-  //       (cell) => cell.friend_wallet === sharedTo.wallet
-  //     );
-
-  //     if (
-  //       friendCell &&
-  //       friendCell.friend_fid &&
-  //       friendCell.friend_username &&
-  //       friendCell.friend_pfp &&
-  //       friendCell.friend_wallet
-  //     ) {
-  //       setBestFriend({
-  //         fid: friendCell.friend_fid,
-  //         username: friendCell.friend_username,
-  //         pfp: friendCell.friend_pfp,
-  //         wallet: friendCell.friend_wallet,
-  //       });
-  //     }
-  // } else {
-  //   setBestFriend(null);
-  // }
-  // }, [cardData]);
-
-  // Populate best friend from numbers_json (free-card scenario)
-  useEffect(() => {
-    if (!currCardData?.numbers_json || currCardData?.prize_amount !== -1) {
-      setBestFriend(null);
-      return;
-    }
-    const friend = extractBonusFriendFromNumbers(currCardData.numbers_json as unknown as CardCell[]);
-    setBestFriend(friend);
-  }, [currCardData?.numbers_json, currCardData?.prize_amount]);
-
   // Reset state when component unmounts
   useEffect(() => {
     return () => {
@@ -543,7 +461,6 @@ const NftScratchOff = ({
       setShowBlurOverlay(false);
       setTilt({ x: 0, y: 0 });
       setCoverImageLoaded(false);
-      resetClaiming();
 
       const currentTimeout = linkCopyTimeoutRef.current;
       if (currentTimeout) {
@@ -554,7 +471,7 @@ const NftScratchOff = ({
       setAppColor(APP_COLORS.DEFAULT);
       setAppBackground(`linear-gradient(to bottom, #090210, ${APP_COLORS.DEFAULT})`);
     };
-  }, [resetClaiming, setAppBackground, setAppColor, setScratched]);
+  }, [setAppBackground, setAppColor, setScratched]);
 
   const handleQuickReveal = () => {
     // Clear the canvas to reveal the card
