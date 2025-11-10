@@ -108,7 +108,24 @@ export default function SwipeableCardStack({
 
   return (
     <div className="h-full relative">
-      {activeTokenId && <div className="absolute top-0 left-0 text-[72px] w-full text-center select-none opacity-40 font-['ABCGaisyr']">#{activeTokenId}</div>}
+      <AnimatePresence mode="wait">
+        {activeTokenId && (
+          <motion.div
+            key={activeTokenId}
+            initial={{ opacity: 0, filter: "blur(10px)", scale: 0.8 }}
+            animate={{ opacity: 0.4, filter: "blur(0px)", scale: 1 }}
+            exit={{ opacity: 0, filter: "blur(10px)", scale: 0.8 }}
+            transition={{
+              duration: 0.4,
+              ease: "easeInOut",
+              filter: { duration: 0.3 }
+            }}
+            className="absolute -top-10 left-0 text-[102px] w-full text-center select-none font-['ABCGaisyr']"
+          >
+            #{activeTokenId}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div className="h-full flex flex-col items-center justify-between">
         {/* Behind previews: low opacity, non-interactive */}
