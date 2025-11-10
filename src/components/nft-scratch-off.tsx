@@ -186,8 +186,66 @@ const NftScratchOff = ({
     }
   }, [user, prizeAmount, bestFriend?.username, actions]);
 
+  // Stable scratch deps ref to avoid listener churn
+  const scratchDepsRef = useRef({
+    currCardData: null as typeof currCardData,
+    isProcessing,
+    address,
+    bestFriend,
+    onPrizeRevealed,
+    playWinSound,
+    prizeAmount,
+    setAppBackground,
+    setAppColor,
+    setScratched,
+    trackScratch,
+    updateCardMeta,
+    user,
+    haptics,
+    setShowBlurOverlay,
+  });
+
+  useEffect(() => {
+    scratchDepsRef.current = {
+      currCardData,
+      isProcessing,
+      address,
+      bestFriend,
+      onPrizeRevealed,
+      playWinSound,
+      prizeAmount,
+      setAppBackground,
+      setAppColor,
+      setScratched,
+      trackScratch,
+      updateCardMeta,
+      user,
+      haptics,
+      setShowBlurOverlay,
+    };
+  }, [currCardData, isProcessing, address, bestFriend, onPrizeRevealed, playWinSound, prizeAmount, setAppBackground, setAppColor, setScratched, trackScratch, updateCardMeta, user, haptics, setShowBlurOverlay]);
+
   // Scratch detection handler
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const handleScratchDetection = useCallback(async () => {
+    const {
+      currCardData,
+      isProcessing,
+      address,
+      bestFriend,
+      onPrizeRevealed,
+      playWinSound,
+      prizeAmount,
+      setAppBackground,
+      setAppColor,
+      setScratched,
+      trackScratch,
+      updateCardMeta,
+      user,
+      haptics,
+      setShowBlurOverlay,
+    } = scratchDepsRef.current;
+
     try {
       if (!currCardData || isProcessing || !address) return;
 
@@ -219,10 +277,10 @@ const NftScratchOff = ({
         tokenId,
         scratched: true,
         scratchedBy: address,
-        prizeWon: prizeAmount > 0 || prizeAmount === -1
+        prizeWon: prizeAmount > 0 || prizeAmount === -1,
       });
 
-      updateCardMeta(String(tokenId), { scratched: true })
+      updateCardMeta(String(tokenId), { scratched: true });
 
       // Send notification (maintains existing social features)
       // TODO: make this quick auth as well 
@@ -238,11 +296,10 @@ const NftScratchOff = ({
       }).catch((error) => {
         console.error("Failed to send notification:", error);
       });
-
     } catch (error) {
-      console.error(error)
+      console.error(error);
     }
-  }, [currCardData, isProcessing, address, bestFriend?.fid, haptics, onPrizeRevealed, playWinSound, prizeAmount, setAppBackground, setAppColor, setScratched, trackScratch, updateCardMeta, user?.address, user?.fid]);
+  }, []);
 
   // Debounced scratch detection with Web3 integration
   const {
