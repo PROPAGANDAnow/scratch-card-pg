@@ -1,10 +1,13 @@
 import { useMiniApp } from "@neynar/react";
 import { motion } from "framer-motion";
 import { useCallback } from "react";
+import { isAddress } from "viem";
+import { CardCell } from "~/app/interface/cardCell";
 import { useClaimSignature, useContractClaiming } from "~/hooks/useContractClaiming";
 import { useUpdateCardClaimStatus } from "~/hooks/useUpdateCardClaimStatus";
 import { useWallet } from "~/hooks/useWeb3Wallet";
 import { ClaimSignature } from "~/lib/blockchain";
+import { extractBonusFriendFromNumbers } from "~/lib/token-utils";
 import { useAppStore, useCardStore } from "~/stores";
 
 const ClaimPrizeButton = () => {
@@ -23,21 +26,19 @@ const ClaimPrizeButton = () => {
     } = useContractClaiming();
     const { createSignature } = useClaimSignature();
     const { mutateAsync: updateCardClaimStatus, isPending: isUpdatingClaimStatus } = useUpdateCardClaimStatus();
+    const bestFriend = currentCard && extractBonusFriendFromNumbers(currentCard?.state.numbers_json as unknown as CardCell[]);
+    console.log("🚀 ~ ClaimPrizeButton ~ bestFriend:", bestFriend)
 
     const handleClaimPrize = useCallback(async (tokenId: number, claimSignature: ClaimSignature) => {
 
         let transactionHash: string;
-        if (cardData?.prize_amount === -1) {
-            if (!address) {
-                throw new Error("address is not there")
-            }
-
+        if (bestFriend?.wallet && isAddress(bestFriend?.wallet)) {
             // Claim with bonus for friend
             transactionHash = await claimPrizeWithBonus(
                 tokenId,
                 claimSignature,
                 address || undefined,
-                address
+                bestFriend?.wallet
             );
         } else {
             transactionHash = await claimPrize(
