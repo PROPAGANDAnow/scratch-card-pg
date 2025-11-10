@@ -37,6 +37,7 @@ import {
 } from "~/lib/constants";
 import { formatCell } from "~/lib/formatCell";
 import { chunk3, findWinningRow } from "~/lib/winningRow";
+import { extractBonusFriendFromNumbers } from "~/lib/token-utils";
 import { useCardStore } from "~/stores";
 import { useAppStore } from "~/stores/app-store";
 import { useUserStore } from "~/stores/user-store";
@@ -76,7 +77,7 @@ const NftScratchOff = ({
   const [prizeAmount, setPrizeAmount] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
   const [showBlurOverlay, setShowBlurOverlay] = useState(false);
-  const [bestFriend] = useState<BestFriend | null>(null);
+  const [bestFriend, setBestFriend] = useState<BestFriend | null>(null);
   const [coverImageLoaded, setCoverImageLoaded] = useState(false);
   const linkCopyTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -522,6 +523,16 @@ const NftScratchOff = ({
   //   setBestFriend(null);
   // }
   // }, [cardData]);
+
+  // Populate best friend from numbers_json (free-card scenario)
+  useEffect(() => {
+    if (!currCardData?.numbers_json || currCardData?.prize_amount !== -1) {
+      setBestFriend(null);
+      return;
+    }
+    const friend = extractBonusFriendFromNumbers(currCardData.numbers_json as unknown as CardCell[]);
+    setBestFriend(friend);
+  }, [currCardData?.numbers_json, currCardData?.prize_amount]);
 
   // Reset state when component unmounts
   useEffect(() => {

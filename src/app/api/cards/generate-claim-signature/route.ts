@@ -3,6 +3,7 @@ import { createPublicClient, http } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { ApiResponse } from "~/app/interface/api";
 import { PAYMENT_TOKEN, SCRATCH_CARD_NFT_ADDRESS, SIGNER_ADDRESS } from "~/lib/blockchain";
+import { extractBonusRecipientWalletFromNumbers } from "~/lib/token-utils";
 import { prisma } from "~/lib/prisma";
 import { GenerateClaimSignatureSchema, validateRequest } from "~/lib/validations";
 
@@ -44,7 +45,8 @@ export async function POST(request: NextRequest) {
         prize_amount: true,
         prize_asset_contract: true,
         scratched: true,
-        claimed: true
+        claimed: true,
+        numbers_json: true
       }
     });
 
@@ -61,6 +63,11 @@ export async function POST(request: NextRequest) {
 
     // For friend wins (prize_amount === -1), we still need to generate a signature
     const actualPrizeAmount = prizeAmount === -1 ? 0 : prizeAmount;
+
+    // Bonus recipient for friend-win scenario
+    const bonusRecipient = prizeAmount === -1
+      ? extractBonusRecipientWalletFromNumbers((card.numbers_json || []) as any)
+      : null;
 
     // Set deadline (24 hours from now)
     const deadline = Math.floor(Date.now() / 1000) + (24 * 3600);
@@ -193,7 +200,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      data: claimSignature,
+      data: { ...claimSignature, bonusRecipient },
     } as ApiResponse);
 
   } catch (error) {

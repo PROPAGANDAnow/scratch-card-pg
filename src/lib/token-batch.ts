@@ -236,7 +236,7 @@ function combineAndSortCards(existingCards: Card[], createdCards: Card[]): Card[
  * @throws Error - If contract address is invalid, payment token is not found, or user not found
  */
 export const getTokensInBatch = async (args: GetTokensInBatchArgs): Promise<Card[]> => {
-  const { tokenIds, friends = [], recipient, contractAddress } = args;
+  const { tokenIds, friends = [], recipient, contractAddress, forceFriends } = args;
 
   // Step 1: Validate inputs and get payment token
   const [paymentToken, minterUser] = await Promise.all([
@@ -257,7 +257,7 @@ export const getTokensInBatch = async (args: GetTokensInBatchArgs): Promise<Card
 
   // Step 4: Generate data for new cards (skip if no new cards)
   const cardsData = newTokenIds.length > 0
-    ? generateCardsData(newTokenIds, friends, paymentToken, contractAddress, args.forceFriends)
+    ? generateCardsData(newTokenIds, friends, paymentToken, contractAddress, forceFriends)
     : [];
 
   // Step 5: Create new cards with duplicate handling

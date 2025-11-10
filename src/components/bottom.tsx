@@ -225,26 +225,13 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
                 {scratched && (
                   <motion.div
                     key="claim-section"
-                    className="grid gap-3 grid-cols-2 w-full"
+                    className="w-full"
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -20 }}
                     transition={{ duration: 0.3 }}
                   >
                     <ClaimPrizeButton />
-                    {unscratchedCardsCount > 1 && <MotionButton
-                      onClick={handleNextButtonClickAfterClaim}
-                      delay={0.2}
-                    >
-                      Go Next
-                    </MotionButton>}
-                    {unscratchedCardsCount <= 1 &&
-                      <MotionButton
-                        onClick={() => setShowBuyModal(true)}
-                        delay={0.2}
-                      >
-                        Buy More
-                      </MotionButton>}
                   </motion.div>
                 )}
 
