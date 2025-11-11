@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
     // Generate cards data for each tokenId
     const createdCards = await getTokensInBatch({
       tokenIds,
-      friends: friends.map(fid => ({ fid })),
+      friends: friends.map(fid => ({ fid, username: '', pfp: '', wallet: '' })),
       recipient: userWallet,
       contractAddress: isAddress(contractAddress) && contractAddress || ZERO_ADDRESS
     })

@@ -13,7 +13,8 @@ import {
   SIGNER_ADDRESS,
   ClaimSignature,
   validateClaimSignature,
-  AddressPatterns
+  AddressPatterns,
+  PAYMENT_TOKEN
 } from '~/lib/blockchain';
 import { SCRATCH_CARD_NFT_ABI } from '~/lib/scratch-card-nft-abi';
 
@@ -34,6 +35,21 @@ export interface UseContractClaimingReturn {
 
   /** Error message if failed */
   error: string | null;
+
+  /** Current allowance amount */
+  allowance: bigint;
+
+  /** Whether approval is needed for the prize amount */
+  needsApproval: boolean;
+
+  /** Whether approval is sufficient for the prize amount */
+  hasSufficientApproval: boolean;
+
+  /** Approve tokens for contract */
+  approve: (amount: bigint) => Promise<void>;
+
+  /** Approve unlimited tokens for contract */
+  approveUnlimited: () => Promise<void>;
 
   /** Claim prize for a token */
   claimPrize: (
@@ -61,7 +77,10 @@ export interface UseContractClaimingReturn {
  * Custom hook for contract prize claiming functionality
  * Replaces traditional API-based prize processing
  */
-export const useContractClaiming = (): UseContractClaimingReturn => {
+export const useContractClaiming = (
+  userAddress?: Address | null,
+  requiredAmount: bigint = BigInt(0)
+): UseContractClaimingReturn => {
   // Contract write hooks
   const {
     writeContractAsync,
@@ -81,9 +100,47 @@ export const useContractClaiming = (): UseContractClaimingReturn => {
     confirmations: 2, // Wait for 2 confirmations on Base
   });
 
+  // Read current allowance for the contract to spend user's tokens
+  const { data: allowanceRaw } = useReadContract({
+    address: PAYMENT_TOKEN.ADDRESS,
+    abi: [
+      {
+        inputs: [
+          { name: 'owner', type: 'address' },
+          { name: 'spender', type: 'address' }
+        ],
+        name: 'allowance',
+        outputs: [{ name: '', type: 'uint256' }],
+        stateMutability: 'view',
+        type: 'function',
+      },
+    ],
+    functionName: 'allowance',
+    args: userAddress ? [userAddress, SCRATCH_CARD_NFT_ADDRESS] : undefined,
+    query: {
+      refetchOnWindowFocus: false,
+      refetchOnMount: true,
+    },
+  }) as { data: bigint | undefined; isLoading: boolean; error: Error | null };
+
   // Local state
   const [state, setState] = useState<ClaimingState>('idle');
   const [error, setError] = useState<string | null>(null);
+
+  // Current allowance
+  const allowance = useMemo(() => {
+    return allowanceRaw || BigInt(0);
+  }, [allowanceRaw]);
+
+  // Check if approval is needed
+  const needsApproval = useMemo(() => {
+    return allowance < requiredAmount;
+  }, [allowance, requiredAmount]);
+
+  // Check if has sufficient approval
+  const hasSufficientApproval = useMemo(() => {
+    return allowance >= requiredAmount;
+  }, [allowance, requiredAmount]);
 
   // Update state based on transaction status
   useEffect(() => {
@@ -126,6 +183,11 @@ export const useContractClaiming = (): UseContractClaimingReturn => {
         throw new Error(`Invalid tokenId: ${tokenId}`);
       }
 
+      // Check if we have sufficient allowance for this prize amount
+      if (allowance < claimSig.prizeAmount) {
+        throw new Error(`Insufficient allowance. Current: ${allowance.toString()}, Required: ${claimSig.prizeAmount.toString()}. Please approve tokens first.`);
+      }
+
       // Convert signature to hex string if it's Uint8Array
       const signatureHex = typeof claimSig.signature === 'string' 
         ? claimSig.signature as `0x${string}`
@@ -162,7 +224,7 @@ export const useContractClaiming = (): UseContractClaimingReturn => {
       console.error('Claiming error:', err);
       throw err;
     }
-  }, [writeContractAsync, publicClient]);
+  }, [writeContractAsync, publicClient, allowance]);
 
   // Claim prize with bonus
   const claimPrizeWithBonus = useCallback(async (
@@ -182,6 +244,11 @@ export const useContractClaiming = (): UseContractClaimingReturn => {
 
       if (!bonusRecipient) {
         throw new Error('Bonus recipient address is required');
+      }
+
+      // Check if we have sufficient allowance for this prize amount
+      if (allowance < claimSig.prizeAmount) {
+        throw new Error(`Insufficient allowance. Current: ${allowance.toString()}, Required: ${claimSig.prizeAmount.toString()}. Please approve tokens first.`);
       }
 
       // Convert signature to hex string if it's Uint8Array
@@ -228,7 +295,64 @@ export const useContractClaiming = (): UseContractClaimingReturn => {
       console.error('Bonus claiming error:', err);
       throw err;
     }
-  }, [writeContractAsync, publicClient]);
+  }, [writeContractAsync, publicClient, allowance]);
+
+  // Approve specific amount
+  const approve = useCallback(async (amount: bigint) => {
+    if (!userAddress) {
+      throw new Error('Wallet not connected');
+    }
+
+    try {
+      setState('pending');
+      setError(null);
+
+      if (!publicClient) return;
+
+      console.log("🚀 ~ useContractClaiming ~ approve ~ spenderAddress, amount:", SCRATCH_CARD_NFT_ADDRESS, amount);
+      
+      // Step 1: Simulate the transaction
+      const { request } = await publicClient.simulateContract({
+        address: PAYMENT_TOKEN.ADDRESS,
+        abi: [
+          {
+            name: 'approve',
+            type: 'function',
+            stateMutability: 'nonpayable',
+            inputs: [
+              { name: 'spender', type: 'address' },
+              { name: 'amount', type: 'uint256' }
+            ],
+            outputs: [{ type: 'bool' }]
+          }
+        ],
+        functionName: 'approve',
+        args: [SCRATCH_CARD_NFT_ADDRESS, amount],
+        account: userAddress
+      });
+
+      // Step 2: Send the transaction
+      const approvalHash = await writeContractAsync(request);
+      console.log('Approval transaction hash:', approvalHash);
+
+      // Step 3: Wait for the transaction to be mined
+      await publicClient.waitForTransactionReceipt({
+        hash: approvalHash,
+        confirmations: 2
+      });
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to approve';
+      setError(errorMessage);
+      setState('error');
+      console.error('Approval error:', err);
+      throw err;
+    }
+  }, [userAddress, publicClient, writeContractAsync]);
+
+  // Approve unlimited amount
+  const approveUnlimited = useCallback(async () => {
+    await approve(BigInt('0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff'));
+  }, [approve]);
 
   // Reset state
   const reset = useCallback(() => {
@@ -236,15 +360,20 @@ export const useContractClaiming = (): UseContractClaimingReturn => {
     setError(null);
   }, []);
 
-  // Can claim if not currently processing
+  // Can claim if not currently processing and has sufficient approval
   const canClaim = useMemo(() => {
-    return state === 'idle' || state === 'success';
-  }, [state]);
+    return (state === 'idle' || state === 'success') && hasSufficientApproval;
+  }, [state, hasSufficientApproval]);
 
   return {
     state,
     transactionHash: hash || null,
     error,
+    allowance,
+    needsApproval,
+    hasSufficientApproval,
+    approve,
+    approveUnlimited,
     claimPrize,
     claimPrizeWithBonus,
     reset,

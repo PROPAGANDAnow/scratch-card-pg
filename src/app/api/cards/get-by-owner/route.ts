@@ -10,6 +10,7 @@ export async function GET(request: NextRequest) {
   try {
     const url = new URL(request.url);
     const userWallet = url.searchParams.get('userWallet');
+    const contractAddress = url.searchParams.get('contractAddress');
 
     if (!userWallet) {
       return NextResponse.json(
@@ -26,8 +27,11 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Use provided contract address or default to SCRATCH_CARD_NFT_ADDRESS
+    const targetContractAddress = contractAddress && isAddress(contractAddress) ? contractAddress : SCRATCH_CARD_NFT_ADDRESS;
+
     // Fetch NFTs from Alchemy API on Base network
-    const apiUrl = `https://base-mainnet.g.alchemy.com/nft/v3/j8Enyeq67txvTS5IlCNWZ/getNFTsForOwner?owner=${userWallet}&contractAddresses%5B%5D=${SCRATCH_CARD_NFT_ADDRESS}&withMetadata=true`;
+    const apiUrl = `https://base-mainnet.g.alchemy.com/nft/v3/j8Enyeq67txvTS5IlCNWZ/getNFTsForOwner?owner=${userWallet}&contractAddresses%5B%5D=${targetContractAddress}&withMetadata=true`;
 
     const response = await fetch(apiUrl, {
       method: 'GET',
@@ -99,7 +103,7 @@ export async function GET(request: NextRequest) {
       tokenIds,
       friends, // Pass full friend objects
       recipient: userWallet,
-      contractAddress: isAddress(SCRATCH_CARD_NFT_ADDRESS) && SCRATCH_CARD_NFT_ADDRESS || ZERO_ADDRESS,
+      contractAddress: targetContractAddress,
       forceFriends
     })
 
