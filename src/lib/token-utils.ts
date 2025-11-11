@@ -62,7 +62,7 @@ export function extractBonusRecipientWalletFromNumbers(numbers: CardCell[] = [])
 // Extract full BestFriend details if available
 export function extractBonusFriendFromNumbers(numbers: CardCell[] = []): BestFriend | null {
   const winningRow = findFriendWinningRow(numbers);
-  const cell = winningRow?.[0] || numbers.find((c) => !!c.friend_wallet && !!c.friend_fid);
+  const cell = winningRow?.[0];
   if (!cell || !cell.friend_wallet) return null;
 
   return {

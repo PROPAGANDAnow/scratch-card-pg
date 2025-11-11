@@ -15,18 +15,18 @@ const ClaimPrizeButton = () => {
     const { address } = useWallet();
     const [isGeneratingSignature, setIsGeneratingSignature] = useState(false);
     const [showApprovalModal, setShowApprovalModal] = useState(false);
-    
+
     // Find current card based on activeTokenId
     const currentCard = activeTokenId ? cards.find(card => card.id === activeTokenId) : null;
     const cardData = currentCard?.state
     const appColor = useAppStore((s) => s.appColor);
     const { haptics } = useMiniApp();
-    
+
     // Calculate prize amount in contract units
-    const prizeAmountInContractUnits = cardData?.prize_amount 
+    const prizeAmountInContractUnits = cardData?.prize_amount
         ? BigInt(Math.floor(cardData.prize_amount * Math.pow(10, PAYMENT_TOKEN.DECIMALS)))
         : BigInt(0);
-    
+
     const {
         claimPrize,
         state: claimState,
@@ -39,10 +39,11 @@ const ClaimPrizeButton = () => {
         error: claimError,
         // reset: resetClaiming
     } = useContractClaiming(address, prizeAmountInContractUnits);
-    
+
     const { createSignature } = useClaimSignature();
     const { mutateAsync: updateCardClaimStatus, isPending: isUpdatingClaimStatus } = useUpdateCardClaimStatus();
     const bestFriend = currentCard && extractBonusFriendFromNumbers(currentCard?.state.numbers_json as unknown as CardCell[]);
+    console.log("🚀 ~ ClaimPrizeButton ~ currentCard?.state.numbers_json:", currentCard?.state.numbers_json)
     console.log("🚀 ~ ClaimPrizeButton ~ bestFriend:", bestFriend)
 
     const handleApprove = useCallback(async () => {
@@ -143,10 +144,10 @@ const ClaimPrizeButton = () => {
 
     const isClaimProcessing = claimState === 'pending' || claimState === 'confirming';
     const isButtonDisabled = isClaimProcessing || isUpdatingClaimStatus || isGeneratingSignature;
-    const claimButtonLabel = isButtonDisabled 
-        ? 'Processing…' 
-        : needsApproval 
-            ? 'Approve & Claim' 
+    const claimButtonLabel = isButtonDisabled
+        ? 'Processing…'
+        : needsApproval
+            ? 'Approve & Claim'
             : 'Claim Prize';
 
     return (
@@ -185,7 +186,7 @@ const ClaimPrizeButton = () => {
                         <h3 className="text-lg font-bold mb-4" style={{ color: appColor }}>
                             Approval Required
                         </h3>
-                        
+
                         <div className="space-y-4">
                             <div className="bg-gray-50 p-3 rounded-lg">
                                 <p className="text-sm font-medium">Prize Amount:</p>

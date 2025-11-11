@@ -94,8 +94,7 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
 
   const [showBigBuy, setShowBigBuy] = useState(false);
   const { availableCards, refetch: refetchCards } = useUserTokens();
-  const { cards } = useCardStore()
-  const unscratchedCards = getUnscratchedCards(cards)
+  const unscratchedCards = getUnscratchedCards(availableCards)
   const unscratchedCardsCount = unscratchedCards.length
 
   const { push } = useRouter();
@@ -138,7 +137,7 @@ const Bottom: FC<{ mode?: "swipeable" | "normal"; loading?: boolean }> = ({
   const loading = initialFetch;
 
   // Calculate current index based on activeTokenId
-  const currentCardIndex = activeTokenId ? availableCards.findIndex(card => card.id === activeTokenId) : -1;
+  // const currentCardIndex = activeTokenId ? availableCards.findIndex(card => card.id === activeTokenId) : -1;
 
   return (
     <>
