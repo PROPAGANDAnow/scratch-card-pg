@@ -160,6 +160,8 @@ export const useCardStore = create<CardStore>()(
           const newCards = data.data?.availableCards || [];
           const totalCount = data.data?.totalCount ?? 0;
 
+          const wasInitialFetch = get().initialFetch;
+
           set({
             cards: newCards,
             totalCount,
@@ -167,16 +169,20 @@ export const useCardStore = create<CardStore>()(
             initialFetch: false
           });
 
-          // Restore activeTokenId if it exists in the new cards
-          if (activeTokenId && newCards.some((card: TokenWithState) => card.id === activeTokenId)) {
-            set({
-              activeTokenId
-            });
+          const existingActive = activeTokenId && newCards.some((card: TokenWithState) => card.id === activeTokenId);
+
+          if (wasInitialFetch) {
+            const scratchedUnclaimed = newCards.find((card: TokenWithState) => card.state.scratched && !card.state.claimed);
+            if (scratchedUnclaimed) {
+              set({ activeTokenId: scratchedUnclaimed.id });
+              return;
+            }
+          }
+
+          if (existingActive) {
+            set({ activeTokenId });
           } else if (newCards.length > 0) {
-            // Set to first card if active card no longer exists
-            set({
-              activeTokenId: newCards[0].id
-            });
+            set({ activeTokenId: newCards[0].id });
           }
         } catch (error) {
           console.error('Failed to refetch user cards:', error);
