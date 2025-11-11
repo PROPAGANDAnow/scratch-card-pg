@@ -10,12 +10,12 @@ import { useWriteContract, useWaitForTransactionReceipt, useReadContract, usePub
 import { Address, hashMessage, recoverAddress } from 'viem';
 import {
   SCRATCH_CARD_NFT_ADDRESS,
-  SCRATCH_CARD_NFT_ABI,
   SIGNER_ADDRESS,
   ClaimSignature,
   validateClaimSignature,
   AddressPatterns
 } from '~/lib/blockchain';
+import { SCRATCH_CARD_NFT_ABI } from '~/lib/scratch-card-nft-abi';
 
 /**
  * Claiming transaction states
@@ -126,6 +126,18 @@ export const useContractClaiming = (): UseContractClaimingReturn => {
         throw new Error(`Invalid tokenId: ${tokenId}`);
       }
 
+      // Convert signature to hex string if it's Uint8Array
+      const signatureHex = typeof claimSig.signature === 'string' 
+        ? claimSig.signature as `0x${string}`
+        : `0x${Buffer.from(claimSig.signature).toString('hex')}` as `0x${string}`;
+
+      const claimSigForContract = {
+        prizeAmount: claimSig.prizeAmount,
+        tokenAddress: claimSig.tokenAddress,
+        deadline: claimSig.deadline,
+        signature: signatureHex
+      };
+
       setState('pending');
       setError(null);
 
@@ -135,7 +147,7 @@ export const useContractClaiming = (): UseContractClaimingReturn => {
         functionName: 'claimPrize',
         args: [
           BigInt(tokenId),
-          claimSig,
+          claimSigForContract,
           AddressPatterns.safeRecipient(recipient) // Use zero address for self
         ],
       });
@@ -172,12 +184,24 @@ export const useContractClaiming = (): UseContractClaimingReturn => {
         throw new Error('Bonus recipient address is required');
       }
 
+      // Convert signature to hex string if it's Uint8Array
+      const signatureHex = typeof claimSig.signature === 'string' 
+        ? claimSig.signature as `0x${string}`
+        : `0x${Buffer.from(claimSig.signature).toString('hex')}` as `0x${string}`;
+
+      const claimSigForContract = {
+        prizeAmount: claimSig.prizeAmount,
+        tokenAddress: claimSig.tokenAddress,
+        deadline: claimSig.deadline,
+        signature: signatureHex
+      };
+
       setState('pending');
       setError(null);
 
       console.log("🚀 ~ useContractClaiming ~", [
         BigInt(tokenId),
-        claimSig,
+        claimSigForContract,
         AddressPatterns.safeRecipient(recipient), // Use zero address for self
         bonusRecipient
       ]);
@@ -188,7 +212,7 @@ export const useContractClaiming = (): UseContractClaimingReturn => {
         functionName: 'claimPrizeWithBonus',
         args: [
           BigInt(tokenId),
-          claimSig,
+          claimSigForContract,
           AddressPatterns.safeRecipient(recipient), // Use zero address for self
           bonusRecipient
         ],

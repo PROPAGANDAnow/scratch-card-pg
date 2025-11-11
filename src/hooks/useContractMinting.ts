@@ -10,10 +10,10 @@ import { useWriteContract, useWaitForTransactionReceipt, useReadContract, usePub
 import { Address, formatUnits } from 'viem';
 import {
   SCRATCH_CARD_NFT_ADDRESS,
-  SCRATCH_CARD_NFT_ABI,
   GAME_CONFIG,
   AddressPatterns
 } from '~/lib/blockchain';
+import { SCRATCH_CARD_NFT_ABI } from '~/lib/scratch-card-nft-abi';
 import { useERC20Approval } from './useERC20Approval';
 
 /**

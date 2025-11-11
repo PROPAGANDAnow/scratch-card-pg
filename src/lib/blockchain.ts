@@ -6,6 +6,7 @@
  */
 
 import { Address as ViemAddress } from 'viem';
+import { SCRATCH_CARD_NFT_ABI } from './scratch-card-nft-abi';
 
 // ========== Network Configuration ==========
 
@@ -44,7 +45,7 @@ export const BASE_CONFIG = {
  * Scratch Card NFT contract address
  * Environment variable override for different deployments
  */
-export const SCRATCH_CARD_NFT_ADDRESS = '0x00aD588484a71b3A22182f6413cb3616440f71eA' as ViemAddress;
+export const SCRATCH_CARD_NFT_ADDRESS = '0xA07636947533723B4B7245fF77fa896697Ea9Ee1' as ViemAddress;
 
 /**
  * Payment token configuration
@@ -130,6 +131,12 @@ export const AddressPatterns = {
 // ========== Contract ABIs ==========
 
 /**
+ * Scratch Card NFT ABI
+ * Complete ABI for the Scratch Card NFT contract including all functions, events, and errors
+ */
+export { SCRATCH_CARD_NFT_ABI };
+
+/**
  * ERC20 ABI for payment tokens (minimal - only functions needed)
  * Works with any ERC20 token used for payments
  */
@@ -189,259 +196,6 @@ export const ERC20_ABI = [
  * Kept for backward compatibility
  */
 export const USDC_ABI = ERC20_ABI;
-
-/**
- * Complete ABI for the Scratch Card NFT contract
- */
-export const SCRATCH_CARD_NFT_ABI = [
-  // Struct definitions
-  {
-    name: 'ClaimSignature',
-    type: 'tuple',
-    components: [
-      { name: 'prizeAmount', type: 'uint256' },
-      { name: 'tokenAddress', type: 'address' },
-      { name: 'deadline', type: 'uint256' },
-      { name: 'signature', type: 'bytes' }
-    ]
-  },
-  {
-    name: 'TokenData',
-    type: 'tuple',
-    components: [
-      { name: 'claimed', type: 'bool' },
-      { name: 'registeredAt', type: 'uint256' },
-      { name: 'tokenAddress', type: 'address' }
-    ]
-  },
-
-  // Read Functions
-  {
-    inputs: [{ name: 'owner', type: 'address' }],
-    name: 'getUserTokens',
-    outputs: [{ name: '', type: 'uint256[]' }],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [
-      { name: 'tokenId', type: 'uint256' },
-      { name: 'prizeAmount', type: 'uint256' },
-      { name: 'tokenAddress', type: 'address' },
-      { name: 'deadline', type: 'uint256' }
-    ],
-    name: 'getClaimMessageHash',
-    outputs: [{ name: '', type: 'bytes32' }],
-    stateMutability: 'pure',
-    type: 'function',
-  },
-  {
-    inputs: [
-      { name: 'tokenId', type: 'uint256' },
-      { name: 'prizeAmount', type: 'uint256' },
-      { name: 'tokenAddress', type: 'address' },
-      { name: 'deadline', type: 'uint256' }
-    ],
-    name: 'getClaimEthSignedMessageHash',
-    outputs: [{ name: '', type: 'bytes32' }],
-    stateMutability: 'pure',
-    type: 'function',
-  },
-  {
-    inputs: [
-      { name: 'tokenId', type: 'uint256' },
-      { name: 'prizeAmount', type: 'uint256' },
-      { name: 'tokenAddress', type: 'address' },
-      { name: 'deadline', type: 'uint256' },
-      { name: 'signature', type: 'bytes' }
-    ],
-    name: 'verifyClaimSignature',
-    outputs: [{ name: '', type: 'bool' }],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [{ name: 'tokenId', type: 'uint256' }],
-    name: 'getTokenData',
-    outputs: [
-      { name: 'claimed', type: 'bool' },
-      { name: 'registeredAt', type: 'uint256' },
-      { name: 'tokenAddress', type: 'address' }
-    ],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [],
-    name: 'getPaymentTokenAddress',
-    outputs: [{ name: '', type: 'address' }],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [],
-    name: 'getCardPrice',
-    outputs: [{ name: '', type: 'uint256' }],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [],
-    name: 'getStats',
-    outputs: [
-      { name: 'totalMinted', type: 'uint256' },
-      { name: 'totalClaimed', type: 'uint256' },
-      { name: 'totalDistributed', type: 'uint256' },
-      { name: 'paymentTokenBalance', type: 'uint256' }
-    ],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [],
-    name: 'maxBatchSize',
-    outputs: [{ name: '', type: 'uint256' }],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [],
-    name: 'totalSupply',
-    outputs: [{ name: '', type: 'uint256' }],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [{ name: 'tokenId', type: 'uint256' }],
-    name: 'ownerOf',
-    outputs: [{ name: '', type: 'address' }],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [{ name: 'owner', type: 'address' }],
-    name: 'balanceOf',
-    outputs: [{ name: '', type: 'uint256' }],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [],
-    name: 'paused',
-    outputs: [{ name: '', type: 'bool' }],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [{ name: 'account', type: 'address' }],
-    name: 'isAdmin',
-    outputs: [{ name: '', type: 'bool' }],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [{ name: 'tokenId', type: 'uint256' }],
-    name: 'tokenURI',
-    outputs: [{ name: '', type: 'string' }],
-    stateMutability: 'view',
-    type: 'function',
-  },
-
-  // Write Functions
-  {
-    inputs: [{ name: 'recipient', type: 'address' }],
-    name: 'mintCard',
-    outputs: [],
-    stateMutability: 'payable',
-    type: 'function',
-  },
-  {
-    inputs: [
-      { name: 'quantity', type: 'uint256' },
-      { name: 'recipient', type: 'address' }
-    ],
-    name: 'mintCardsBatch',
-    outputs: [],
-    stateMutability: 'payable',
-    type: 'function',
-  },
-  {
-    inputs: [
-      { name: 'tokenId', type: 'uint256' },
-      {
-        name: 'claimSig',
-        type: 'tuple',
-        components: [
-          { name: 'prizeAmount', type: 'uint256' },
-          { name: 'tokenAddress', type: 'address' },
-          { name: 'deadline', type: 'uint256' },
-          { name: 'signature', type: 'bytes' }
-        ]
-      },
-      { name: 'recipient', type: 'address' }
-    ],
-    name: 'claimPrize',
-    outputs: [],
-    stateMutability: 'nonReentrant',
-    type: 'function',
-  },
-  {
-    inputs: [
-      { name: 'tokenId', type: 'uint256' },
-      {
-        name: 'claimSig',
-        type: 'tuple',
-        components: [
-          { name: 'prizeAmount', type: 'uint256' },
-          { name: 'tokenAddress', type: 'address' },
-          { name: 'deadline', type: 'uint256' },
-          { name: 'signature', type: 'bytes' }
-        ]
-      },
-      { name: 'recipient', type: 'address' },
-      { name: 'bonusRecipient', type: 'address' }
-    ],
-    name: 'claimPrizeWithBonus',
-    outputs: [],
-    stateMutability: 'nonReentrant',
-    type: 'function',
-  },
-
-  // Events
-  {
-    anonymous: false,
-    inputs: [
-      { indexed: true, name: 'buyer', type: 'address' },
-      { indexed: true, name: 'recipient', type: 'address' },
-      { name: 'tokenIds', type: 'uint256[]' },
-      { name: 'timestamp', type: 'uint256' }
-    ],
-    name: 'CardsMinted',
-    type: 'event',
-  },
-  {
-    anonymous: false,
-    inputs: [
-      { indexed: true, name: 'tokenId', type: 'uint256' },
-      { indexed: true, name: 'winner', type: 'address' },
-      { name: 'prizeAmount', type: 'uint256' },
-      { name: 'tokenAddress', type: 'address' },
-      { name: 'timestamp', type: 'uint256' }
-    ],
-    name: 'PrizeClaimed',
-    type: 'event',
-  },
-  {
-    anonymous: false,
-    inputs: [
-      { indexed: true, name: 'recipient', type: 'address' },
-      { indexed: true, name: 'tokenId', type: 'uint256' },
-      { name: 'timestamp', type: 'uint256' }
-    ],
-    name: 'BonusCardMinted',
-    type: 'event',
-  },
-] as const;
 
 // ========== Game Configuration ==========
 

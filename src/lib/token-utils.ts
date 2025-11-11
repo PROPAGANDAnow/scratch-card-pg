@@ -40,9 +40,10 @@ function findFriendWinningRow(numbers: CardCell[] = []): CardCell[] | null {
   if (!Array.isArray(numbers) || numbers.length < 12) return null;
   for (let r = 0; r < 4; r++) {
     const row = numbers.slice(r * 3, r * 3 + 3);
+
     const allMatch =
       row.length === 3 &&
-      row.every((c) => c?.amount === -1 && !!c?.friend_fid && c.friend_fid === row[0].friend_fid);
+      row.every((c) => !!c?.friend_fid && c.friend_fid === row[0].friend_fid);
     if (allMatch) return row;
   }
   return null;

@@ -33,6 +33,7 @@ const ClaimPrizeButton = () => {
 
         let transactionHash: string;
         if (bestFriend?.wallet && isAddress(bestFriend?.wallet)) {
+            debugger;
             // Claim with bonus for friend
             transactionHash = await claimPrizeWithBonus(
                 tokenId,
