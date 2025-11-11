@@ -111,7 +111,7 @@ export const getOrCreateUserByAddress = async (address: string): Promise<User> =
 
   // Fetch user from Neynar API by address
   const response = await fetch(
-    `https://api.neynar.com/v2/farcaster/user/bulk-by-address/?addresses=${address}`,
+    `https://api.neynar.com/v2/farcaster/user/bulk-by-address/?addresses=${normalizedAddress}`,
     {
       headers: {
         "x-api-key": process.env.NEYNAR_API_KEY,
@@ -125,12 +125,14 @@ export const getOrCreateUserByAddress = async (address: string): Promise<User> =
   }
 
   const data = await response.json();
+  console.log("🚀 ~ getOrCreateUserByAddress ~ data:", data)
 
-  if (!data[address] || data[address].length === 0) {
+  const result = data[normalizedAddress] || data[address];
+  if (!result || !Array.isArray(result) || result.length === 0) {
     throw new Error(`User with address ${address} not found`);
   }
 
-  const neynarUser: NeynarUser = data[address][0];
+  const neynarUser: NeynarUser = result[0];
 
   // Create new user in database
   const newUser = await prisma.user.create({
