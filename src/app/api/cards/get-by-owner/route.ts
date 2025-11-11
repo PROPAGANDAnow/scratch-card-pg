@@ -55,6 +55,7 @@ export async function GET(request: NextRequest) {
         token_id: {
           in: tokenIds
         },
+        contract_address: SCRATCH_CARD_NFT_ADDRESS,
         scratched: false,
         claimed: false
       },
