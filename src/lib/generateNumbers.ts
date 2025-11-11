@@ -84,7 +84,7 @@ export function generateNumbers(params: {
 
     for (let i = rowStart; i < rowEnd; i++) {
       // Randomly decide if this cell should be a friend or amount
-      let shouldBeFriend = (forceFriends || Math.random() < 0.3) && friends.length > 0; // 30% chance of friend PFP, or forced
+      let shouldBeFriend = (forceFriends || Math.random() < 0.12) && friends.length > 0; // 12% chance of friend PFP, or forced
 
       if (shouldBeFriend) {
         // This cell will be a friend PFP
