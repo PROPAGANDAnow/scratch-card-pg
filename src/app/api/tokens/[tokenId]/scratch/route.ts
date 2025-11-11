@@ -51,9 +51,10 @@ export async function POST(
     // Use a transaction to ensure atomicity
     const result = await prisma.$transaction(async (tx) => {
       // Get the token and lock it for update
-      const token = await tx.card.findUnique({
+      const token = await tx.card.findFirst({
         where: {
-          token_id: tokenId
+          token_id: tokenId,
+          contract_address: contractAddress
         },
         select: {
           id: true,

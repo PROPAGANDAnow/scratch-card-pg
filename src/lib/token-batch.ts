@@ -188,12 +188,8 @@ async function findExistingCardForRetry(cardData: CardDataInput): Promise<Card |
     },
   });
 
-  // If not found, try without contract address (fallback)
-  if (!existingCard) {
-    existingCard = await prisma.card.findUnique({
-      where: { token_id: cardData.token_id },
-    });
-  }
+  // No fallback needed - with the new constraint, token_id is only unique within a contract
+  // If we can't find the card with both token_id and contract_address, it doesn't exist
 
   return existingCard;
 }
@@ -205,17 +201,20 @@ async function findExistingCardForRetry(cardData: CardDataInput): Promise<Card |
  * @returns Combined and sorted array of all cards
  */
 function combineAndSortCards(existingCards: Card[], createdCards: Card[]): Card[] {
-  // Create a Map to deduplicate cards by token_id
-  const allCardsMap = new Map<number, Card>();
+  // Create a Map to deduplicate cards by token_id and contract_address combination
+  const allCardsMap = new Map<string, Card>();
+
+  // Helper function to create a unique key
+  const createCardKey = (card: Card) => `${card.token_id}:${card.contract_address}`;
 
   // Add existing cards
   existingCards.forEach(card => {
-    allCardsMap.set(card.token_id, card);
+    allCardsMap.set(createCardKey(card), card);
   });
 
   // Add or override with created cards (in case they were already in existing)
   createdCards.forEach(card => {
-    allCardsMap.set(card.token_id, card);
+    allCardsMap.set(createCardKey(card), card);
   });
 
   // Convert back to array and sort by token_id

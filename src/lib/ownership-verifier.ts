@@ -119,8 +119,11 @@ export async function verifyUserCardAction(
   }
 
   // Get the card record to check additional permissions
-  const card = await prisma.card.findUnique({
-    where: { token_id: tokenId },
+  const card = await prisma.card.findFirst({
+    where: { 
+      token_id: tokenId,
+      contract_address: contractAddress
+    },
     select: {
       scratched_by_user_id: true,
       gifter_id: true,

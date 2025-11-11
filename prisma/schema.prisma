@@ -52,7 +52,7 @@ model Card {
   gifted_to            User?     @relation("CardReceived", fields: [gifted_to_user_id], references: [id])
   minter               User      @relation("CardMinted", fields: [minter_user_id], references: [id])
 
-  @@unique([token_id]) // Assuming card_no should be unique
+  @@unique([token_id, contract_address]) // Token ID should be unique per contract address
   @@index([scratched_by_user_id]) // For fast user scratch lookup
   @@index([scratched]) // For filtering scratched cards
   @@index([scratched_at]) // For time-based queries

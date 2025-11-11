@@ -5,6 +5,7 @@ import { verifyTokenOwnership } from '~/lib/auth-utils';
 import { prisma } from '~/lib/prisma';
 import { ApiResponse, ProofData } from '~/app/interface/api';
 import { createHash, randomBytes } from 'crypto';
+import { SCRATCH_CARD_NFT_ADDRESS } from '~/lib/blockchain';
 
 interface RouteParams {
   params: Promise<{ tokenId: string }>;
@@ -50,9 +51,10 @@ export async function GET(
 
     // Get token details from database
     // Note: user_wallet field removed from Card model
-    const token = await prisma.card.findUnique({
+    const token = await prisma.card.findFirst({
       where: {
-        token_id: tokenId
+        token_id: tokenId,
+        contract_address: SCRATCH_CARD_NFT_ADDRESS
       },
       select: {
         id: true,

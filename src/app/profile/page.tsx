@@ -222,6 +222,10 @@ const ProfilePage = () => {
             >
               <CardGrid
                 cards={userCards}
+                onCardSelect={(card) => {
+                  // Handle card selection - navigate to card details or scratch page
+                  window.open(`/cards/${card.token_id}`, '_blank');
+                }}
                 showViewAll={!showAllCards}
                 onViewAll={() => setShowAllCards(true)}
               />

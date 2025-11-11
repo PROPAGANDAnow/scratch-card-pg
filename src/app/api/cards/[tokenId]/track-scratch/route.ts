@@ -5,6 +5,7 @@ import { withDatabaseRetry } from "~/lib/db-utils";
 import { UpdateCardScratchStatusSchema } from "~/lib/validations";
 import { ZodIssue } from "zod";
 import { getOrCreateUserByAddress } from "~/lib/neynar-users";
+import { SCRATCH_CARD_NFT_ADDRESS } from "~/lib/blockchain";
 
 const DEFAULT_VALIDATION_FIELD = "body" as const;
 
@@ -86,18 +87,43 @@ export async function PATCH(
     const scratchUser = await getOrCreateUserByAddress(scratchedBy.trim().toLowerCase())
 
     // Update the card with minimal select fields for performance
-    const updatedCard = await withDatabaseRetry(() =>
-      prisma.card.update({
-        where: { token_id: parsedTokenId },
-        data: updateData,
-        select: {
-          token_id: true,
-          scratched: true,
-          scratched_at: true,
-          prize_won: true,
+    const updateResult = await withDatabaseRetry(() =>
+      prisma.card.updateMany({
+        where: { 
+          token_id: parsedTokenId,
+          contract_address: SCRATCH_CARD_NFT_ADDRESS
         },
+        data: updateData,
       })
     );
+
+    if (updateResult.count === 0) {
+      return NextResponse.json(
+        { success: false, error: "Card not found", field: "tokenId" },
+        { status: 404 }
+      );
+    }
+
+    // Get the updated card to return
+    const updatedCard = await prisma.card.findFirst({
+      where: { 
+        token_id: parsedTokenId,
+        contract_address: SCRATCH_CARD_NFT_ADDRESS
+      },
+      select: {
+        token_id: true,
+        scratched: true,
+        scratched_at: true,
+        prize_won: true,
+      },
+    });
+
+    if (!updatedCard) {
+      return NextResponse.json(
+        { success: false, error: "Card not found after update", field: "tokenId" },
+        { status: 404 }
+      );
+    }
 
     // Log performance metric in development
     if (process.env.NODE_ENV === 'development') {

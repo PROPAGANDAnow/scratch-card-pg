@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "~/lib/prisma";
+import { SCRATCH_CARD_NFT_ADDRESS } from "~/lib/blockchain";
 
 export async function GET(
   request: NextRequest,
@@ -23,9 +24,12 @@ export async function GET(
       );
     }
 
-    // Fetch the card by tokenId
-    const card = await prisma.card.findUnique({
-      where: { token_id: cardId },
+    // Fetch the card by tokenId and default contract address
+    const card = await prisma.card.findFirst({
+      where: { 
+        token_id: cardId,
+        contract_address: SCRATCH_CARD_NFT_ADDRESS
+      },
       select: {
         id: true,
         prize_amount: true,

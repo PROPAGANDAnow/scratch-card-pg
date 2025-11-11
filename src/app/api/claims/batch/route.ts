@@ -6,7 +6,7 @@ import { prisma } from '~/lib/prisma';
 import { ApiResponse, BatchClaimResponse } from '~/app/interface/api';
 import { encodeAbiParameters, keccak256 } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
-import { PAYMENT_TOKEN } from '~/lib/blockchain';
+import { PAYMENT_TOKEN, SCRATCH_CARD_NFT_ADDRESS } from '~/lib/blockchain';
 
 export async function POST(request: NextRequest) {
   const validation = await validateRequest(request, BatchClaimSchema, { method: 'POST' });
@@ -58,9 +58,10 @@ export async function POST(request: NextRequest) {
         const result = await prisma.$transaction(async (tx) => {
           // Get the token
           // Note: user_wallet field removed, ownership check needs to be updated
-          const token = await tx.card.findUnique({
+          const token = await tx.card.findFirst({
             where: {
-              token_id: tokenId
+              token_id: tokenId,
+              contract_address: SCRATCH_CARD_NFT_ADDRESS
             },
             select: {
               id: true,

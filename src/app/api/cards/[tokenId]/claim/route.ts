@@ -4,6 +4,7 @@ import { prisma } from "~/lib/prisma";
 import { withDatabaseRetry } from "~/lib/db-utils";
 import { UpdateCardClaimStatusSchema } from "~/lib/validations";
 import { ZodIssue } from "zod";
+import { SCRATCH_CARD_NFT_ADDRESS } from "~/lib/blockchain";
 
 const DEFAULT_VALIDATION_FIELD = "body" as const;
 
@@ -94,30 +95,63 @@ export async function PATCH(
     const normalizedClaimant = claimedBy.trim().toLowerCase();
 
     const updatedCard = await withDatabaseRetry(() =>
-      prisma.card.update({
-        where: { token_id: parsedTokenId },
+      prisma.card.updateMany({
+        where: { 
+          token_id: parsedTokenId,
+          contract_address: SCRATCH_CARD_NFT_ADDRESS
+        },
         data: {
           claimed,
           claim_hash: normalizedClaimHash,
           claimed_at: new Date(),
         },
-        select: {
-          token_id: true,
-          claimed: true,
-          claim_hash: true,
-          claimed_at: true,
-        },
       })
     );
+
+    if (updatedCard.count === 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Card not found",
+          field: "tokenId",
+        },
+        { status: 404 }
+      );
+    }
+
+    // Get the updated card to return
+    const card = await prisma.card.findFirst({
+      where: { 
+        token_id: parsedTokenId,
+        contract_address: SCRATCH_CARD_NFT_ADDRESS
+      },
+      select: {
+        token_id: true,
+        claimed: true,
+        claim_hash: true,
+        claimed_at: true,
+      },
+    });
+
+    if (!card) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Card not found after update",
+          field: "tokenId",
+        },
+        { status: 404 }
+      );
+    }
 
     return NextResponse.json(
       {
         success: true,
         data: {
-          tokenId: updatedCard.token_id,
-          claimed: updatedCard.claimed,
-          claimHash: updatedCard.claim_hash,
-          claimedAt: updatedCard.claimed_at,
+          tokenId: card.token_id,
+          claimed: card.claimed,
+          claimHash: card.claim_hash,
+          claimedAt: card.claimed_at,
         },
       },
       { status: 200 }

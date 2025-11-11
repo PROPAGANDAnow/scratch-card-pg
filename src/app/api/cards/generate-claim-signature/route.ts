@@ -38,8 +38,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Fetch card data from database
-    const card = await prisma.card.findUnique({
-      where: { token_id: tokenId },
+    const card = await prisma.card.findFirst({
+      where: { 
+        token_id: tokenId,
+        contract_address: SCRATCH_CARD_NFT_ADDRESS
+      },
       select: {
         id: true,
         prize_amount: true,
@@ -187,9 +190,10 @@ export async function POST(request: NextRequest) {
     })
 
     // Update prisma
-    await prisma.card.update({
+    await prisma.card.updateMany({
       where: {
-        token_id: validation.data.tokenId
+        token_id: validation.data.tokenId,
+        contract_address: SCRATCH_CARD_NFT_ADDRESS
       },
       data: {
         scratched: true,

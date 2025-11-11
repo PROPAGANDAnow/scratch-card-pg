@@ -40,10 +40,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if any cards already exist for these tokenIds
+    // Check if any cards already exist for these tokenIds and contract address
     const existingCards = await prisma.card.findMany({
       where: {
-        token_id: { in: tokenIds }
+        token_id: { in: tokenIds },
+        contract_address: contractAddress
       }
     });
 

@@ -45,7 +45,7 @@ export const BASE_CONFIG = {
  * Scratch Card NFT contract address
  * Environment variable override for different deployments
  */
-export const SCRATCH_CARD_NFT_ADDRESS = '0xBaCa267fccb629A7C0D623fecCA8bF9272347e18' as ViemAddress;
+export const SCRATCH_CARD_NFT_ADDRESS = '0xc9C69754C8654C64694E65406D4732C4f8d09746' as ViemAddress;
 
 /**
  * Payment token configuration
